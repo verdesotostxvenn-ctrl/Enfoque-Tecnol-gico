@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronLeft, Navigation, Briefcase, Users, Bell } from 'lucide-react';
+import { motion, useMotionValue } from 'framer-motion';
+import { ChevronLeft, Navigation, Briefcase, Users, Bell, CheckCircle2, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 const MisionEvacuacion = () => {
   const navigate = useNavigate();
-  const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
+  const [isHovering, setIsHovering] = useState(false);
   const [cursorVisible, setCursorVisible] = useState(true);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // 🚀 RENDIMIENTO 1:1 (0 DELAY)
+  const mouseX = useMotionValue(-100);
+  const mouseY = useMotionValue(-100);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-      if (!cursorVisible) setCursorVisible(true);
+      mouseX.set(e.clientX);
+      mouseY.set(e.clientY);
     };
 
     const handleMouseLeave = () => setCursorVisible(false);
@@ -26,55 +33,104 @@ const MisionEvacuacion = () => {
       document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
       document.documentElement.removeEventListener('mouseenter', handleMouseEnter);
     };
-  }, [cursorVisible]);
+  }, [mouseX, mouseY]);
+
+  const completeMission = async () => {
+    setLoading(true);
+    const nombre = localStorage.getItem('agenteNombre');
+    
+    // 📊 ACTUALIZACIÓN EN SUPABASE
+    const { error } = await supabase
+      .from('agentes') 
+      .update({ mision_evacuacion: true, ultima_conexion: new Date() })
+      .eq('nombre', nombre);
+
+    if (!error) {
+      setIsCompleted(true);
+      setTimeout(() => navigate('/hub'), 2000);
+    } else {
+      alert("Fallo en la comunicación con el servidor central.");
+    }
+    setLoading(false);
+  };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white p-6 md:p-12 relative overflow-hidden cursor-none">
+    <div className="min-h-screen bg-[#010413] text-white p-6 md:p-12 relative overflow-hidden cursor-none">
       
+      {/* 🖱️ CURSOR TÁCTICO */}
       <motion.div
+        style={{ x: mouseX, y: mouseY, translateX: '-50%', translateY: '-50%', willChange: 'transform' }}
         animate={{ opacity: cursorVisible ? 1 : 0 }}
-        transition={{ duration: 0.15 }}
         className="fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
-        style={{ left: `${mousePos.x}px`, top: `${mousePos.y}px`, transform: 'translate(-50%, -50%)' }}
       >
-        <div className="w-7 h-7 border-2 border-cyan-400 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)]">
-          <div className="w-1 h-1 bg-white rounded-full" />
+        <div className="w-6 h-6 border-2 border-emerald-500 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.3)] bg-white/5">
+          <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_5px_#fff]" />
         </div>
       </motion.div>
 
-      <button onClick={() => navigate('/hub')} className="relative z-10 flex items-center text-cyan-400 mb-8 hover:text-cyan-300">
-        <ChevronLeft size={20} /> <span className="text-xs font-black uppercase tracking-widest text-white">Volver al Hub</span>
+      <button 
+        onClick={() => navigate('/hub')} 
+        onMouseEnter={() => setIsHovering(true)} 
+        onMouseLeave={() => setIsHovering(false)}
+        className="relative z-10 flex items-center space-x-2 text-white/50 hover:text-emerald-400 transition-colors mb-12"
+      >
+        <ChevronLeft size={20} /> <span className="text-[10px] font-black uppercase tracking-[0.3em]">Regresar al Hub</span>
       </button>
 
       <div className="relative z-10 max-w-4xl mx-auto">
         <header className="mb-12 text-center">
-          <h2 className="text-emerald-500 font-black text-xs uppercase tracking-[0.4em] mb-2 text-white">Rutas Seguras</h2>
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white">EVACUACIÓN</h1>
+          <div className="flex justify-center items-center space-x-3 text-emerald-500 mb-4">
+            <Activity size={18} className="animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-[0.5em]">Logística de Emergencia</span>
+          </div>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white uppercase">RUTAS DE <br /><span className="text-emerald-500">EVACUACIÓN</span></h1>
         </header>
 
-        <div className="bg-emerald-500/10 border border-emerald-500/20 p-8 rounded-[2.5rem] mb-12 flex flex-col items-center backdrop-blur-sm">
-          <Bell size={48} className="text-emerald-500 mb-6" />
-          <p className="text-center text-xl font-medium max-w-2xl text-white">
-            Identifica las señales verdes en tu Unidad Educativa. Sigue las flechas y mantén la calma.
+        <div className="bg-emerald-500/5 border border-emerald-500/20 p-10 rounded-[3rem] mb-12 flex flex-col items-center backdrop-blur-xl relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+          <Bell size={48} className="text-emerald-500 mb-6 animate-ring" />
+          <p className="text-center text-xl md:text-2xl font-bold max-w-2xl text-white leading-tight">
+            Sigue siempre la señalética verde. Mantener la calma es tu herramienta más poderosa para salvar vidas.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="flex space-x-6 items-start bg-slate-900/30 p-6 rounded-3xl border border-white/5">
-            <div className="bg-emerald-500/20 p-4 rounded-2xl text-emerald-500 shrink-0"><Briefcase /></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+          <div className="flex space-x-6 items-start bg-slate-900/40 p-8 rounded-[2rem] border border-white/5 backdrop-blur-sm">
+            <div className="bg-emerald-500/20 p-4 rounded-2xl text-emerald-500 shrink-0 shadow-lg shadow-emerald-500/10"><Briefcase /></div>
             <div>
-              <h3 className="font-black text-lg mb-1 text-white">Mochila de Emergencia</h3>
-              <p className="text-slate-500 text-sm">Botiquín, linterna, radio y documentos.</p>
+              <h3 className="font-black text-lg mb-1 text-white uppercase tracking-tighter">Kit de Supervivencia</h3>
+              <p className="text-slate-400 text-xs font-medium leading-relaxed">Debe contener: Botiquín de primer auxilio, linterna con pilas extra, radio AM/FM y agua embotellada.</p>
             </div>
           </div>
-          <div className="flex space-x-6 items-start bg-slate-900/30 p-6 rounded-3xl border border-white/5">
-            <div className="bg-emerald-500/20 p-4 rounded-2xl text-emerald-500 shrink-0"><Users /></div>
+          <div className="flex space-x-6 items-start bg-slate-900/40 p-8 rounded-[2rem] border border-white/5 backdrop-blur-sm">
+            <div className="bg-emerald-500/20 p-4 rounded-2xl text-emerald-500 shrink-0 shadow-lg shadow-emerald-500/10"><Users /></div>
             <div>
-              <h3 className="font-black text-lg mb-1 text-white">Punto de Encuentro</h3>
-              <p className="text-slate-500 text-sm">El lugar acordado para reunirse con la familia.</p>
+              <h3 className="font-black text-lg mb-1 text-white uppercase tracking-tighter">Puntos Seguros</h3>
+              <p className="text-slate-400 text-xs font-medium leading-relaxed">Establece un punto de encuentro familiar fuera de la zona de riesgo. Conoce los albergues del distrito.</p>
             </div>
           </div>
         </div>
+
+        <button 
+          onClick={completeMission}
+          disabled={loading || isCompleted}
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
+          className={`w-full p-6 rounded-[2rem] font-black uppercase tracking-[0.4em] transition-all flex items-center justify-center space-x-3 text-sm ${
+            isCompleted 
+            ? 'bg-emerald-500 text-white' 
+            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_15px_40px_rgba(16,185,129,0.3)] active:scale-95'
+          }`}
+        >
+          {loading ? 'CARGANDO DATOS...' : isCompleted ? (
+            <>
+              <CheckCircle2 size={20} />
+              <span>MISIÓN COMPLETADA</span>
+            </>
+          ) : (
+            'CONFIRMAR CONOCIMIENTO'
+          )}
+        </button>
       </div>
     </div>
   );
