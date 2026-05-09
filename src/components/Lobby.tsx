@@ -33,6 +33,10 @@ const Lobby = () => {
     e.preventDefault();
     if (!nombre || !escuela) return;
     setLoading(true);
+
+    // 💾 LÍNEA AÑADIDA: Guardar nombre localmente
+    localStorage.setItem('agenteNombre', nombre);
+
     // Guardar en la base de datos de Supabase
     const { error } = await supabase.from('agentes').insert([{ nombre, institucion: escuela }]);
     if (error) {
@@ -49,7 +53,7 @@ const Lobby = () => {
       
       {/* Cursor Táctico (Z-index superior) */}
       <div
-        className="custom-cursor fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
+        className="fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
         style={{ left: `${mousePos.x}px`, top: `${mousePos.y}px`, transform: 'translate(-50%, -50%)' }}
       >
         <motion.div 
