@@ -11,12 +11,12 @@
     background-color: #020617;
     color: white;
     overflow-x: hidden;
-    /* Cursor por defecto oculto en PC para usar el personalizado */
+    /* Cursor estándar oculto para usar el de tecnología */
     cursor: none; 
   }
 }
 
-/* Personalización del Scrollbar (La barra de la derecha) */
+/* Scrollbar profesional casi invisible */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -26,18 +26,18 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(6, 182, 212, 0.3);
+  background: rgba(6, 182, 212, 0.2);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(6, 182, 212, 0.6);
+  background: rgba(6, 182, 212, 0.5);
 }
 
-/* Firefox */
+/* Soporte Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(6, 182, 212, 0.3) #020617;
+  scrollbar-color: rgba(6, 182, 212, 0.2) #020617;
 }
 
 /* Desactivar cursor personalizado en móviles */
