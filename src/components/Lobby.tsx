@@ -1,17 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
-import {
-  School,
-  MapPin,
-  User,
-  ChevronRight,
-  Activity,
-  X,
-  Users,
-  HelpCircle
-} from 'lucide-react';
+import { School, MapPin, User, ChevronRight, Activity, X, Users, HelpCircle } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
 const Lobby = () => {
   const navigate = useNavigate();
@@ -138,11 +129,7 @@ const Lobby = () => {
               x: [0, i % 2 ? 150 : -150, 0],
               y: [0, i % 2 ? -100 : 100, 0]
             }}
-            transition={{
-              duration: 30 + i * 5,
-              repeat: Infinity,
-              ease: 'linear'
-            }}
+            transition={{ duration: 30 + i * 5, repeat: Infinity, ease: 'linear' }}
             style={{
               width: '500px',
               height: '500px',
@@ -163,9 +150,7 @@ const Lobby = () => {
           <div>
             <div className="flex items-center space-x-3 text-orange-500 mb-6">
               <Activity size={16} className="animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-[0.4em]">
-                Distrito 18D03
-              </span>
+              <span className="text-[10px] font-black uppercase tracking-[0.4em]">Distrito 18D03</span>
             </div>
 
             <h1 className="text-[clamp(2.2rem,5vw,3.8rem)] font-black leading-[0.9] tracking-tighter mb-6 text-white uppercase">
@@ -307,33 +292,6 @@ const Lobby = () => {
             <div className="flex items-start pr-14">
               <HelpCircle className="text-red-400 shrink-0 mt-1 mr-3" size={20} />
               <div>
-                <h4 className="text-red-300 font-black text-[10px] uppercase tracking-widest mb-1">
-                  ¿Sabías que?
-                </h4>
+                <h4 className="text-red-300 font-black text-[10px] uppercase tracking-widest mb-1">¿Sabías que?</h4>
                 <p className="text-white text-[11px] leading-relaxed font-semibold">
-                  El riesgo es una construcción social, es decir, no hay riesgo si no existen personas expuestas y vulnerables.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsModalOpen(false)}
-              className="absolute inset-0 bg-black/95 backdrop-blur-md cursor-pointer"
-            />
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="relative w-full max-w-xl bg-slate-900 border border-white/10 rounded-[2.5rem] overflow-hidden"
-            >
-              <div className="p-5 border-b border
+                  El riesgo es una construcción social, es decir, no hay riesgo si
