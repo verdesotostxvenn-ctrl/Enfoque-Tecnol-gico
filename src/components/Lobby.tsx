@@ -1,14 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
+import {
+  motion,
+  AnimatePresence,
+  useMotionValue,
+  useSpring,
+  useTransform
+} from 'framer-motion';
 import {
   Activity,
-  Brain,
   ChevronRight,
   HelpCircle,
-  Lightbulb,
   MapPin,
   School,
+  ShieldCheck,
+  Sparkles,
   User,
   Users,
   X
@@ -16,8 +22,8 @@ import {
 import { supabase } from '../supabaseClient';
 
 const avatarImages = {
-  chica: 'https://api.dicebear.com/8.x/adventurer/svg?seed=agente-nina-prevencion',
-  chico: 'https://api.dicebear.com/8.x/adventurer/svg?seed=agente-nino-prevencion'
+  chica: 'https://api.dicebear.com/8.x/adventurer/svg?seed=agente-nina-lobby-ultra-final',
+  chico: 'https://api.dicebear.com/8.x/adventurer/svg?seed=agente-nino-lobby-ultra-final'
 };
 
 const escuelasDisponibles = [
@@ -35,7 +41,7 @@ const escuelasDisponibles = [
   'Unidad Educativa 12'
 ];
 
-const Lobby = () => {
+const LobbyUltra = () => {
   const navigate = useNavigate();
 
   const [nombre, setNombre] = useState('');
@@ -46,23 +52,26 @@ const Lobby = () => {
   const [showEscuelas, setShowEscuelas] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
 
-  const rawMouseX = useMotionValue(-100);
-  const rawMouseY = useMotionValue(-100);
-  const mouseX = useSpring(rawMouseX, { stiffness: 900, damping: 45 });
-  const mouseY = useSpring(rawMouseY, { stiffness: 900, damping: 45 });
+  const rawMouseX = useMotionValue(0);
+  const rawMouseY = useMotionValue(0);
+  const mouseX = useSpring(rawMouseX, { stiffness: 1300, damping: 65 });
+  const mouseY = useSpring(rawMouseY, { stiffness: 1300, damping: 65 });
+
+  const bokehX = useTransform(rawMouseX, [0, 1400], [-45, 45]);
+  const bokehY = useTransform(rawMouseY, [0, 900], [-32, 32]);
 
   useEffect(() => {
-    const moveCursor = (e: MouseEvent) => {
-      rawMouseX.set(e.clientX);
-      rawMouseY.set(e.clientY);
+    const moveCursor = (event: MouseEvent) => {
+      rawMouseX.set(event.clientX);
+      rawMouseY.set(event.clientY);
     };
 
     window.addEventListener('mousemove', moveCursor);
     return () => window.removeEventListener('mousemove', moveCursor);
   }, [rawMouseX, rawMouseY]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
     if (!nombre.trim() || !escuela || !avatar) return;
 
@@ -87,7 +96,10 @@ const Lobby = () => {
       ]);
 
       if (error) {
-        console.warn('Supabase no sincronizó, pero el agente fue guardado localmente:', error.message);
+        console.warn(
+          'Supabase no sincronizó, pero el agente fue guardado localmente:',
+          error.message
+        );
       }
     } catch (error) {
       console.warn('Fallo de red con Supabase. Registro local guardado:', error);
@@ -98,11 +110,11 @@ const Lobby = () => {
     setTimeout(() => {
       setLoading(false);
       navigate('/hub');
-    }, 850);
+    }, 650);
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#010413] text-white relative overflow-hidden flex items-center justify-center p-5 cursor-none">
+    <main className="h-screen max-h-screen w-full bg-[#010413] text-white relative overflow-hidden flex items-center justify-center p-2 md:p-4 cursor-none">
       <motion.div
         style={{
           x: mouseX,
@@ -114,128 +126,148 @@ const Lobby = () => {
       >
         <motion.div
           animate={{
-            scale: isHovering ? 1.75 : 1,
-            borderColor: isHovering ? '#f97316' : '#22d3ee',
-            backgroundColor: isHovering ? 'rgba(249,115,22,0.16)' : 'rgba(34,211,238,0.12)'
+            scale: isHovering ? 1.05 : 1,
+            borderColor: isHovering ? '#fb923c' : '#22d3ee',
+            backgroundColor: isHovering
+              ? 'rgba(251,146,60,0.08)'
+              : 'rgba(34,211,238,0.08)'
           }}
-          className="w-8 h-8 rounded-full border-2 flex items-center justify-center shadow-[0_0_26px_rgba(34,211,238,0.65)] backdrop-blur-sm"
+          transition={{ duration: 0.1 }}
+          className="w-3.5 h-3.5 rounded-full border flex items-center justify-center shadow-[0_0_14px_rgba(34,211,238,0.8)] backdrop-blur-sm"
         >
-          <div className="w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_8px_#fff]" />
+          <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_8px_#fff]" />
         </motion.div>
       </motion.div>
 
-      <div className="absolute inset-0 pointer-events-none">
+      <motion.div
+        style={{ x: bokehX, y: bokehY }}
+        className="absolute inset-0 pointer-events-none overflow-hidden"
+      >
         <motion.div
           animate={{ rotate: 360 }}
-          transition={{ duration: 26, repeat: Infinity, ease: 'linear' }}
-          className="absolute left-1/2 top-1/2 w-[900px] h-[900px] -translate-x-1/2 -translate-y-1/2"
+          transition={{ duration: 13, repeat: Infinity, ease: 'linear' }}
+          className="absolute left-1/2 top-1/2 w-[1250px] h-[1250px] -translate-x-1/2 -translate-y-1/2"
         >
-          <div className="absolute top-0 left-1/2 w-72 h-72 bg-orange-500/25 rounded-full blur-[110px]" />
-          <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/20 rounded-full blur-[120px]" />
-          <div className="absolute left-0 top-1/2 w-64 h-64 bg-emerald-500/15 rounded-full blur-[120px]" />
+          <div className="absolute top-0 left-1/2 w-[410px] h-[410px] bg-orange-500/50 rounded-full blur-[115px]" />
+          <div className="absolute bottom-10 right-0 w-[460px] h-[460px] bg-cyan-400/42 rounded-full blur-[125px]" />
+          <div className="absolute left-0 top-1/2 w-[360px] h-[360px] bg-emerald-400/35 rounded-full blur-[120px]" />
+          <div className="absolute right-1/3 top-1/4 w-80 h-80 bg-pink-500/32 rounded-full blur-[115px]" />
+          <div className="absolute left-1/4 bottom-1/4 w-72 h-72 bg-yellow-400/28 rounded-full blur-[110px]" />
         </motion.div>
 
         <motion.div
-          animate={{ scale: [1, 1.15, 1], opacity: [0.16, 0.3, 0.16] }}
-          transition={{ duration: 5, repeat: Infinity }}
-          className="absolute -top-36 -left-36 w-[500px] h-[500px] bg-orange-500/20 rounded-full blur-[140px]"
+          animate={{
+            x: [-100, 125, -100],
+            y: [45, -85, 45],
+            scale: [1, 1.18, 1],
+            opacity: [0.35, 0.68, 0.35]
+          }}
+          transition={{ duration: 5.8, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -top-32 -left-32 w-[560px] h-[560px] bg-orange-500/38 rounded-full blur-[130px]"
         />
 
         <motion.div
-          animate={{ scale: [1.15, 1, 1.15], opacity: [0.12, 0.28, 0.12] }}
-          transition={{ duration: 6.5, repeat: Infinity }}
-          className="absolute -bottom-40 -right-40 w-[520px] h-[520px] bg-cyan-500/20 rounded-full blur-[140px]"
+          animate={{
+            x: [100, -120, 100],
+            y: [-45, 80, -45],
+            scale: [1.12, 1, 1.12],
+            opacity: [0.3, 0.62, 0.3]
+          }}
+          transition={{ duration: 6.8, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -bottom-36 -right-32 w-[610px] h-[610px] bg-cyan-400/38 rounded-full blur-[135px]"
         />
-      </div>
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 20 }}
+        <motion.div
+          animate={{
+            x: [-55, 70, -55],
+            y: [-25, 35, -25],
+            opacity: [0.2, 0.46, 0.2]
+          }}
+          transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute top-1/4 right-1/4 w-[380px] h-[380px] bg-fuchsia-500/25 rounded-full blur-[125px]"
+        />
+
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:30px_30px] opacity-45" />
+      </motion.div>
+
+      <motion.section
+        initial={{ opacity: 0, scale: 0.965, y: 14 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.55 }}
-        className="relative z-10 w-full max-w-6xl bg-white/5 border border-white/10 rounded-[3rem] overflow-hidden grid grid-cols-1 lg:grid-cols-2 backdrop-blur-2xl shadow-[0_30px_120px_rgba(0,0,0,0.5)]"
+        transition={{ duration: 0.5 }}
+        className="relative z-10 w-full max-w-6xl h-[94vh] bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden grid grid-cols-1 lg:grid-cols-[0.82fr_1.18fr] backdrop-blur-2xl shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
       >
-        <div className="p-8 md:p-14 bg-slate-950/50 border-b lg:border-b-0 lg:border-r border-white/10 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
+        <aside className="relative overflow-hidden bg-slate-950/55 border-b lg:border-b-0 lg:border-r border-white/10 p-4 md:p-6 flex flex-col justify-between">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-transparent to-cyan-500/10 pointer-events-none" />
 
           <div className="relative z-10">
-            <div className="flex items-center gap-3 text-orange-500 mb-6">
-              <Activity size={18} className="animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-[0.4em]">
+            <div className="flex items-center gap-3 text-orange-500 mb-3">
+              <Activity size={14} className="animate-pulse" />
+              <span className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.35em]">
                 Distrito 18D03
               </span>
             </div>
 
-            <h1 className="text-5xl md:text-7xl font-black leading-none tracking-tighter uppercase mb-6">
-              Misión <br />
-              <span className="text-orange-500">Prevención</span>
-            </h1>
+            <motion.div
+              animate={{
+                textShadow: [
+                  '0 0 14px rgba(249,115,22,0.4)',
+                  '0 0 30px rgba(34,211,238,0.4)',
+                  '0 0 14px rgba(249,115,22,0.4)'
+                ]
+              }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="relative mb-4"
+            >
+              <motion.div
+                animate={{
+                  rotate: [0, 10, -10, 0],
+                  scale: [1, 1.12, 1]
+                }}
+                transition={{ duration: 2.5, repeat: Infinity }}
+                className="absolute -right-1 -top-4 text-cyan-300/90"
+              >
+                <Sparkles size={24} />
+              </motion.div>
 
-            <p className="text-slate-300 text-sm md:text-base leading-relaxed max-w-md mb-10">
+              <h1 className="text-[2.35rem] md:text-[3.85rem] font-black leading-[0.86] tracking-tighter uppercase">
+                Misión <br />
+                <span className="relative bg-gradient-to-r from-yellow-200 via-orange-400 to-red-500 bg-clip-text text-transparent">
+                  Prevención
+                </span>
+              </h1>
+
+              <div className="mt-3 flex items-center gap-2 text-[8px] md:text-[9px] font-black uppercase tracking-[0.24em] text-cyan-200/80">
+                <ShieldCheck size={14} />
+                Academia infantil de gestión de riesgos
+              </div>
+            </motion.div>
+
+            <p className="text-slate-300 text-[11px] md:text-sm leading-relaxed max-w-md mb-4">
               Plataforma educativa de gestión de riesgos para entrenar agentes infantiles en prevención, emergencia y evacuación.
             </p>
 
-            <div className="relative w-40">
-              <div className="absolute inset-0 bg-orange-500/30 blur-3xl rounded-full" />
+            <div className="relative w-24 md:w-32">
+              <div className="absolute inset-0 bg-orange-500/45 blur-3xl rounded-full" />
               <img
                 src="https://blogger.googleusercontent.com/img/a/AVvXsEhwwQia3e2LdO2aVrT1GFE6Cojzx6-lve9qceOZH3IiwXtV3wYKFiTioE7lSASVOnjdUexdIJwv9PUVScy_iupzCzzbbGUp7S1ByxBcJWK8fsZVexSyKj2oh7VgnJZ7iC4bkUjuko0R7SH-Lzgii-JsZmRgbdNWqQlwFlQ194py9fA-fCIIhM1HrHesW3pv"
                 alt="Logo"
                 className="relative z-10 w-full h-auto drop-shadow-2xl"
               />
             </div>
-
-            <div className="mt-10 pt-6 border-t border-white/10">
-              <p className="text-xs text-white/85 font-bold italic border-l-2 border-orange-500 pl-4 uppercase leading-relaxed">
-                “Un buen conocimiento del riesgo ayuda a mejorar la resiliencia comunitaria”
-              </p>
-            </div>
-
-            <div className="mt-10 relative">
-              <motion.div
-                animate={{ rotate: [-1.5, 1.5, -1.5], y: [0, -5, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative bg-white/10 border border-white/10 p-7 rounded-[3.2rem] rounded-bl-xl backdrop-blur-xl shadow-[0_0_40px_rgba(255,255,255,0.07)]"
-              >
-                <div className="absolute -top-8 right-12 flex gap-3">
-                  <motion.div
-                    animate={{ y: [0, -9, 0], rotate: [-8, 8, -8] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="bg-yellow-300 text-black p-3 rounded-full shadow-[0_0_22px_rgba(250,204,21,0.7)]"
-                  >
-                    <Lightbulb size={22} />
-                  </motion.div>
-
-                  <motion.div
-                    animate={{ y: [0, -7, 0], scale: [1, 1.08, 1] }}
-                    transition={{ duration: 2.4, repeat: Infinity }}
-                    className="bg-pink-400 text-black p-3 rounded-full shadow-[0_0_22px_rgba(244,114,182,0.55)]"
-                  >
-                    <Brain size={22} />
-                  </motion.div>
-                </div>
-
-                <div className="flex gap-3 pt-3">
-                  <HelpCircle className="text-orange-400 shrink-0 mt-1" size={22} />
-                  <div>
-                    <h4 className="text-orange-300 font-black text-[10px] uppercase tracking-[0.25em] mb-1">
-                      ¿Sabías que?
-                    </h4>
-                    <p className="text-white text-xs leading-relaxed font-semibold">
-                      El riesgo es una construcción social: no hay riesgo si no existen personas expuestas y vulnerables.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="absolute -bottom-3 left-10 w-8 h-8 bg-white/10 border-l border-b border-white/10 rotate-45" />
-              </motion.div>
-            </div>
           </div>
-        </div>
 
-        <div className="p-8 md:p-14 bg-black/30">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="relative z-10 pt-3 border-t border-white/10">
+            <p className="text-[9px] md:text-[11px] text-white/85 font-bold italic border-l-2 border-orange-500 pl-3 uppercase leading-relaxed">
+              “Un buen conocimiento del riesgo ayuda a mejorar la resiliencia comunitaria”
+            </p>
+          </div>
+        </aside>
+
+        <section className="bg-black/30 p-4 md:p-6 flex flex-col justify-center">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center mb-2">
-                <User size={14} className="mr-2 text-orange-500" />
+              <label className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.24em] text-slate-400 flex items-center mb-1.5">
+                <User size={12} className="mr-2 text-orange-500" />
                 Registro de identidad
               </label>
 
@@ -243,17 +275,17 @@ const Lobby = () => {
                 type="text"
                 required
                 value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
+                onChange={(event) => setNombre(event.target.value)}
                 onMouseEnter={() => setIsHovering(true)}
                 onMouseLeave={() => setIsHovering(false)}
                 placeholder="Escribe tu nombre..."
-                className="w-full bg-black/50 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-orange-500 transition-all"
+                className="w-full bg-black/50 border border-white/10 rounded-2xl px-4 py-3 text-white font-bold outline-none focus:border-orange-500 transition-all text-sm"
               />
             </div>
 
             <div>
-              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center mb-2">
-                <School size={14} className="mr-2 text-cyan-400" />
+              <label className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.24em] text-slate-400 flex items-center mb-1.5">
+                <School size={12} className="mr-2 text-cyan-400" />
                 Unidad educativa local
               </label>
 
@@ -262,22 +294,22 @@ const Lobby = () => {
                 onClick={() => setShowEscuelas(true)}
                 onMouseEnter={() => setIsHovering(true)}
                 onMouseLeave={() => setIsHovering(false)}
-                className="w-full bg-black/50 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none hover:border-cyan-400 transition-all flex items-center justify-between text-left"
+                className="w-full bg-black/50 border border-white/10 rounded-2xl px-4 py-3 text-white font-bold outline-none hover:border-cyan-400 transition-all flex items-center justify-between text-left text-sm"
               >
                 <span className={escuela ? 'text-white' : 'text-slate-500'}>
                   {escuela || 'Seleccionar escuela...'}
                 </span>
-                <MapPin className="text-cyan-400" size={18} />
+                <MapPin className="text-cyan-400" size={17} />
               </button>
             </div>
 
             <div>
-              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center mb-3">
-                <Users size={14} className="mr-2 text-white" />
+              <label className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.24em] text-slate-400 flex items-center mb-1.5">
+                <Users size={12} className="mr-2 text-white" />
                 Selecciona tu agente
               </label>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <motion.button
                   type="button"
                   onClick={() => setAvatar('chica')}
@@ -289,21 +321,23 @@ const Lobby = () => {
                     setHoverAvatar('');
                     setIsHovering(false);
                   }}
-                  whileHover={{ y: -8, scale: 1.04 }}
+                  whileHover={{ y: -4, scale: 1.02 }}
                   whileTap={{ scale: 0.96 }}
-                  className={`p-5 rounded-3xl border transition-all ${
+                  className={`p-3 rounded-[1.5rem] border transition-all ${
                     avatar === 'chica' || hoverAvatar === 'chica'
-                      ? 'bg-orange-500/20 border-orange-500 shadow-[0_0_28px_rgba(249,115,22,0.35)]'
+                      ? 'bg-orange-500/20 border-orange-500 shadow-[0_0_24px_rgba(249,115,22,0.35)]'
                       : 'bg-white/5 border-white/10'
                   }`}
                 >
                   <img
                     src={avatarImages.chica}
                     alt="Avatar niña"
-                    className="w-24 h-24 mx-auto mb-3 rounded-3xl bg-white/10 p-2"
+                    className="w-[4.5rem] h-[4.5rem] md:w-[5rem] md:h-[5rem] mx-auto mb-1.5 rounded-3xl bg-white/10 p-1.5"
                   />
-                  <div className="text-[10px] font-black uppercase tracking-widest">Niña</div>
-                  <div className="text-[8px] mt-1 text-orange-200/70 uppercase font-black tracking-widest">
+                  <div className="text-[9px] font-black uppercase tracking-widest">
+                    Niña
+                  </div>
+                  <div className="text-[7px] mt-0.5 text-orange-200/70 uppercase font-black tracking-widest">
                     Agente alerta
                   </div>
                 </motion.button>
@@ -319,21 +353,23 @@ const Lobby = () => {
                     setHoverAvatar('');
                     setIsHovering(false);
                   }}
-                  whileHover={{ y: -8, scale: 1.04 }}
+                  whileHover={{ y: -4, scale: 1.02 }}
                   whileTap={{ scale: 0.96 }}
-                  className={`p-5 rounded-3xl border transition-all ${
+                  className={`p-3 rounded-[1.5rem] border transition-all ${
                     avatar === 'chico' || hoverAvatar === 'chico'
-                      ? 'bg-cyan-500/20 border-cyan-400 shadow-[0_0_28px_rgba(34,211,238,0.35)]'
+                      ? 'bg-cyan-500/20 border-cyan-400 shadow-[0_0_24px_rgba(34,211,238,0.35)]'
                       : 'bg-white/5 border-white/10'
                   }`}
                 >
                   <img
                     src={avatarImages.chico}
                     alt="Avatar niño"
-                    className="w-24 h-24 mx-auto mb-3 rounded-3xl bg-white/10 p-2"
+                    className="w-[4.5rem] h-[4.5rem] md:w-[5rem] md:h-[5rem] mx-auto mb-1.5 rounded-3xl bg-white/10 p-1.5"
                   />
-                  <div className="text-[10px] font-black uppercase tracking-widest">Niño</div>
-                  <div className="text-[8px] mt-1 text-cyan-200/70 uppercase font-black tracking-widest">
+                  <div className="text-[9px] font-black uppercase tracking-widest">
+                    Niño
+                  </div>
+                  <div className="text-[7px] mt-0.5 text-cyan-200/70 uppercase font-black tracking-widest">
                     Agente táctico
                   </div>
                 </motion.button>
@@ -345,9 +381,9 @@ const Lobby = () => {
               disabled={loading || !nombre.trim() || !escuela || !avatar}
               onMouseEnter={() => setIsHovering(true)}
               onMouseLeave={() => setIsHovering(false)}
-              whileHover={!loading ? { scale: 1.025, y: -3 } : {}}
-              whileTap={!loading ? { scale: 0.96 } : {}}
-              className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-30 rounded-2xl p-5 text-white font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed shadow-[0_15px_35px_rgba(249,115,22,0.25)]"
+              whileHover={!loading ? { scale: 1.012, y: -2 } : {}}
+              whileTap={!loading ? { scale: 0.97 } : {}}
+              className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-30 rounded-2xl p-3.5 text-white font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed shadow-[0_15px_35px_rgba(249,115,22,0.28)] text-xs md:text-sm"
             >
               {loading ? (
                 <motion.span
@@ -359,18 +395,62 @@ const Lobby = () => {
               ) : (
                 <>
                   Comenzar aventura
-                  <ChevronRight size={18} />
+                  <ChevronRight size={17} />
                 </>
               )}
             </motion.button>
           </form>
-        </div>
-      </motion.div>
+
+          <motion.div
+            animate={{
+              y: [0, -3, 0],
+              rotate: [-0.4, 0.4, -0.4]
+            }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+            className="mt-3 relative bg-gradient-to-br from-cyan-400/12 via-white/10 to-orange-400/12 border border-white/15 rounded-[1.7rem] p-3.5 backdrop-blur-xl shadow-[0_0_38px_rgba(34,211,238,0.16)] overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(255,255,255,0.16),transparent_25%),radial-gradient(circle_at_85%_20%,rgba(34,211,238,0.16),transparent_25%),radial-gradient(circle_at_50%_90%,rgba(249,115,22,0.18),transparent_28%)]" />
+
+            <div className="relative z-10 flex items-start gap-3">
+              <div className="bg-orange-500/15 border border-orange-400/20 p-2 rounded-2xl text-orange-300">
+                <HelpCircle size={18} />
+              </div>
+
+              <div className="flex-1">
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <h4 className="text-orange-300 font-black text-[9px] uppercase tracking-[0.25em]">
+                    ¿Sabías que?
+                  </h4>
+
+                  <div className="flex gap-2 text-xl">
+                    <motion.span
+                      animate={{ y: [0, -6, 0], rotate: [-8, 8, -8] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      💡
+                    </motion.span>
+                    <motion.span
+                      animate={{ y: [0, -5, 0], scale: [1, 1.1, 1] }}
+                      transition={{ duration: 2.4, repeat: Infinity }}
+                    >
+                      🧠
+                    </motion.span>
+                  </div>
+                </div>
+
+                <p className="text-white text-[11px] md:text-xs leading-relaxed font-semibold">
+                  El riesgo es una construcción social: no hay riesgo si no existen personas expuestas y vulnerables.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+      </motion.section>
 
       <AnimatePresence>
         {showEscuelas && (
           <motion.div
-            className="fixed inset-0 z-[99999] flex items-center justify-center p-5"
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -386,11 +466,11 @@ const Lobby = () => {
               initial={{ opacity: 0, scale: 0.9, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 30 }}
-              className="relative w-full max-w-5xl bg-slate-950 border border-cyan-400/20 rounded-[3rem] p-6 shadow-[0_0_80px_rgba(34,211,238,0.18)]"
+              className="relative w-full max-w-5xl bg-slate-950 border border-cyan-400/20 rounded-[2.4rem] p-5 shadow-[0_0_80px_rgba(34,211,238,0.25)]"
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-5">
                 <div>
-                  <p className="text-cyan-400 text-[10px] font-black uppercase tracking-[0.35em]">
+                  <p className="text-cyan-400 text-[9px] font-black uppercase tracking-[0.32em]">
                     Censo Escolar 18D03
                   </p>
                   <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight mt-1">
@@ -401,6 +481,8 @@ const Lobby = () => {
                 <button
                   type="button"
                   onClick={() => setShowEscuelas(false)}
+                  onMouseEnter={() => setIsHovering(true)}
+                  onMouseLeave={() => setIsHovering(false)}
                   className="bg-white/10 hover:bg-red-500/20 border border-white/10 p-3 rounded-2xl transition-all"
                 >
                   <X size={20} />
@@ -416,19 +498,21 @@ const Lobby = () => {
                       setEscuela(item);
                       setShowEscuelas(false);
                     }}
-                    whileHover={{ y: -5, scale: 1.03 }}
+                    onMouseEnter={() => setIsHovering(true)}
+                    onMouseLeave={() => setIsHovering(false)}
+                    whileHover={{ y: -4, scale: 1.025 }}
                     whileTap={{ scale: 0.96 }}
-                    className={`p-4 rounded-2xl border text-left transition-all min-h-[90px] ${
+                    className={`p-3 rounded-2xl border text-left transition-all min-h-[76px] ${
                       escuela === item
                         ? 'bg-cyan-500/20 border-cyan-400 text-white'
                         : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:border-cyan-400/50'
                     }`}
                   >
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-2">
                       <div className="bg-cyan-400/10 p-2 rounded-xl text-cyan-300 w-fit">
-                        <School size={18} />
+                        <School size={16} />
                       </div>
-                      <span className="text-[10px] md:text-xs font-black uppercase tracking-wider leading-tight">
+                      <span className="text-[9px] md:text-[11px] font-black uppercase tracking-wider leading-tight">
                         {item}
                       </span>
                     </div>
@@ -439,8 +523,8 @@ const Lobby = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </main>
   );
 };
 
-export default Lobby;
+export default LobbyUltra;
