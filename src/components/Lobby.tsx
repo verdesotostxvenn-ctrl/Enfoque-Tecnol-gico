@@ -9,8 +9,9 @@ const Lobby = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // 🖱️ Posición del cursor con actualización inmediata
+  // 🖱️ Lógica de posición y estado de hover
   const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
+  const [isHovering, setIsHovering] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -19,6 +20,9 @@ const Lobby = () => {
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
+
+  // Funciones para activar/desactivar el efecto del cursor
+  const toggleHover = (state: boolean) => setIsHovering(state);
 
   const escuelasDisponibles = [
     "Escuela Río Blanco", "Escuela Río Verde", "U.E. Baños", 
@@ -40,7 +44,7 @@ const Lobby = () => {
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 md:p-10 relative overflow-hidden bg-[#020617]">
       
-      {/* 🟢 CURSOR TÁCTICO FIEL (Capa Superior Absoluta) */}
+      {/* 🟢 CURSOR TÁCTICO INTERACTIVO (Cambia a verde y crece al seleccionar) */}
       <div
         className="custom-cursor fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
         style={{ 
@@ -49,9 +53,19 @@ const Lobby = () => {
           transform: 'translate(-50%, -50%)'
         }}
       >
-        <div className="w-7 h-7 border-2 border-cyan-400 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.6)] bg-transparent">
-          <div className="w-1 h-1 bg-white rounded-full" />
-        </div>
+        <motion.div 
+          animate={{ 
+            scale: isHovering ? 1.25 : 1, // Se hace un pelín más grande
+            borderColor: isHovering ? '#10b981' : '#22d3ee' // Cambia de Cyan a Verde (Emerald)
+          }}
+          transition={{ duration: 0.2 }}
+          className="w-7 h-7 border-2 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)] bg-transparent"
+        >
+          <motion.div 
+            animate={{ backgroundColor: isHovering ? '#10b981' : '#ffffff' }}
+            className="w-1 h-1 rounded-full" 
+          />
+        </motion.div>
       </div>
 
       {/* 🔵 BOKEH INTENSIFICADO */}
@@ -81,7 +95,6 @@ const Lobby = () => {
         animate={{ opacity: 1, y: 0 }}
         className="relative w-full max-w-6xl bg-slate-900/40 backdrop-blur-3xl rounded-[3.5rem] border border-white/5 shadow-2xl flex flex-col lg:flex-row overflow-hidden z-10"
       >
-        {/* PANEL IZQUIERDO: TEXTO */}
         <div className="w-full lg:w-1/2 p-10 md:p-16 border-b lg:border-b-0 lg:border-r border-white/5 bg-slate-950/20">
           <div className="flex items-center space-x-3 text-cyan-400 mb-10">
             <Activity size={18} className="animate-pulse" />
@@ -106,7 +119,6 @@ const Lobby = () => {
           </div>
         </div>
 
-        {/* PANEL DERECHO: FORMULARIO */}
         <div className="w-full lg:w-1/2 p-10 md:p-16 bg-black/10">
           <form onSubmit={handleSubmit} className="space-y-10">
             <div className="space-y-4">
@@ -117,6 +129,8 @@ const Lobby = () => {
                 type="text"
                 placeholder="Nombre completo..."
                 required
+                onMouseEnter={() => toggleHover(true)}
+                onMouseLeave={() => toggleHover(false)}
                 className="w-full bg-slate-950/60 border border-white/5 rounded-2xl px-6 py-5 focus:outline-none focus:border-cyan-500/50 transition-all text-xl font-bold placeholder:text-slate-800"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
@@ -129,6 +143,8 @@ const Lobby = () => {
               </label>
               <button
                 type="button"
+                onMouseEnter={() => toggleHover(true)}
+                onMouseLeave={() => toggleHover(false)}
                 onClick={() => setIsModalOpen(true)}
                 className={`w-full flex items-center justify-between p-5 rounded-2xl border transition-all ${
                   escuela 
@@ -148,6 +164,8 @@ const Lobby = () => {
 
             <button
               type="submit"
+              onMouseEnter={() => toggleHover(true)}
+              onMouseLeave={() => toggleHover(false)}
               disabled={loading || !nombre || !escuela}
               className="relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 p-6 font-black uppercase tracking-[0.3em] text-black shadow-2xl transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-20"
             >
@@ -158,7 +176,6 @@ const Lobby = () => {
         </div>
       </motion.div>
 
-      {/* MODAL DE UNIDADES (También con z-index corregido para el cursor) */}
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-[50] flex items-center justify-center p-4">
@@ -178,7 +195,12 @@ const Lobby = () => {
                   <Search className="text-cyan-400" size={18} />
                   <h2 className="text-xs font-black uppercase tracking-[0.3em]">Censo del Distrito</h2>
                 </div>
-                <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
+                <button 
+                  onMouseEnter={() => toggleHover(true)}
+                  onMouseLeave={() => toggleHover(false)}
+                  onClick={() => setIsModalOpen(false)} 
+                  className="p-2 hover:bg-white/5 rounded-full transition-colors"
+                >
                   <X size={20} />
                 </button>
               </div>
@@ -187,6 +209,8 @@ const Lobby = () => {
                 {escuelasDisponibles.map((item) => (
                   <button
                     key={item}
+                    onMouseEnter={() => toggleHover(true)}
+                    onMouseLeave={() => toggleHover(false)}
                     onClick={() => { setEscuela(item); setIsModalOpen(false); }}
                     className={`flex items-center p-4 rounded-xl border transition-all text-left ${
                       escuela === item 
