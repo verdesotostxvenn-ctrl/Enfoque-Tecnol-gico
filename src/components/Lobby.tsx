@@ -76,29 +76,31 @@ const Lobby = () => {
     localStorage.setItem('agenteEscuela', escuela);
     localStorage.setItem('agenteAvatar', avatar);
     localStorage.setItem('agenteNivel', '1');
-
-    const { error } = await supabase.from('agentes').insert([
-      {
-        nombre: nombreLimpio,
-        institucion: escuela,
-        avatar,
-        nivel: 1,
-        mision_volcan: false,
-        mision_inundacion: false,
-        mision_evacuacion: false,
-        ultima_conexion: new Date().toISOString()
-      }
-    ]);
-
-    if (error) {
-      console.error('Error Supabase Lobby:', error);
-      alert('Error de sincronización satelital.');
-      setLoading(false);
-      return;
-    }
+    localStorage.setItem('misionVolcanCompletada', 'false');
+    localStorage.setItem('misionInundacionCompletada', 'false');
+    localStorage.setItem('misionEvacuacionCompletada', 'false');
 
     window.dispatchEvent(new Event('agenteNivelActualizado'));
-    navigate('/hub');
+
+    try {
+      const { error } = await supabase.from('agentes').insert([
+        {
+          nombre: nombreLimpio,
+          institucion: escuela
+        }
+      ]);
+
+      if (error) {
+        console.warn('Supabase no sincronizó el registro, pero el agente fue guardado localmente:', error.message);
+      }
+    } catch (error) {
+      console.warn('Fallo de conexión con Supabase. Registro local guardado:', error);
+    }
+
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/hub');
+    }, 700);
   };
 
   return (
@@ -251,13 +253,13 @@ const Lobby = () => {
                   onClick={() => setAvatar('chica')}
                   onMouseEnter={() => setIsHovering(true)}
                   onMouseLeave={() => setIsHovering(false)}
-                  className={`flex items-center justify-center space-x-2 p-4 rounded-xl border transition-all ${
+                  className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all ${
                     avatar === 'chica'
-                      ? 'bg-orange-500/20 border-orange-500 text-white scale-[1.03]'
+                      ? 'bg-orange-500/20 border-orange-500 text-white scale-[1.03] shadow-[0_0_25px_rgba(249,115,22,0.25)]'
                       : 'bg-black/40 border-white/10 text-slate-500 hover:bg-white/10'
                   }`}
                 >
-                  <span className="text-2xl">👧🏽</span>
+                  <span className="text-5xl mb-2">👧🏽</span>
                   <span className="font-black text-[9px] uppercase tracking-widest">Niña</span>
                 </button>
 
@@ -266,13 +268,13 @@ const Lobby = () => {
                   onClick={() => setAvatar('chico')}
                   onMouseEnter={() => setIsHovering(true)}
                   onMouseLeave={() => setIsHovering(false)}
-                  className={`flex items-center justify-center space-x-2 p-4 rounded-xl border transition-all ${
+                  className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all ${
                     avatar === 'chico'
-                      ? 'bg-blue-500/20 border-blue-500 text-white scale-[1.03]'
+                      ? 'bg-blue-500/20 border-blue-500 text-white scale-[1.03] shadow-[0_0_25px_rgba(59,130,246,0.25)]'
                       : 'bg-black/40 border-white/10 text-slate-500 hover:bg-white/10'
                   }`}
                 >
-                  <span className="text-2xl">👦🏽</span>
+                  <span className="text-5xl mb-2">👦🏽</span>
                   <span className="font-black text-[9px] uppercase tracking-widest">Niño</span>
                 </button>
               </div>
@@ -285,7 +287,7 @@ const Lobby = () => {
               onMouseLeave={() => setIsHovering(false)}
               className="w-full rounded-xl bg-orange-600 p-5 font-black uppercase tracking-[0.3em] text-white shadow-2xl hover:bg-orange-500 active:scale-[0.98] transition-all disabled:opacity-10"
             >
-              {loading ? 'SINCRONIZANDO...' : 'COMENZAR AVENTURA'}
+              {loading ? 'PREPARANDO MISIÓN...' : 'COMENZAR AVENTURA'}
             </button>
           </form>
 
@@ -293,19 +295,11 @@ const Lobby = () => {
             <div className="absolute top-[-10px] left-10 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[10px] border-b-red-500/30" />
 
             <div className="absolute top-4 right-8 flex space-x-3">
-              <motion.span
-                animate={{ y: [0, -6, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="text-2xl"
-              >
+              <motion.span animate={{ y: [0, -6, 0] }} transition={{ duration: 2, repeat: Infinity }} className="text-2xl">
                 💡
               </motion.span>
 
-              <motion.span
-                animate={{ y: [0, -4, 0] }}
-                transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
-                className="text-2xl"
-              >
+              <motion.span animate={{ y: [0, -4, 0] }} transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }} className="text-2xl">
                 🧠
               </motion.span>
             </div>
@@ -342,40 +336,4 @@ const Lobby = () => {
               exit={{ opacity: 0, scale: 0.9 }}
               className="relative w-full max-w-xl bg-slate-900 border border-white/10 rounded-[2.5rem] overflow-hidden"
             >
-              <div className="p-5 border-b border-white/5 flex items-center justify-between bg-black/40 text-white font-black uppercase text-[10px] tracking-widest">
-                <span>Censo Escolar 18D03</span>
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="hover:text-red-500 transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="p-6 max-h-[40vh] overflow-y-auto grid grid-cols-1 gap-2 custom-scrollbar">
-                {escuelasDisponibles.map((item) => (
-                  <button
-                    key={item}
-                    onClick={() => {
-                      setEscuela(item);
-                      setIsModalOpen(false);
-                    }}
-                    className={`p-4 rounded-xl border transition-all text-left text-[11px] font-bold uppercase ${
-                      escuela === item
-                        ? 'bg-blue-600/20 border-blue-500 text-white shadow-lg'
-                        : 'bg-white/5 border-transparent text-slate-400 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-export default Lobby;
+              <div className="p-5 border-b border
