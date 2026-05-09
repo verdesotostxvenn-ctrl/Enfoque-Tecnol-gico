@@ -50,29 +50,33 @@ const MisionEvacuacion = () => {
       return;
     }
 
-    const { error } = await supabase
-      .from('agentes')
-      .update({
-        mision_evacuacion: true,
-        nivel: 4,
-        ultima_conexion: new Date().toISOString()
-      })
-      .eq('nombre', nombre);
+    localStorage.setItem('agenteNivel', '4');
+    localStorage.setItem('misionEvacuacionCompletada', 'true');
+    window.dispatchEvent(new Event('agenteNivelActualizado'));
 
-    if (!error) {
-      setIsCompleted(true);
-      localStorage.setItem('agenteNivel', '4');
-      window.dispatchEvent(new Event('agenteNivelActualizado'));
+    try {
+      const { error } = await supabase
+        .from('agentes')
+        .update({
+          mision_evacuacion: true,
+          nivel: 4,
+          ultima_conexion: new Date().toISOString()
+        })
+        .eq('nombre', nombre);
 
-      setTimeout(() => {
-        navigate('/hub');
-      }, 2000);
-    } else {
-      console.error('Error Supabase MisionEvacuacion:', error);
-      alert('Fallo en la comunicación con el servidor central.');
+      if (error) {
+        console.warn('Supabase no sincronizó Evacuación, pero el progreso local fue guardado:', error.message);
+      }
+    } catch (error) {
+      console.warn('Fallo de conexión con Supabase. Progreso local guardado:', error);
     }
 
-    setLoading(false);
+    setIsCompleted(true);
+
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/hub');
+    }, 1500);
   };
 
   return (
