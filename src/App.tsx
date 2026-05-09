@@ -7,9 +7,9 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Ruta principal */}
+        {/* Registro inicial */}
         <Route path="/" element={<Lobby />} />
-        {/* Ruta del Hub táctico */}
+        {/* Panel de misiones */}
         <Route path="/hub" element={<Hub />} />
       </Routes>
     </Router>
