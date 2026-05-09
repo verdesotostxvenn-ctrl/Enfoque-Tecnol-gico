@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ShieldAlert, Mask, EyeOff, Droplets } from 'lucide-react';
+import { ChevronLeft, ShieldAlert, ShieldCheck, EyeOff, Droplets } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const MisionVolcan = () => {
@@ -18,7 +18,6 @@ const MisionVolcan = () => {
           <h1 className="text-4xl md:text-6xl font-black tracking-tighter">ALERTA VOLCÁNICA</h1>
         </header>
 
-        {/* Video Educativo */}
         <div className="aspect-video w-full rounded-[2rem] overflow-hidden border border-white/5 mb-12 shadow-2xl">
           <iframe 
             className="w-full h-full"
@@ -32,7 +31,7 @@ const MisionVolcan = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
-            <Mask className="text-orange-500 mb-4" />
+            <ShieldCheck className="text-orange-500 mb-4" />
             <h3 className="font-bold mb-2">Usa Mascarilla</h3>
             <p className="text-sm text-slate-400">Protege tus vías respiratorias de la ceniza fina.</p>
           </div>
