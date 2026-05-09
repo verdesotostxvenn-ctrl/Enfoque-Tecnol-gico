@@ -7,9 +7,9 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Página inicial en la carpeta components */}
+        {/* Esta es la pantalla de inicio */}
         <Route path="/" element={<Lobby />} />
-        {/* Página del Hub en la carpeta components */}
+        {/* Esta es la pantalla a la que saltará después del registro */}
         <Route path="/hub" element={<Hub />} />
       </Routes>
     </Router>
