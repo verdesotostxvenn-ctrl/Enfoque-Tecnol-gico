@@ -50,29 +50,33 @@ const MisionInundacion = () => {
       return;
     }
 
-    const { error } = await supabase
-      .from('agentes')
-      .update({
-        mision_inundacion: true,
-        nivel: 3,
-        ultima_conexion: new Date().toISOString()
-      })
-      .eq('nombre', nombre);
+    localStorage.setItem('agenteNivel', '3');
+    localStorage.setItem('misionInundacionCompletada', 'true');
+    window.dispatchEvent(new Event('agenteNivelActualizado'));
 
-    if (!error) {
-      setIsCompleted(true);
-      localStorage.setItem('agenteNivel', '3');
-      window.dispatchEvent(new Event('agenteNivelActualizado'));
+    try {
+      const { error } = await supabase
+        .from('agentes')
+        .update({
+          mision_inundacion: true,
+          nivel: 3,
+          ultima_conexion: new Date().toISOString()
+        })
+        .eq('nombre', nombre);
 
-      setTimeout(() => {
-        navigate('/hub');
-      }, 2000);
-    } else {
-      console.error('Error Supabase MisionInundacion:', error);
-      alert('Error en la sincronización del reporte.');
+      if (error) {
+        console.warn('Supabase no sincronizó Inundación, pero el progreso local fue guardado:', error.message);
+      }
+    } catch (error) {
+      console.warn('Fallo de conexión con Supabase. Progreso local guardado:', error);
     }
 
-    setLoading(false);
+    setIsCompleted(true);
+
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/hub');
+    }, 1500);
   };
 
   return (
