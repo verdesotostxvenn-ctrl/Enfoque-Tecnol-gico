@@ -19,9 +19,9 @@ const MisionEvacuacion = () => {
         </header>
 
         <div className="bg-emerald-500/10 border border-emerald-500/20 p-8 rounded-[2.5rem] mb-12 flex flex-col items-center">
-          <Bell size={48} className="text-emerald-500 mb-6 animate-bounce" />
+          <Bell size={48} className="text-emerald-500 mb-6" />
           <p className="text-center text-xl font-medium max-w-2xl">
-            "Identifica las señales verdes en tu Unidad Educativa. Sigue las flechas y mantén la calma."
+            Identifica las señales verdes en tu Unidad Educativa. Sigue las flechas y mantén la calma.
           </p>
         </div>
 
