@@ -3,6 +3,7 @@ import { motion, useMotionValue } from 'framer-motion';
 import { ChevronLeft, ShieldCheck, EyeOff, Droplets, Activity, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import Quiz from './Quiz'; // 👈 IMPORTAMOS EL QUIZ
 
 const MisionVolcan = () => {
   const navigate = useNavigate();
@@ -10,6 +11,9 @@ const MisionVolcan = () => {
   const [cursorVisible, setCursorVisible] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // 👈 NUEVO ESTADO PARA MOSTRAR/OCULTAR EL QUIZ
+  const [showQuiz, setShowQuiz] = useState(false); 
 
   const mouseX = useMotionValue(-100);
   const mouseY = useMotionValue(-100);
@@ -24,12 +28,13 @@ const MisionVolcan = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [mouseX, mouseY]);
 
-  const completeMission = async () => {
+  // 👈 NUEVA LÓGICA: Se ejecuta solo cuando el Agente gana el Quiz
+  const handleWinQuiz = async () => {
+    setShowQuiz(false); // Ocultamos la nube
     setLoading(true);
     const nombre = localStorage.getItem('agenteNombre');
     
     // 📊 REGISTRO ESTADÍSTICO EN SUPABASE
-    // Nota: Asegúrate de tener una tabla 'progreso' o similar
     const { error } = await supabase
       .from('agentes') 
       .update({ mision_volcan: true, ultima_conexion: new Date() })
@@ -37,6 +42,7 @@ const MisionVolcan = () => {
 
     if (!error) {
       setIsCompleted(true);
+      localStorage.setItem('agenteNivel', '2'); // 👈 ¡Sube a Nivel 2!
       setTimeout(() => navigate('/hub'), 2000);
     } else {
       alert("Error en la sincronización del reporte.");
@@ -119,9 +125,9 @@ const MisionVolcan = () => {
               <p className="text-slate-400 text-[11px] leading-tight font-medium uppercase">Cubre tanques de agua. La ceniza acidifica y contamina el suministro.</p>
             </div>
 
-            {/* BOTÓN DE FINALIZACIÓN */}
+            {/* BOTÓN PARA ABRIR EL QUIZ */}
             <button 
-              onClick={completeMission}
+              onClick={() => setShowQuiz(true)} // 👈 AHORA ABRE EL QUIZ EN LUGAR DE ENVIAR DIRECTO
               disabled={loading || isCompleted}
               onMouseEnter={() => setIsHovering(true)}
               onMouseLeave={() => setIsHovering(false)}
@@ -137,12 +143,22 @@ const MisionVolcan = () => {
                   <span>MISIÓN LOGRADA</span>
                 </>
               ) : (
-                'COMPLETAR REPORTE'
+                'INICIAR EVALUACIÓN' // 👈 CAMBIO DE TEXTO
               )}
             </button>
           </div>
         </div>
       </div>
+
+      {/* 👈 RENDERIZAMOS EL QUIZ SI showQuiz ES TRUE */}
+      {showQuiz && (
+        <Quiz 
+          tipo="volcan" 
+          onClose={() => setShowQuiz(false)} 
+          onWin={handleWinQuiz} 
+        />
+      )}
+
     </div>
   );
 };
