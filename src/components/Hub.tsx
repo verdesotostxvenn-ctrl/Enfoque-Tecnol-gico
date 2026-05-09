@@ -9,6 +9,7 @@ import {
   LogOut,
   Mountain,
   Navigation,
+  PartyPopper,
   QrCode,
   ShieldCheck,
   Sparkles,
@@ -95,6 +96,7 @@ const Hub = () => {
   const [nivelAgente, setNivelAgente] = useState(1);
   const [avatarAgente, setAvatarAgente] = useState<AvatarTipo>('chico');
   const [showCredencial, setShowCredencial] = useState(false);
+  const [showFinalCelebration, setShowFinalCelebration] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [lastLevel, setLastLevel] = useState(1);
 
@@ -152,9 +154,19 @@ const Hub = () => {
     setNivelAgente((prev) => {
       if (nivelSeguro > prev) {
         setLastLevel(nivelSeguro);
-        setShowLevelUp(true);
-        setTimeout(() => setShowLevelUp(false), 2800);
+
+        if (nivelSeguro >= 4) {
+          setShowFinalCelebration(true);
+          setTimeout(() => {
+            setShowFinalCelebration(false);
+            setShowCredencial(true);
+          }, 3600);
+        } else {
+          setShowLevelUp(true);
+          setTimeout(() => setShowLevelUp(false), 2800);
+        }
       }
+
       return nivelSeguro;
     });
 
@@ -559,6 +571,93 @@ const Hub = () => {
 
                 <p className="text-sm text-white/65 font-semibold">
                   Tu avatar evolucionó y una nueva misión está disponible.
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showFinalCelebration && (
+          <motion.div
+            className="fixed inset-0 z-[190] flex items-center justify-center bg-black/85 backdrop-blur-2xl p-5 overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {[...Array(32)].map((_, index) => (
+              <motion.div
+                key={index}
+                initial={{
+                  x: 0,
+                  y: 0,
+                  rotate: 0,
+                  scale: 0
+                }}
+                animate={{
+                  x: Math.cos(index) * (180 + (index % 6) * 36),
+                  y: Math.sin(index) * (160 + (index % 5) * 32),
+                  rotate: 360 + index * 18,
+                  scale: [0, 1, 0.8]
+                }}
+                transition={{
+                  duration: 1.8,
+                  delay: index * 0.015,
+                  ease: 'easeOut'
+                }}
+                className={`absolute left-1/2 top-1/2 w-3 h-8 rounded-full ${
+                  index % 4 === 0
+                    ? 'bg-yellow-300'
+                    : index % 4 === 1
+                      ? 'bg-cyan-300'
+                      : index % 4 === 2
+                        ? 'bg-orange-400'
+                        : 'bg-emerald-300'
+                }`}
+              />
+            ))}
+
+            <motion.div
+              initial={{ scale: 0.55, opacity: 0, y: 60, rotate: -8 }}
+              animate={{ scale: 1, opacity: 1, y: 0, rotate: 0 }}
+              exit={{ scale: 0.85, opacity: 0, y: 40 }}
+              transition={{ type: 'spring', stiffness: 170, damping: 15 }}
+              className="relative w-full max-w-lg text-center bg-gradient-to-b from-slate-900 via-slate-950 to-black border border-yellow-400/40 rounded-[3rem] p-8 shadow-[0_0_120px_rgba(234,179,8,0.35)] overflow-hidden"
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 7, repeat: Infinity, ease: 'linear' }}
+                className="absolute -inset-24 bg-[conic-gradient(from_0deg,transparent,rgba(250,204,21,0.18),transparent,rgba(34,211,238,0.18),transparent)]"
+              />
+
+              <div className="relative z-10">
+                <motion.div
+                  animate={{ y: [0, -8, 0], scale: [1, 1.08, 1] }}
+                  transition={{ duration: 1.4, repeat: Infinity }}
+                  className="mx-auto mb-5 w-32 h-32 rounded-[2.3rem] bg-yellow-400/10 border border-yellow-300/30 p-1 shadow-[0_0_50px_rgba(250,204,21,0.28)]"
+                >
+                  <img
+                    src={AVATARES[avatarAgente][4]}
+                    alt="Avatar comandante"
+                    className="w-full h-full rounded-[2rem] object-cover"
+                  />
+                </motion.div>
+
+                <div className="flex justify-center mb-3 text-yellow-300">
+                  <PartyPopper size={34} />
+                </div>
+
+                <p className="text-yellow-300 text-[10px] font-black uppercase tracking-[0.38em] mb-2">
+                  Protocolo completado
+                </p>
+
+                <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-3">
+                  ¡Comandante graduado!
+                </h2>
+
+                <p className="text-sm md:text-base text-white/70 font-semibold leading-relaxed">
+                  Has completado todas las misiones de prevención. Preparando tu credencial digital...
                 </p>
               </div>
             </motion.div>
