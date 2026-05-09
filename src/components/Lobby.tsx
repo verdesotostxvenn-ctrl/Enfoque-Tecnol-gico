@@ -246,7 +246,7 @@ const LobbyUltra = () => {
               Plataforma educativa de gestión de riesgos para entrenar agentes infantiles en prevención, emergencia y evacuación.
             </p>
 
-            <div className="relative w-24 md:w-32">
+            <div className="relative w-32 md:w-44">
               <div className="absolute inset-0 bg-orange-500/45 blur-3xl rounded-full" />
               <img
                 src="https://blogger.googleusercontent.com/img/a/AVvXsEhwwQia3e2LdO2aVrT1GFE6Cojzx6-lve9qceOZH3IiwXtV3wYKFiTioE7lSASVOnjdUexdIJwv9PUVScy_iupzCzzbbGUp7S1ByxBcJWK8fsZVexSyKj2oh7VgnJZ7iC4bkUjuko0R7SH-Lzgii-JsZmRgbdNWqQlwFlQ194py9fA-fCIIhM1HrHesW3pv"
@@ -337,9 +337,6 @@ const LobbyUltra = () => {
                   <div className="text-[9px] font-black uppercase tracking-widest">
                     Niña
                   </div>
-                  <div className="text-[7px] mt-0.5 text-orange-200/70 uppercase font-black tracking-widest">
-                    Agente alerta
-                  </div>
                 </motion.button>
 
                 <motion.button
@@ -368,9 +365,6 @@ const LobbyUltra = () => {
                   />
                   <div className="text-[9px] font-black uppercase tracking-widest">
                     Niño
-                  </div>
-                  <div className="text-[7px] mt-0.5 text-cyan-200/70 uppercase font-black tracking-widest">
-                    Agente táctico
                   </div>
                 </motion.button>
               </div>
@@ -407,12 +401,12 @@ const LobbyUltra = () => {
               rotate: [-0.4, 0.4, -0.4]
             }}
             transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-            className="mt-3 relative bg-gradient-to-br from-cyan-400/12 via-white/10 to-orange-400/12 border border-white/15 rounded-[1.7rem] p-3.5 backdrop-blur-xl shadow-[0_0_38px_rgba(34,211,238,0.16)] overflow-hidden"
+            className="mt-3 relative bg-slate-950/45 border border-white/10 rounded-[1.7rem] p-3.5 backdrop-blur-xl shadow-[0_0_24px_rgba(34,211,238,0.10)] overflow-hidden"
           >
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(255,255,255,0.16),transparent_25%),radial-gradient(circle_at_85%_20%,rgba(34,211,238,0.16),transparent_25%),radial-gradient(circle_at_50%_90%,rgba(249,115,22,0.18),transparent_28%)]" />
+            <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
 
             <div className="relative z-10 flex items-start gap-3">
-              <div className="bg-orange-500/15 border border-orange-400/20 p-2 rounded-2xl text-orange-300">
+              <div className="bg-white/5 border border-white/10 p-2 rounded-2xl text-orange-300">
                 <HelpCircle size={18} />
               </div>
 
