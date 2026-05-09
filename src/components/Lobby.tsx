@@ -22,8 +22,8 @@ import {
 import { supabase } from '../supabaseClient';
 
 const avatarImages = {
-  chica: 'https://api.dicebear.com/8.x/adventurer/svg?seed=agente-nina-lobby-ultra-final',
-  chico: 'https://api.dicebear.com/8.x/adventurer/svg?seed=agente-nino-lobby-ultra-final'
+  chica: 'https://blogger.googleusercontent.com/img/a/AVvXsEh_PnIcFYcgmsvgfKqk4Mr0s40x0a5f1_pIFmBRlR0oVInL1-uaLQIez5BrYNp-ua4-mBmHqb2A8Ox4tElSIJx3LtHnBaO-cGTxzHomjYO1f2X6KQzCYn8I0LmpqNe6o1UiXhc814JjCv0hWJ3kME5gcDJ1czrxl7xYge9BE214gnYyrIHHqxwuTMyoxPjd',
+  chico: 'https://blogger.googleusercontent.com/img/a/AVvXsEhGuah8gRxjKHRH2XeN_K7ew3dlo-4QNWudy46AsoT91CiPXkrU9JDEA1wQ1iyIcYj23qQGhITb2EJpIMP1bww_g24vx1-yYp6dYz1agR_nWX6pazjghCNOXXKGvdI0nzDG173acHzltH-fCPlxYYkVQhA47V7aFNiZmVH4HAZf8OTIqtiu0DiI7SIOd5Qe'
 };
 
 const escuelasDisponibles = [
@@ -69,6 +69,14 @@ const LobbyUltra = () => {
     window.addEventListener('mousemove', moveCursor);
     return () => window.removeEventListener('mousemove', moveCursor);
   }, [rawMouseX, rawMouseY]);
+
+
+  useEffect(() => {
+    Object.values(avatarImages).forEach((src) => {
+      const image = new Image();
+      image.src = src;
+    });
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -332,7 +340,7 @@ const LobbyUltra = () => {
                   <img
                     src={avatarImages.chica}
                     alt="Avatar niña"
-                    className="w-[4.5rem] h-[4.5rem] md:w-[5rem] md:h-[5rem] mx-auto mb-1.5 rounded-3xl bg-white/10 p-1.5"
+                    className="w-[4.5rem] h-[4.5rem] md:w-[5rem] md:h-[5rem] mx-auto mb-1.5 rounded-full bg-white/10 p-1.5 object-cover"
                   />
                   <div className="text-[9px] font-black uppercase tracking-widest">
                     Niña
@@ -361,7 +369,7 @@ const LobbyUltra = () => {
                   <img
                     src={avatarImages.chico}
                     alt="Avatar niño"
-                    className="w-[4.5rem] h-[4.5rem] md:w-[5rem] md:h-[5rem] mx-auto mb-1.5 rounded-3xl bg-white/10 p-1.5"
+                    className="w-[4.5rem] h-[4.5rem] md:w-[5rem] md:h-[5rem] mx-auto mb-1.5 rounded-full bg-white/10 p-1.5 object-cover"
                   />
                   <div className="text-[9px] font-black uppercase tracking-widest">
                     Niño
