@@ -1,25 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { motion, useMotionValue } from 'framer-motion';
-import { ChevronLeft, ZapOff, MapPin, CheckCircle2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { motion, useMotionValue, useSpring } from 'framer-motion';
+import {
+  CheckCircle2,
+  ChevronLeft,
+  Droplets,
+  LifeBuoy,
+  MapPin,
+  PlayCircle,
+  Radar,
+  ShieldCheck,
+  Sparkles,
+  Waves,
+  ZapOff
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import Quiz from './Quiz';
 
 const MisionInundacion = () => {
   const navigate = useNavigate();
+
   const [isHovering, setIsHovering] = useState(false);
   const [cursorVisible, setCursorVisible] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
 
-  const mouseX = useMotionValue(-100);
-  const mouseY = useMotionValue(-100);
+  const rawMouseX = useMotionValue(-100);
+  const rawMouseY = useMotionValue(-100);
+  const mouseX = useSpring(rawMouseX, { stiffness: 1100, damping: 55 });
+  const mouseY = useSpring(rawMouseY, { stiffness: 1100, damping: 55 });
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      mouseX.set(e.clientX);
-      mouseY.set(e.clientY);
+      rawMouseX.set(e.clientX);
+      rawMouseY.set(e.clientY);
       setCursorVisible(true);
     };
 
@@ -35,7 +50,7 @@ const MisionInundacion = () => {
       document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
       document.documentElement.removeEventListener('mouseenter', handleMouseEnter);
     };
-  }, [mouseX, mouseY]);
+  }, [rawMouseX, rawMouseY]);
 
   const handleWinQuiz = async () => {
     setShowQuiz(false);
@@ -65,7 +80,10 @@ const MisionInundacion = () => {
         .eq('nombre', nombre);
 
       if (error) {
-        console.warn('Supabase no sincronizó Inundación, pero el progreso local fue guardado:', error.message);
+        console.warn(
+          'Supabase no sincronizó Inundación, pero el progreso local fue guardado:',
+          error.message
+        );
       }
     } catch (error) {
       console.warn('Fallo de conexión con Supabase. Progreso local guardado:', error);
@@ -76,111 +94,217 @@ const MisionInundacion = () => {
     setTimeout(() => {
       setLoading(false);
       navigate('/hub');
-    }, 1500);
+    }, 1300);
   };
 
+  const consejos = [
+    {
+      icono: <ZapOff size={20} />,
+      titulo: 'Desconecta energía',
+      texto: 'Corta la luz si el agua entra en casa.'
+    },
+    {
+      icono: <MapPin size={20} />,
+      titulo: 'Busca zonas altas',
+      texto: 'Dirígete a lugares seguros sin correr.'
+    },
+    {
+      icono: <LifeBuoy size={20} />,
+      titulo: 'No cruces corrientes',
+      texto: 'El agua puede arrastrar personas y objetos.'
+    }
+  ];
+
   return (
-    <div className="min-h-screen bg-[#020617] text-white p-6 md:p-12 relative overflow-hidden cursor-none">
+    <main className="h-screen max-h-screen bg-[#010413] text-white relative overflow-hidden cursor-none p-3 md:p-5">
       <motion.div
-        animate={{ opacity: cursorVisible ? 1 : 0 }}
-        transition={{ duration: 0.15 }}
-        className="fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
         style={{
           x: mouseX,
           y: mouseY,
           translateX: '-50%',
-          translateY: '-50%',
-          willChange: 'transform'
+          translateY: '-50%'
         }}
+        animate={{ opacity: cursorVisible ? 1 : 0 }}
+        className="fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
       >
         <motion.div
           animate={{
-            scale: isHovering ? 1.4 : 1,
-            borderColor: isHovering ? '#38bdf8' : '#22d3ee'
+            scale: isHovering ? 1.08 : 1,
+            borderColor: isHovering ? '#38bdf8' : '#22d3ee',
+            backgroundColor: isHovering
+              ? 'rgba(56,189,248,0.08)'
+              : 'rgba(34,211,238,0.08)'
           }}
-          className="w-7 h-7 border-2 border-cyan-400 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)]"
+          transition={{ duration: 0.1 }}
+          className="w-4 h-4 border rounded-full flex items-center justify-center shadow-[0_0_16px_rgba(34,211,238,0.6)] backdrop-blur-sm"
         >
-          <div className="w-1 h-1 bg-white rounded-full" />
+          <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_8px_#fff]" />
         </motion.div>
       </motion.div>
 
-      <button
-        onClick={() => navigate('/hub')}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
-        className="relative z-10 flex items-center text-cyan-400 mb-8 hover:text-cyan-300 transition-colors"
-      >
-        <ChevronLeft size={20} />
-        <span className="text-xs font-black uppercase tracking-widest text-white ml-2">
-          Volver al Hub
-        </span>
-      </button>
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 19, repeat: Infinity, ease: 'linear' }}
+          className="absolute left-1/2 top-1/2 w-[1120px] h-[1120px] -translate-x-1/2 -translate-y-1/2"
+        >
+          <div className="absolute top-0 left-1/2 w-96 h-96 bg-cyan-400/35 rounded-full blur-[125px]" />
+          <div className="absolute bottom-10 right-0 w-[430px] h-[430px] bg-blue-500/28 rounded-full blur-[135px]" />
+          <div className="absolute left-0 top-1/2 w-80 h-80 bg-sky-300/18 rounded-full blur-[120px]" />
+        </motion.div>
 
-      <div className="relative z-10 max-w-4xl mx-auto">
-        <header className="mb-12">
-          <h2 className="text-blue-500 font-black text-xs uppercase tracking-[0.4em] mb-2">
-            Protocolo Hídrico
-          </h2>
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white">
-            INUNDACIONES
-          </h1>
+        <motion.div
+          animate={{
+            x: [-90, 100, -90],
+            y: [35, -65, 35],
+            opacity: [0.24, 0.5, 0.24]
+          }}
+          transition={{ duration: 6.4, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -bottom-28 -left-24 w-[500px] h-[500px] bg-cyan-500/25 rounded-full blur-[130px]"
+        />
+
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.045)_1px,transparent_1px)] [background-size:32px_32px] opacity-40" />
+      </div>
+
+      <section className="relative z-10 h-full max-w-7xl mx-auto grid grid-rows-[auto_1fr] gap-4">
+        <header className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-[2rem] px-5 py-4 flex items-center justify-between gap-4 shadow-2xl">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-cyan-300 mb-1">
+              <Waves size={15} className="animate-pulse" />
+              <span className="text-[9px] font-black uppercase tracking-[0.35em]">
+                Protocolo hídrico activado
+              </span>
+            </div>
+
+            <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter leading-none">
+              Inundaciones <span className="text-cyan-400">Seguras</span>
+            </h1>
+          </div>
+
+          <button
+            onClick={() => navigate('/hub')}
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
+            className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3 rounded-2xl text-white/60 text-[10px] font-black uppercase tracking-widest hover:text-cyan-300 hover:border-cyan-400/40 transition-all"
+          >
+            <ChevronLeft size={16} />
+            <span className="hidden sm:inline">Volver al Hub</span>
+          </button>
         </header>
 
-        <div
-          onMouseEnter={() => setCursorVisible(false)}
-          onMouseLeave={() => setCursorVisible(true)}
-          className="aspect-video w-full rounded-[2rem] overflow-hidden border border-white/5 mb-12 shadow-2xl bg-black"
-        >
-          <iframe
-            className="w-full h-full"
-            src="https://www.youtube.com/embed/jfK_I5yQi8E?autoplay=0&rel=0"
-            title="Prevención Inundaciones"
-            frameBorder="0"
-            allowFullScreen
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_0.8fr] gap-4 min-h-0">
+          <section className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-[2rem] overflow-hidden min-h-0 grid grid-rows-[1fr_auto]">
+            <div
+              onMouseEnter={() => setCursorVisible(false)}
+              onMouseLeave={() => setCursorVisible(true)}
+              className="relative bg-black/60 min-h-0"
+            >
+              <iframe
+                className="absolute inset-0 w-full h-full"
+                src="https://www.youtube.com/embed/jfK_I5yQi8E?autoplay=0&rel=0"
+                title="Prevención Inundaciones"
+                frameBorder="0"
+                allowFullScreen
+              />
+
+              <div className="absolute left-4 top-4 bg-black/45 border border-white/10 backdrop-blur-xl rounded-2xl px-4 py-3">
+                <div className="flex items-center gap-2 text-cyan-300">
+                  <Droplets size={16} />
+                  <span className="text-[9px] font-black uppercase tracking-[0.24em]">
+                    Misión 02
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 md:p-5 bg-slate-950/60 border-t border-white/10">
+              <div className="flex items-start gap-3">
+                <div className="bg-cyan-500/15 border border-cyan-400/20 p-3 rounded-2xl text-cyan-300">
+                  <Radar size={20} />
+                </div>
+
+                <div>
+                  <h3 className="text-cyan-300 font-black text-[10px] uppercase tracking-[0.25em] mb-1">
+                    Análisis de misión
+                  </h3>
+                  <p className="text-white/70 text-xs md:text-sm leading-relaxed font-semibold">
+                    Las inundaciones pueden avanzar rápido. La clave es reconocer zonas altas,
+                    cortar la energía y nunca cruzar corrientes de agua en movimiento.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside className="grid grid-rows-[auto_1fr_auto] gap-4 min-h-0">
+            <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-[2rem] p-5">
+              <div className="flex items-center gap-2 text-cyan-300 mb-2">
+                <Sparkles size={16} />
+                <span className="text-[9px] font-black uppercase tracking-[0.28em]">
+                  Objetivo
+                </span>
+              </div>
+              <p className="text-sm text-white/75 font-semibold leading-relaxed">
+                Mira la cápsula, domina las reglas de seguridad y completa la evaluación para subir al Nivel 3.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 min-h-0">
+              {consejos.map((item) => (
+                <motion.div
+                  key={item.titulo}
+                  whileHover={{ y: -3, scale: 1.01 }}
+                  className="bg-white/5 border border-white/10 rounded-[1.5rem] p-4 backdrop-blur-xl"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="bg-cyan-500/15 border border-cyan-400/20 p-2.5 rounded-2xl text-cyan-300">
+                      {item.icono}
+                    </div>
+
+                    <div>
+                      <h4 className="font-black text-[10px] uppercase tracking-widest mb-1 text-white">
+                        {item.titulo}
+                      </h4>
+                      <p className="text-slate-400 text-[11px] leading-relaxed font-semibold uppercase">
+                        {item.texto}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            <motion.button
+              type="button"
+              onClick={() => setShowQuiz(true)}
+              disabled={loading || isCompleted}
+              onMouseEnter={() => setIsHovering(true)}
+              onMouseLeave={() => setIsHovering(false)}
+              whileHover={!loading && !isCompleted ? { scale: 1.02, y: -2 } : {}}
+              whileTap={!loading && !isCompleted ? { scale: 0.97 } : {}}
+              className={`w-full p-4 rounded-[1.5rem] font-black uppercase tracking-[0.22em] transition-all flex items-center justify-center gap-3 text-xs md:text-sm ${
+                isCompleted
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_15px_35px_rgba(34,211,238,0.28)]'
+              } disabled:opacity-70`}
+            >
+              {loading ? (
+                'Actualizando nivel...'
+              ) : isCompleted ? (
+                <>
+                  <CheckCircle2 size={18} />
+                  Nivel 3 desbloqueado
+                </>
+              ) : (
+                <>
+                  <PlayCircle size={18} />
+                  Iniciar evaluación
+                </>
+              )}
+            </motion.button>
+          </aside>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-slate-900/50 p-8 rounded-3xl border border-blue-500/20 backdrop-blur-md">
-            <ZapOff className="text-blue-500 mb-4" size={32} />
-            <h3 className="text-xl font-bold mb-2 text-white">Desconecta la Energía</h3>
-            <p className="text-slate-400 text-sm">
-              Si el agua entra en casa, corta la luz de inmediato para evitar cortocircuitos.
-            </p>
-          </div>
-
-          <div className="bg-slate-900/50 p-8 rounded-3xl border border-blue-500/20 backdrop-blur-md">
-            <MapPin className="text-blue-500 mb-4" size={32} />
-            <h3 className="text-xl font-bold mb-2 text-white">Zonas Altas</h3>
-            <p className="text-slate-400 text-sm">
-              Ubica el punto más alto de tu escuela o comunidad y dirígete allí sin correr.
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={() => setShowQuiz(true)}
-          disabled={loading || isCompleted}
-          onMouseEnter={() => setIsHovering(true)}
-          onMouseLeave={() => setIsHovering(false)}
-          className={`w-full p-6 rounded-3xl font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center space-x-3 ${
-            isCompleted
-              ? 'bg-emerald-500 text-white'
-              : 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_10px_30px_rgba(59,130,246,0.3)] active:scale-95'
-          }`}
-        >
-          {loading ? (
-            'PROCESANDO...'
-          ) : isCompleted ? (
-            <>
-              <CheckCircle2 size={20} />
-              <span>NIVEL 3 DESBLOQUEADO</span>
-            </>
-          ) : (
-            'INICIAR EVALUACIÓN'
-          )}
-        </button>
-      </div>
+      </section>
 
       {showQuiz && (
         <Quiz
@@ -189,7 +313,7 @@ const MisionInundacion = () => {
           onWin={handleWinQuiz}
         />
       )}
-    </div>
+    </main>
   );
 };
 
