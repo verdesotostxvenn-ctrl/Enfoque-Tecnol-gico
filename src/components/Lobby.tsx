@@ -13,7 +13,7 @@ const Lobby = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [cursorVisible, setCursorVisible] = useState(true);
 
-  // 🚀 OPTIMIZACIÓN: Valores directos sin 'useSpring' para 0% de delay (movimiento 1:1 instantáneo)
+  // 🚀 OPTIMIZACIÓN: Valores directos para 0% de delay (movimiento 1:1 instantáneo)
   const mouseX = useMotionValue(-100);
   const mouseY = useMotionValue(-100);
 
@@ -37,7 +37,7 @@ const Lobby = () => {
       document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
       document.documentElement.removeEventListener('mouseenter', handleMouseEnter);
     };
-  }, []);
+  }, [mouseX, mouseY]);
 
   const escuelasDisponibles = [
     "Escuela Río Blanco", "Escuela Río Verde", "U.E. Baños", 
@@ -67,22 +67,26 @@ const Lobby = () => {
   return (
     <div className="h-screen w-full flex items-center justify-center p-4 md:p-6 relative overflow-hidden bg-[#010413] cursor-none">
       
-      {/* 🖱️ CURSOR TÁCTICO (Instantáneo, 0 delay) */}
+      {/* 🖱️ CURSOR TÁCTICO REDUCIDO (Instantáneo) */}
       <motion.div
         style={{ x: mouseX, y: mouseY, translateX: '-50%', translateY: '-50%', willChange: 'transform' }}
         animate={{ opacity: cursorVisible ? 1 : 0 }}
         className="fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
       >
         <motion.div 
-          animate={{ scale: isHovering ? 1.3 : 1, borderColor: isHovering ? '#f97316' : '#22d3ee' }}
+          animate={{ 
+            scale: isHovering ? 1.4 : 1, 
+            borderColor: isHovering ? '#f97316' : '#22d3ee',
+            borderWidth: isHovering ? '1px' : '2px'
+          }}
           transition={{ duration: 0.15 }}
-          className="w-8 h-8 border-2 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.3)] bg-black/10 backdrop-blur-sm"
+          className="w-6 h-6 border-2 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(34,211,238,0.2)] bg-white/5 backdrop-blur-[2px]"
         >
-          <div className="w-1.5 h-1.5 bg-white rounded-full" />
+          <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_5px_#fff]" />
         </motion.div>
       </motion.div>
 
-      {/* 🟢 BOKEH DINÁMICO (Optimizado) */}
+      {/* 🟢 BOKEH DINÁMICO */}
       <div className="absolute inset-0 pointer-events-none z-0">
         {[...Array(3)].map((_, i) => (
           <motion.div
@@ -128,15 +132,14 @@ const Lobby = () => {
             </div>
           </div>
 
-          {/* TEXTO CORREGIDO: Sin opacidad reducida, texto blanco, un poco más de peso visual */}
           <div className="pt-6 border-t border-white/20">
-            <p className="text-slate-100 font-semibold italic text-[11px] md:text-xs border-l-2 border-orange-500 pl-4 uppercase tracking-tighter drop-shadow-md">
+            <p className="text-slate-100 font-bold italic text-[11px] md:text-xs border-l-2 border-orange-500 pl-4 uppercase tracking-tighter shadow-orange-900/20">
               "Un buen conocimiento del riesgo ayuda a mejorar la resiliencia comunitaria"
             </p>
           </div>
         </div>
 
-        {/* DERECHA: Formulario + Nube de Pensamiento */}
+        {/* DERECHA: Formulario */}
         <div className="w-full lg:w-1/2 p-8 md:p-14 bg-black/30 flex flex-col justify-between overflow-hidden">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
@@ -153,7 +156,6 @@ const Lobby = () => {
               <label className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center"><Users size={12} className="mr-2 text-white" /> Selecciona tu Agente (Nivel 1)</label>
               <div className="grid grid-cols-2 gap-4">
                 
-                {/* BOTÓN NIÑA: Con Hover y Active States potenciados */}
                 <button 
                   type="button" 
                   onClick={() => setAvatar('chica')} 
@@ -169,7 +171,6 @@ const Lobby = () => {
                   <span className="font-black text-[9px] uppercase tracking-widest">Niña</span>
                 </button>
 
-                {/* BOTÓN NIÑO: Con Hover y Active States potenciados */}
                 <button 
                   type="button" 
                   onClick={() => setAvatar('chico')} 
@@ -193,22 +194,18 @@ const Lobby = () => {
             </button>
           </form>
 
-          {/* ☁️ NUBE "SABÍAS QUE" ILUMINADA */}
+          {/* ☁️ NUBE "SABÍAS QUE" */}
           <div className="mt-8 relative bg-red-600/10 border border-red-500/30 p-6 rounded-[2.8rem] backdrop-blur-xl">
-            {/* Puntero de la nube */}
             <div className="absolute top-[-10px] left-10 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[10px] border-b-red-500/30"></div>
-            
-            {/* 💡🧠 EMOJIS DENTRO */}
             <div className="absolute top-4 right-8 flex space-x-3">
-              <motion.span animate={{ y: [0, -6, 0] }} transition={{ duration: 2, repeat: Infinity }} className="text-2xl drop-shadow-[0_0_10px_orange]">💡</motion.span>
-              <motion.span animate={{ y: [0, -4, 0] }} transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }} className="text-2xl drop-shadow-[0_0_10px_pink]">🧠</motion.span>
+              <motion.span animate={{ y: [0, -6, 0] }} transition={{ duration: 2, repeat: Infinity }} className="text-2xl">💡</motion.span>
+              <motion.span animate={{ y: [0, -4, 0] }} transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }} className="text-2xl">🧠</motion.span>
             </div>
-
             <div className="flex items-start pr-14">
               <HelpCircle className="text-red-400 shrink-0 mt-1 mr-3" size={20} />
               <div>
                 <h4 className="text-red-300 font-black text-[10px] uppercase tracking-widest mb-1">¿Sabías que?</h4>
-                <p className="text-white text-[11px] leading-relaxed font-semibold opacity-90">
+                <p className="text-white text-[11px] leading-relaxed font-semibold">
                   El riesgo es una construcción social, es decir, no hay riesgo si no existen personas expuestas y vulnerables.
                 </p>
               </div>
