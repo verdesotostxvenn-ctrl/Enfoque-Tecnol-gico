@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 @layer base {
+  /* Forzamos la desaparición del cursor en todo, sin excepciones */
+  * {
+    cursor: none !important;
+  }
+
   html, body, #root {
     margin: 0;
     padding: 0;
@@ -11,17 +16,10 @@
     background-color: #020617;
     color: white;
     overflow-x: hidden;
-    /* Puntero oculto en todo el documento */
-    cursor: none !important; 
-  }
-
-  /* Forzamos que desaparezca en elementos interactivos */
-  button, input, select, textarea, a, [role="button"] {
-    cursor: none !important;
   }
 }
 
-/* Scrollbar profesional y discreta */
+/* Scrollbar personalizada para que combine con el azul marino */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -31,23 +29,13 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(6, 182, 212, 0.2);
+  background: rgba(6, 182, 212, 0.3);
   border-radius: 10px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(6, 182, 212, 0.5);
-}
-
-/* Soporte para Firefox */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(6, 182, 212, 0.2) #020617;
-}
-
-/* Desactivar cursor personalizado en móviles para evitar conflictos */
+/* Desactiva el cursor personalizado en móviles para que no estorbe */
 @media (pointer: coarse) {
-  html, body, #root, button, input {
+  * {
     cursor: auto !important;
   }
   .custom-cursor {
