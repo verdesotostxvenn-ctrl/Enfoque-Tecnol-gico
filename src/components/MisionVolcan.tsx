@@ -50,36 +50,45 @@ const MisionVolcan = () => {
       return;
     }
 
-    const { error } = await supabase
-      .from('agentes')
-      .update({
-        mision_volcan: true,
-        nivel: 2,
-        ultima_conexion: new Date().toISOString()
-      })
-      .eq('nombre', nombre);
+    localStorage.setItem('agenteNivel', '2');
+    localStorage.setItem('misionVolcanCompletada', 'true');
+    window.dispatchEvent(new Event('agenteNivelActualizado'));
 
-    if (!error) {
-      setIsCompleted(true);
-      localStorage.setItem('agenteNivel', '2');
-      window.dispatchEvent(new Event('agenteNivelActualizado'));
+    try {
+      const { error } = await supabase
+        .from('agentes')
+        .update({
+          mision_volcan: true,
+          nivel: 2,
+          ultima_conexion: new Date().toISOString()
+        })
+        .eq('nombre', nombre);
 
-      setTimeout(() => {
-        navigate('/hub');
-      }, 2000);
-    } else {
-      console.error('Error Supabase MisionVolcan:', error);
-      alert('Error en la sincronización del reporte.');
+      if (error) {
+        console.warn('Supabase no sincronizó Volcán, pero el progreso local fue guardado:', error.message);
+      }
+    } catch (error) {
+      console.warn('Fallo de conexión con Supabase. Progreso local guardado:', error);
     }
 
-    setLoading(false);
+    setIsCompleted(true);
+
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/hub');
+    }, 1500);
   };
 
   return (
     <div className="min-h-screen bg-[#010413] text-white p-6 md:p-12 relative overflow-hidden cursor-none">
-
       <motion.div
-        style={{ x: mouseX, y: mouseY, translateX: '-50%', translateY: '-50%', willChange: 'transform' }}
+        style={{
+          x: mouseX,
+          y: mouseY,
+          translateX: '-50%',
+          translateY: '-50%',
+          willChange: 'transform'
+        }}
         animate={{ opacity: cursorVisible ? 1 : 0 }}
         className="fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
       >
