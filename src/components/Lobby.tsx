@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { motion, AnimatePresence, useSpring, useMotionValue } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { School, ShieldCheck, MapPin, User, ChevronRight, Activity, X, Search, Database } from 'lucide-react';
 
 const Lobby = () => {
@@ -8,24 +8,19 @@ const Lobby = () => {
   const [escuela, setEscuela] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // Lógica del Cursor Táctico (Mouse Follower)
-  const cursorX = useMotionValue(-100);
-  const cursorY = useMotionValue(-100);
-  const springConfig = { damping: 30, stiffness: 500 };
-  const cursorXSpring = useSpring(cursorX, springConfig);
-  const cursorYSpring = useSpring(cursorY, springConfig);
+  
+  // Posición del cursor en tiempo real (Sin delay)
+  const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
+  const [isHovering, setIsHovering] = useState(false);
 
   useEffect(() => {
-    const moveCursor = (e: MouseEvent) => {
-      cursorX.set(e.clientX);
-      cursorY.set(e.clientY);
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
     };
-    window.addEventListener('mousemove', moveCursor);
-    return () => window.removeEventListener('mousemove', moveCursor);
-  }, [cursorX, cursorY]);
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
-  // Lista de ejemplo para el Distrito 18D03
   const escuelasDisponibles = [
     "Escuela Río Blanco", "Escuela Río Verde", "U.E. Baños", 
     "Unidad Educativa 04", "Unidad Educativa 05", "Unidad Educativa 06", 
@@ -38,34 +33,56 @@ const Lobby = () => {
     if (!nombre || !escuela) return;
     setLoading(true);
     const { error } = await supabase.from('agentes').insert([{ nombre, institucion: escuela }]);
-    if (error) alert('Error de conexión satelital.');
-    else alert('Acceso Concedido. Sistema de Prevención iniciado.');
+    if (error) alert('Error de sincronización satelital.');
+    else alert('Acceso Concedido.');
     setLoading(false);
   };
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 md:p-10 relative overflow-hidden bg-[#020617]">
       
-      {/* Cursor Táctico Personalizado (Solo en PC) */}
-      <motion.div
-        className="custom-cursor fixed top-0 left-0 w-6 h-6 border-2 border-cyan-400 rounded-full pointer-events-none z-[9999] mix-blend-screen hidden md:block shadow-[0_0_15px_rgba(34,211,238,0.5)]"
-        style={{ x: cursorXSpring, y: cursorYSpring, translateX: '-50%', translateY: '-50%' }}
+      {/* 🟢 CURSOR TÁCTICO SIN DELAY */}
+      <div
+        className="custom-cursor fixed top-0 left-0 pointer-events-none z-[9999] hidden md:block"
+        style={{ 
+          transform: `translate(${mousePos.x}px, ${mousePos.y}px) translate(-50%, -50%)`,
+          transition: 'transform 0.05s linear' // Mínimo suavizado para evitar parpadeo, pero fiel al mouse
+        }}
       >
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-1 bg-cyan-400 rounded-full" />
-      </motion.div>
+        <motion.div 
+          animate={{ scale: isHovering ? 1.5 : 1, borderColor: isHovering ? '#10b981' : '#06b6d4' }}
+          className="w-8 h-8 border-2 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+        >
+          <div className="w-1 h-1 bg-white rounded-full" />
+        </motion.div>
+      </div>
 
-      {/* Micromovimientos de fondo */}
+      {/* 🔵 EFECTO BOKEH DE FONDO (Círculo de luz grande con movimiento) */}
       <div className="absolute inset-0 pointer-events-none">
         <motion.div 
-          animate={{ x: [0, 40, 0], y: [0, 20, 0], opacity: [0.1, 0.18, 0.1] }}
-          transition={{ duration: 20, repeat: Infinity }}
-          className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_30%_30%,rgba(6,182,212,0.2)_0%,transparent_50%)]"
+          animate={{ 
+            x: [0, 100, -100, 0], 
+            y: [0, -50, 50, 0],
+            scale: [1, 1.2, 1],
+            rotate: 360
+          }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          className="absolute top-1/4 left-1/3 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-[120px]"
+        />
+        <motion.div 
+          animate={{ 
+            x: [0, -80, 80, 0], 
+            y: [0, 60, -60, 0],
+            scale: [1, 1.3, 1]
+          }}
+          transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+          className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-[150px]"
         />
       </div>
 
       <motion.div 
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         className="relative w-full max-w-6xl bg-slate-900/20 backdrop-blur-3xl rounded-[2.5rem] border border-white/5 shadow-2xl flex flex-col lg:flex-row overflow-hidden z-10"
       >
         {/* PANEL IZQUIERDO */}
@@ -75,7 +92,7 @@ const Lobby = () => {
             <span className="text-[10px] font-black uppercase tracking-[0.4em]">Enlace Seguro Activo</span>
           </div>
 
-          <h1 className="text-[clamp(2.5rem,7vw,4.5rem)] font-black leading-[0.85] tracking-tighter mb-8">
+          <h1 className="text-[clamp(2.5rem,7vw,4.5rem)] font-black leading-[0.85] tracking-tighter mb-8 select-none">
             MISIÓN <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">
               PREVENCIÓN
@@ -89,7 +106,7 @@ const Lobby = () => {
           <div className="flex items-center space-x-4 opacity-30">
             <Database size={20} />
             <div className="h-[1px] w-12 bg-white/20" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Protocolo v1.2.5</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Protocolo v1.2.6</span>
           </div>
         </div>
 
@@ -104,6 +121,8 @@ const Lobby = () => {
                 type="text"
                 placeholder="Nombre completo..."
                 required
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => setIsHovering(false)}
                 className="w-full bg-slate-950/40 border border-white/5 rounded-2xl px-6 py-5 focus:outline-none focus:border-cyan-500/50 transition-all text-xl font-bold placeholder:text-slate-800"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
@@ -112,10 +131,12 @@ const Lobby = () => {
 
             <div className="space-y-4">
               <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 flex items-center">
-                <School size={14} className="mr-2 text-emerald-400" /> Unidad Educativa Local
+                <School size={14} className="mr-2 text-emerald-400" /> Localización Educativa
               </label>
               <button
                 type="button"
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => setIsHovering(false)}
                 onClick={() => setIsModalOpen(true)}
                 className={`w-full flex items-center justify-between p-5 rounded-2xl border transition-all ${
                   escuela 
@@ -135,17 +156,19 @@ const Lobby = () => {
 
             <button
               type="submit"
+              onMouseEnter={() => setIsHovering(true)}
+              onMouseLeave={() => setIsHovering(false)}
               disabled={loading || !nombre || !escuela}
               className="relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 p-6 font-black uppercase tracking-[0.3em] text-black shadow-2xl transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-20"
             >
               <div className="absolute inset-0 bg-white/20 translate-x-[-100%] animate-[scan_4s_infinite_linear]" />
-              <span className="relative z-10 font-black">{loading ? 'CONECTANDO...' : 'INICIAR PROTOCOLO'}</span>
+              <span className="relative z-10">{loading ? 'CONECTANDO...' : 'INICIAR PROTOCOLO'}</span>
             </button>
           </form>
         </div>
       </motion.div>
 
-      {/* MODAL DE UNIDADES */}
+      {/* MODAL DE ESCUELAS */}
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -174,6 +197,8 @@ const Lobby = () => {
                 {escuelasDisponibles.map((item) => (
                   <button
                     key={item}
+                    onMouseEnter={() => setIsHovering(true)}
+                    onMouseLeave={() => setIsHovering(false)}
                     onClick={() => { setEscuela(item); setIsModalOpen(false); }}
                     className={`flex items-center p-4 rounded-xl border transition-all text-left ${
                       escuela === item 
