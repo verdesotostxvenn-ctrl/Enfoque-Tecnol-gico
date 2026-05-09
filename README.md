@@ -1,6 +1,9 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+# Proyecto Fusilero
+### Gestión de Riesgos - Distrito 18D03 (Baños - Río Verde)
 
-export default defineConfig({
-  plugins: [react()]
-});
+Software interactivo desarrollado para la **ESPOCH** enfocado en la educación y prevención de riesgos para niños.
+
+## Tecnologías
+* React + Vite
+* Tailwind CSS
+* Supabase
