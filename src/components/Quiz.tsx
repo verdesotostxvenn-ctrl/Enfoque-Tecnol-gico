@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, AlertCircle, BrainCircuit, Lightbulb, ChevronRight } from 'lucide-react';
+import { ShieldCheck, BrainCircuit, ChevronRight } from 'lucide-react';
 
 interface Question {
   pregunta: string;
@@ -19,18 +19,14 @@ const Quiz: React.FC<QuizProps> = ({ tipo, onWin, onClose }) => {
   const [selected, setSelected] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
 
-  // Banco de preguntas tácticas
+  // Banco de preguntas tácticas basadas en los videos
   const preguntas: Record<string, Question[]> = {
     volcan: [
-      { pregunta: "¿Qué debes usar para proteger tus pulmones de la ceniza?", opciones: ["Mascarilla", "Bufanda normal", "Nada"], correcta: 0 },
-      { pregunta: "¿Qué debes hacer con los depósitos de agua?", opciones: ["Dejarlos abiertos", "Cubrirlos", "Vaciar todo"], correcta: 1 },
-      { pregunta: "Si usas lentes de contacto, ¿qué es mejor usar?", opciones: ["Gafas protectoras", "Nada", "Lentes de sol"], correcta: 0 }
+      { pregunta: "¿Qué debes usar para proteger tus vías respiratorias de la ceniza?", opciones: ["Mascarilla", "Bufanda", "Nada"], correcta: 0 },
+      { pregunta: "¿Qué debes hacer con los depósitos de agua para evitar que se contaminen?", opciones: ["Vaciarlos", "Cubrirlos", "Dejarlos abiertos"], correcta: 1 },
+      { pregunta: "Si usas lentes de contacto, ¿qué es mejor usar durante la caída de ceniza?", opciones: ["Gafas protectoras", "Nada", "Lentes de sol"], correcta: 0 }
     ],
-    inundacion: [
-      { pregunta: "Si el agua entra en casa, ¿qué desconectas primero?", opciones: ["La radio", "La energía eléctrica", "La televisión"], correcta: 1 },
-      { pregunta: "¿Hacia dónde debes dirigirte en una inundación?", opciones: ["A la calle", "A zonas altas", "Al sótano"], correcta: 1 },
-      { pregunta: "¿Qué debe tener tu mochila de emergencia?", opciones: ["Juguetes", "Botiquín y linterna", "Libros"], correcta: 1 }
-    ]
+    // Por ahora solo usaremos volcan para probar
   };
 
   const actualQuestions = preguntas[tipo] || preguntas.volcan;
