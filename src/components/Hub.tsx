@@ -6,9 +6,16 @@ import { useNavigate } from 'react-router-dom';
 const Hub = () => {
   const navigate = useNavigate();
   const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
-  const [isHovering, setIsHovering] = useState(false); // Para el efecto del cursor
+  const [isHovering, setIsHovering] = useState(false);
+  
+  // 💾 ESTADOS AÑADIDOS
+  const [nombreAgente, setNombreAgente] = useState('AGENTE');
 
   useEffect(() => {
+    // 🔍 RECUPERAR NOMBRE DEL STORAGE
+    const guardado = localStorage.getItem('agenteNombre');
+    if (guardado) setNombreAgente(guardado.toUpperCase());
+
     const handleMouseMove = (e: MouseEvent) => {
       setMousePos({ x: e.clientX, y: e.clientY });
     };
@@ -16,7 +23,12 @@ const Hub = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // 1. Añadimos el "path" que configuramos en App.tsx
+  // 💾 FUNCIÓN DE CIERRE DE SESIÓN
+  const handleLogout = () => {
+    localStorage.removeItem('agenteNombre');
+    navigate('/');
+  };
+
   const misiones = [
     { 
       id: 1, 
@@ -46,7 +58,7 @@ const Hub = () => {
       
       {/* Cursor Táctico */}
       <div
-        className="custom-cursor fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
+        className="fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
         style={{ left: `${mousePos.x}px`, top: `${mousePos.y}px`, transform: 'translate(-50%, -50%)' }}
       >
         <motion.div 
@@ -63,7 +75,8 @@ const Hub = () => {
             <Activity size={16} className="animate-pulse" />
             <span className="text-[10px] font-black uppercase tracking-[0.4em]">Terminal de Agente Activa</span>
           </div>
-          <h1 className="text-4xl font-black tracking-tighter text-white">CENTRO DE <span className="text-cyan-400">OPERACIONES</span></h1>
+          {/* 🔍 SALUDO ACTUALIZADO */}
+          <h1 className="text-4xl font-black tracking-tighter text-white">BIENVENIDO, <span className="text-cyan-400">{nombreAgente}</span></h1>
         </motion.div>
 
         <motion.button 
@@ -71,7 +84,7 @@ const Hub = () => {
           onMouseLeave={() => setIsHovering(false)}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => navigate('/')}
+          onClick={handleLogout} // 🔍 CAMBIADO A handleLogout
           className="flex items-center space-x-2 bg-red-500/10 border border-red-500/20 px-6 py-3 rounded-2xl text-red-400 text-xs font-black uppercase tracking-widest hover:bg-red-500 hover:text-black transition-all"
         >
           <LogOut size={16} />
@@ -83,7 +96,6 @@ const Hub = () => {
         {misiones.map((mision, index) => (
           <motion.div
             key={mision.id}
-            // 2. Aquí activamos la navegación al dar clic
             onClick={() => navigate(mision.path)}
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
