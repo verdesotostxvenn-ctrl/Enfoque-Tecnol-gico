@@ -70,7 +70,6 @@ const LobbyUltra = () => {
     return () => window.removeEventListener('mousemove', moveCursor);
   }, [rawMouseX, rawMouseY]);
 
-
   useEffect(() => {
     Object.values(avatarImages).forEach((src) => {
       const image = new Image();
@@ -99,7 +98,13 @@ const LobbyUltra = () => {
       const { error } = await supabase.from('agentes').insert([
         {
           nombre: nombreLimpio,
-          institucion: escuela
+          institucion: escuela,
+          avatar,
+          nivel: 1,
+          mision_volcan: false,
+          mision_inundacion: false,
+          mision_evacuacion: false,
+          ultima_conexion: new Date().toISOString()
         }
       ]);
 
@@ -403,49 +408,51 @@ const LobbyUltra = () => {
             </motion.button>
           </form>
 
-          <motion.div
-            animate={{
-              y: [0, -3, 0],
-              rotate: [-0.4, 0.4, -0.4]
-            }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-            className="mt-3 relative bg-slate-950/45 border border-white/10 rounded-[1.7rem] p-3.5 backdrop-blur-xl shadow-[0_0_24px_rgba(34,211,238,0.10)] overflow-hidden"
-          >
-            <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
+          <div className="mt-3 flex justify-end">
+            <motion.div
+              animate={{
+                y: [0, -3, 0],
+                rotate: [-0.4, 0.4, -0.4]
+              }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+              className="relative w-full max-w-[430px] bg-slate-950/55 border border-white/10 rounded-[2.2rem] rounded-tr-[3rem] rounded-bl-[1.2rem] p-4 backdrop-blur-xl shadow-[0_0_24px_rgba(34,211,238,0.10)] overflow-hidden"
+            >
+              <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
+              <div className="absolute -right-3 -top-3 w-12 h-12 bg-cyan-400/10 rounded-full blur-lg" />
+              <div className="absolute right-7 -bottom-2 w-6 h-6 bg-slate-950/55 border-r border-b border-white/10 rotate-45" />
 
-            <div className="relative z-10 flex items-start gap-3">
-              <div className="bg-white/5 border border-white/10 p-2 rounded-2xl text-orange-300">
-                <HelpCircle size={18} />
-              </div>
+              <div className="relative z-10 grid grid-cols-[auto_1fr_auto] items-start gap-3">
+                <div className="bg-white/5 border border-white/10 p-2 rounded-2xl text-orange-300">
+                  <HelpCircle size={18} />
+                </div>
 
-              <div className="flex-1">
-                <div className="flex items-center justify-between gap-3 mb-1">
-                  <h4 className="text-orange-300 font-black text-[9px] uppercase tracking-[0.25em]">
+                <div>
+                  <h4 className="text-orange-300 font-black text-[9px] uppercase tracking-[0.25em] mb-1">
                     ¿Sabías que?
                   </h4>
 
-                  <div className="flex gap-2 text-xl">
-                    <motion.span
-                      animate={{ y: [0, -6, 0], rotate: [-8, 8, -8] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    >
-                      💡
-                    </motion.span>
-                    <motion.span
-                      animate={{ y: [0, -5, 0], scale: [1, 1.1, 1] }}
-                      transition={{ duration: 2.4, repeat: Infinity }}
-                    >
-                      🧠
-                    </motion.span>
-                  </div>
+                  <p className="text-white/85 text-[11px] md:text-xs leading-relaxed font-semibold max-w-[270px]">
+                    El riesgo es una construcción social: no hay riesgo si no existen personas expuestas y vulnerables.
+                  </p>
                 </div>
 
-                <p className="text-white text-[11px] md:text-xs leading-relaxed font-semibold">
-                  El riesgo es una construcción social: no hay riesgo si no existen personas expuestas y vulnerables.
-                </p>
+                <div className="flex flex-col gap-1 text-xl">
+                  <motion.span
+                    animate={{ y: [0, -6, 0], rotate: [-8, 8, -8] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    💡
+                  </motion.span>
+                  <motion.span
+                    animate={{ y: [0, -5, 0], scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2.4, repeat: Infinity }}
+                  >
+                    🧠
+                  </motion.span>
+                </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </section>
       </motion.section>
 
