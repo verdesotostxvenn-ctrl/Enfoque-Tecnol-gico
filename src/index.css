@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 @layer base {
-  /* Bloqueo absoluto del cursor original en todo el sitio */
-  *, *::before, *::after {
+  /* Forzamos la desaparición del cursor en todo, sin excepciones */
+  * {
     cursor: none !important;
   }
 
@@ -19,9 +19,9 @@
   }
 }
 
-/* Scrollbar personalizada: Delgada y de color Cyan */
+/* Scrollbar personalizada: Color Cyan para que combine con el Lobby */
 ::-webkit-scrollbar {
-  width: 5px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -29,11 +29,15 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(6, 182, 212, 0.4);
+  background: rgba(6, 182, 212, 0.3);
   border-radius: 10px;
 }
 
-/* Desactivar efectos pesados en móviles para evitar lag */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(6, 182, 212, 0.5);
+}
+
+/* Desactiva el cursor personalizado en móviles para evitar conflictos */
 @media (pointer: coarse) {
   * {
     cursor: auto !important;
