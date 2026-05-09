@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BrainCircuit, Star, AlertTriangle, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import { supabase } from '../supabaseClient'; // Asegúrate de que la ruta sea correcta
+import { supabase } from '../supabaseClient'; 
 
 interface Question {
   pregunta: string;
@@ -42,16 +42,16 @@ const Quiz: React.FC<QuizProps> = ({ tipo, onWin, onClose }) => {
 
   const actualQuestions = preguntas[tipo] || preguntas.volcan;
 
-  // Lógica para determinar el siguiente nivel basado en la misión actual
   const handleLevelUp = async () => {
     setIsSyncing(true);
+    // Mapeo táctico de niveles
     const niveles = { volcan: 2, inundacion: 3, evacuacion: 4 };
     const nuevoNivel = niveles[tipo];
     const nombreAgente = localStorage.getItem('agenteNombre');
 
     try {
       if (nombreAgente) {
-        // 1. Reporte a la Base de Datos (Supabase)
+        // 1. Impacto en Supabase (Aseguramos que el nombre sea exacto)
         const { error } = await supabase
           .from('usuarios')
           .update({ nivel: nuevoNivel })
@@ -92,7 +92,7 @@ const Quiz: React.FC<QuizProps> = ({ tipo, onWin, onClose }) => {
           setSelected(null);
           setStatus('idle');
         } else {
-          handleLevelUp(); // Iniciamos el proceso de guardado
+          handleLevelUp();
         }
       }, 1500);
     } else {
