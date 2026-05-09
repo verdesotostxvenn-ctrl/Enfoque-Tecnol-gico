@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 const Hub = () => {
   const navigate = useNavigate();
   const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
+  const [isHovering, setIsHovering] = useState(false); // Para el efecto del cursor
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -15,10 +16,29 @@ const Hub = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
+  // 1. Añadimos el "path" que configuramos en App.tsx
   const misiones = [
-    { id: 1, titulo: 'Alerta Volcánica', desc: 'Protocolos ante caída de ceniza y lahares.', icono: <Mountain className="w-8 h-8 text-orange-500" /> },
-    { id: 2, titulo: 'Inundaciones', desc: 'Gestión de riesgos en zonas de ríos y lluvias.', icono: <Wind className="w-8 h-8 text-blue-500" /> },
-    { id: 3, titulo: 'Evacuación', desc: 'Rutas seguras y puntos de encuentro del distrito.', icono: <Navigation className="w-8 h-8 text-emerald-500" /> }
+    { 
+      id: 1, 
+      titulo: 'Alerta Volcánica', 
+      path: '/volcan', 
+      desc: 'Protocolos ante caída de ceniza y lahares.', 
+      icono: <Mountain className="w-8 h-8 text-orange-500" /> 
+    },
+    { 
+      id: 2, 
+      titulo: 'Inundaciones', 
+      path: '/inundacion', 
+      desc: 'Gestión de riesgos en zonas de ríos y lluvias.', 
+      icono: <Wind className="w-8 h-8 text-blue-500" /> 
+    },
+    { 
+      id: 3, 
+      titulo: 'Evacuación', 
+      path: '/evacuacion', 
+      desc: 'Rutas seguras y puntos de encuentro del distrito.', 
+      icono: <Navigation className="w-8 h-8 text-emerald-500" /> 
+    }
   ];
 
   return (
@@ -29,9 +49,12 @@ const Hub = () => {
         className="custom-cursor fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
         style={{ left: `${mousePos.x}px`, top: `${mousePos.y}px`, transform: 'translate(-50%, -50%)' }}
       >
-        <div className="w-7 h-7 border-2 border-cyan-400 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)]">
+        <motion.div 
+          animate={{ scale: isHovering ? 1.25 : 1, borderColor: isHovering ? '#10b981' : '#22d3ee' }}
+          className="w-7 h-7 border-2 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)]"
+        >
           <div className="w-1 h-1 bg-white rounded-full" />
-        </div>
+        </motion.div>
       </div>
 
       <header className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-6">
@@ -40,10 +63,12 @@ const Hub = () => {
             <Activity size={16} className="animate-pulse" />
             <span className="text-[10px] font-black uppercase tracking-[0.4em]">Terminal de Agente Activa</span>
           </div>
-          <h1 className="text-4xl font-black tracking-tighter">CENTRO DE <span className="text-cyan-400">OPERACIONES</span></h1>
+          <h1 className="text-4xl font-black tracking-tighter text-white">CENTRO DE <span className="text-cyan-400">OPERACIONES</span></h1>
         </motion.div>
 
         <motion.button 
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => navigate('/')}
@@ -58,6 +83,10 @@ const Hub = () => {
         {misiones.map((mision, index) => (
           <motion.div
             key={mision.id}
+            // 2. Aquí activamos la navegación al dar clic
+            onClick={() => navigate(mision.path)}
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
@@ -67,7 +96,7 @@ const Hub = () => {
             <div className="mb-8 p-6 bg-white/5 rounded-[2rem] group-hover:bg-white/10 transition-colors">
               {mision.icono}
             </div>
-            <h2 className="text-2xl font-black mb-4 uppercase tracking-tighter">{mision.titulo}</h2>
+            <h2 className="text-2xl font-black mb-4 uppercase tracking-tighter text-white">{mision.titulo}</h2>
             <p className="text-slate-400 text-sm leading-relaxed">{mision.desc}</p>
           </motion.div>
         ))}
@@ -76,9 +105,9 @@ const Hub = () => {
       <footer className="absolute bottom-8 left-8 right-8 flex justify-between items-center opacity-30">
         <div className="flex items-center space-x-4">
           <Database size={16} />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Base de Datos: Sincronizada</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white">Base de Datos: Sincronizada</span>
         </div>
-        <span className="text-[10px] font-bold">DISTRITO 18D03 - 2026</span>
+        <span className="text-[10px] font-bold text-white uppercase tracking-widest">DISTRITO 18D03 - 2026</span>
       </footer>
     </div>
   );
