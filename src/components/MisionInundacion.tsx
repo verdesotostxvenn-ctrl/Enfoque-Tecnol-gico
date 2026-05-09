@@ -6,28 +6,46 @@ import { useNavigate } from 'react-router-dom';
 const MisionInundacion = () => {
   const navigate = useNavigate();
   const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
+  const [cursorVisible, setCursorVisible] = useState(true);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       setMousePos({ x: e.clientX, y: e.clientY });
+      if (!cursorVisible) setCursorVisible(true);
     };
+
+    // Detectar cuando el ratón sale o entra de la ventana del navegador
+    const handleMouseLeave = () => setCursorVisible(false);
+    const handleMouseEnter = () => setCursorVisible(true);
+
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+    document.documentElement.addEventListener('mouseleave', handleMouseLeave);
+    document.documentElement.addEventListener('mouseenter', handleMouseEnter);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
+      document.documentElement.removeEventListener('mouseenter', handleMouseEnter);
+    };
+  }, [cursorVisible]);
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white p-6 md:p-12 relative overflow-hidden">
+    // ¡AQUÍ ESTÁ LA MAGIA!: 'cursor-none' oculta el ratón blanco de Windows/Mac
+    <div className="min-h-screen bg-[#020617] text-white p-6 md:p-12 relative overflow-hidden cursor-none">
       
-      <div
+      {/* 🟢 CURSOR TÁCTICO */}
+      <motion.div
+        animate={{ opacity: cursorVisible ? 1 : 0 }} // Se desvanece suavemente
+        transition={{ duration: 0.15 }}
         className="fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
         style={{ left: `${mousePos.x}px`, top: `${mousePos.y}px`, transform: 'translate(-50%, -50%)' }}
       >
         <div className="w-7 h-7 border-2 border-cyan-400 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)]">
           <div className="w-1 h-1 bg-white rounded-full" />
         </div>
-      </div>
+      </motion.div>
 
-      <button onClick={() => navigate('/hub')} className="relative z-10 flex items-center text-cyan-400 mb-8 hover:underline">
+      <button onClick={() => navigate('/hub')} className="relative z-10 flex items-center text-cyan-400 mb-8 hover:text-cyan-300">
         <ChevronLeft size={20} /> <span className="text-xs font-black uppercase tracking-widest">Volver al Hub</span>
       </button>
 
@@ -37,10 +55,17 @@ const MisionInundacion = () => {
           <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white">INUNDACIONES</h1>
         </header>
 
-        <div className="aspect-video w-full rounded-[2rem] overflow-hidden border border-white/5 mb-12 shadow-2xl bg-black">
+        {/* 🎬 CAJA DEL VIDEO */}
+        {/* Estos eventos ocultan el cursor verde cuando entras al video */}
+        <div 
+          onMouseEnter={() => setCursorVisible(false)}
+          onMouseLeave={() => setCursorVisible(true)}
+          className="aspect-video w-full rounded-[2rem] overflow-hidden border border-white/5 mb-12 shadow-2xl bg-black"
+        >
           <iframe 
             className="w-full h-full"
-            src="https://www.youtube.com/embed/YpS8Vf9fRpk" 
+            // NOTA: Cambia este código 'YpS8Vf9fRpk' por la ID del video de YouTube que quieras usar
+            src="https://www.youtube.com/embed/jfK_I5yQi8E" 
             title="Prevención Inundaciones"
             frameBorder="0"
             allowFullScreen
