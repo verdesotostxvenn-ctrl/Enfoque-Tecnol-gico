@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Estos datos los sacas de tu panel de Supabase (Settings > API)
-const supabaseUrl = 'TU_URL_DE_PROYECTO';
-const supabaseAnonKey = 'TU_CLAVE_ANON_KEY';
+// Conexión oficial del Proyecto Fusilero
+const supabaseUrl = 'https://iordxjvbxtytcraepmnd.supabase.co';
+const supabaseAnonKey = 'sb_publishable_B0D4_ccnf1wIPx9YJUacmw_kLJuIu-g';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
