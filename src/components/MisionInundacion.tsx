@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, CloudRain, ZapOff, MapPin, Phone } from 'lucide-react';
+import { ChevronLeft, CloudRain, ZapOff, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const MisionInundacion = () => {
