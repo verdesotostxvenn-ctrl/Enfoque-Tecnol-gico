@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion, useMotionValue } from 'framer-motion';
-import { ShieldAlert, Wind, Mountain, Navigation, Activity, Database, LogOut, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
+import { Wind, Mountain, Navigation, Activity, Database, LogOut, ChevronRight, Trophy, QrCode, ShieldCheck, Award, XSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Hub = () => {
@@ -8,14 +8,25 @@ const Hub = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [nombreAgente, setNombreAgente] = useState('AGENTE');
   const [cursorVisible, setCursorVisible] = useState(true);
+  
+  // 👈 NUEVOS ESTADOS PARA EL RANGO Y LA CREDENCIAL
+  const [nivelAgente, setNivelAgente] = useState('1'); 
+  const [avatarAgente, setAvatarAgente] = useState('chico'); 
+  const [showCredencial, setShowCredencial] = useState(false);
 
   // 🚀 CURSOR DE ALTO RENDIMIENTO (0 DELAY)
   const mouseX = useMotionValue(-100);
   const mouseY = useMotionValue(-100);
 
   useEffect(() => {
-    const guardado = localStorage.getItem('agenteNombre');
-    if (guardado) setNombreAgente(guardado.toUpperCase());
+    // 👈 RECUPERAMOS DATOS DE LOCALSTORAGE
+    const guardadoNombre = localStorage.getItem('agenteNombre');
+    const guardadoNivel = localStorage.getItem('agenteNivel');
+    const guardadoAvatar = localStorage.getItem('agenteAvatar');
+    
+    if (guardadoNombre) setNombreAgente(guardadoNombre.toUpperCase());
+    if (guardadoNivel) setNivelAgente(guardadoNivel);
+    if (guardadoAvatar) setAvatarAgente(guardadoAvatar);
 
     const handleMouseMove = (e: MouseEvent) => {
       mouseX.set(e.clientX);
@@ -37,7 +48,10 @@ const Hub = () => {
   }, [mouseX, mouseY]);
 
   const handleLogout = () => {
-    localStorage.clear();
+    // 👈 BORRAMOS SOLO LO NUESTRO, NO TODA LA SESIÓN
+    localStorage.removeItem('agenteNombre');
+    localStorage.removeItem('agenteAvatar');
+    localStorage.removeItem('agenteNivel');
     navigate('/');
   };
 
@@ -91,7 +105,33 @@ const Hub = () => {
             <Activity size={16} className="animate-pulse" />
             <span className="text-[9px] font-black uppercase tracking-[0.4em]">Terminal Agente Distrito 18D03</span>
           </div>
-          <h1 className="text-4xl font-black tracking-tighter uppercase">BIENVENIDO, <span className="text-orange-500">{nombreAgente}</span></h1>
+          
+          <div className="flex flex-col md:flex-row md:items-end space-y-4 md:space-y-0 md:space-x-4">
+            <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase text-white">BIENVENIDO, <span className="text-orange-500">{nombreAgente}</span></h1>
+            
+            <div className="flex space-x-3">
+              {/* 👈 INDICADOR DE RANGO */}
+              <div className="flex items-center space-x-2 bg-orange-500/10 border border-orange-500/30 px-4 py-2 rounded-xl text-orange-400 text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(249,115,22,0.1)]">
+                <Trophy size={14} />
+                <span>Rango: {nivelAgente === '4' ? 'COMANDANTE' : `Nivel ${nivelAgente}`}</span>
+              </div>
+
+              {/* 👈 BOTÓN DE CREDENCIAL (SOLO SI ES NIVEL 4) */}
+              {nivelAgente === '4' && (
+                <motion.button 
+                  initial={{ scale: 0 }} animate={{ scale: 1 }}
+                  whileHover={{ scale: 1.05 }}
+                  onClick={() => setShowCredencial(true)}
+                  onMouseEnter={() => setIsHovering(true)}
+                  onMouseLeave={() => setIsHovering(false)}
+                  className="flex items-center space-x-2 bg-gradient-to-r from-yellow-500 to-amber-600 px-4 py-2 rounded-xl text-black text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(234,179,8,0.4)]"
+                >
+                  <Award size={14} />
+                  <span>Ver Credencial</span>
+                </motion.button>
+              )}
+            </div>
+          </div>
         </motion.div>
 
         <button 
@@ -141,6 +181,81 @@ const Hub = () => {
         </div>
         <span className="text-[9px] font-bold text-white uppercase tracking-widest">ESPOCH - INVESTIGACIÓN RESILIENCIA 2026</span>
       </footer>
+
+      {/* 👈 MODAL DE LA CREDENCIAL DE AGENTE */}
+      <AnimatePresence>
+        {showCredencial && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0, rotateY: 90 }} 
+              animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+              exit={{ scale: 0.8, opacity: 0, rotateY: -90 }}
+              transition={{ type: "spring", damping: 20 }}
+              className="relative w-full max-w-sm bg-gradient-to-b from-slate-800 to-[#020617] p-1 rounded-3xl shadow-[0_0_50px_rgba(234,179,8,0.2)]"
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:20px_20px] rounded-3xl pointer-events-none" />
+              
+              <div className="relative bg-slate-900/90 border border-white/10 h-full rounded-[1.4rem] p-6 flex flex-col items-center overflow-hidden">
+                {/* Header Credencial */}
+                <div className="w-full flex justify-between items-start mb-6">
+                  <div>
+                    <h3 className="text-[8px] text-cyan-500 font-black tracking-[0.3em] uppercase">República del Ecuador</h3>
+                    <h2 className="text-[10px] text-white font-black tracking-widest uppercase">Distrito 18D03</h2>
+                  </div>
+                  <ShieldCheck className="text-yellow-500" size={24} />
+                </div>
+
+                {/* Foto / Avatar */}
+                <div className="relative w-32 h-32 bg-gradient-to-tr from-cyan-900 to-blue-900 rounded-2xl border-2 border-cyan-500/50 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(6,182,212,0.3)]">
+                  <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.2)_50%)] bg-[length:100%_4px] pointer-events-none rounded-2xl" />
+                  <span className="text-7xl drop-shadow-2xl">{avatarAgente === 'chica' ? '👧🏽' : '👦🏽'}</span>
+                  <div className="absolute -bottom-3 bg-yellow-500 text-black text-[9px] font-black tracking-[0.2em] px-3 py-1 rounded-full uppercase border-2 border-slate-900">
+                    Comandante
+                  </div>
+                </div>
+
+                {/* Datos del Agente */}
+                <div className="w-full space-y-4 mb-8">
+                  <div className="border-b border-white/10 pb-2">
+                    <p className="text-[8px] text-slate-500 font-black tracking-widest uppercase mb-1">Identidad</p>
+                    <p className="text-lg text-white font-black uppercase tracking-wider truncate">{nombreAgente}</p>
+                  </div>
+                  <div className="flex justify-between border-b border-white/10 pb-2">
+                    <div>
+                      <p className="text-[8px] text-slate-500 font-black tracking-widest uppercase mb-1">Estatus</p>
+                      <p className="text-xs text-emerald-400 font-black uppercase tracking-widest">ACTIVO / APROBADO</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[8px] text-slate-500 font-black tracking-widest uppercase mb-1">Nivel</p>
+                      <p className="text-xs text-yellow-500 font-black uppercase tracking-widest">MAX [4]</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Código QR */}
+                <div className="w-full flex items-center justify-between bg-black/50 p-3 rounded-xl border border-white/5">
+                  <QrCode size={40} className="text-white/80" />
+                  <div className="text-right">
+                    <p className="text-[7px] text-slate-400 font-mono tracking-widest">AUTH_CODE: {Math.random().toString(36).substr(2, 8).toUpperCase()}</p>
+                    <p className="text-[7px] text-slate-500 font-mono tracking-widest mt-1">EMISIÓN: 2026-ESPOCH</p>
+                  </div>
+                </div>
+
+                {/* Botón Cerrar */}
+                <button 
+                  onClick={() => setShowCredencial(false)}
+                  onMouseEnter={() => setIsHovering(true)}
+                  onMouseLeave={() => setIsHovering(false)}
+                  className="absolute top-4 right-4 text-white/20 hover:text-red-500 transition-colors z-50"
+                >
+                  <XSquare size={20} />
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };
