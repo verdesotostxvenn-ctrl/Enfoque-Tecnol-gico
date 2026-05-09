@@ -9,7 +9,7 @@ const Lobby = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // 🖱️ Posición del cursor con actualización inmediata (Sin Delay)
+  // 🖱️ Posición del cursor con actualización inmediata
   const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
 
   useEffect(() => {
@@ -20,7 +20,6 @@ const Lobby = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Lista de escuelas (Aquí podrás agregar las 19 cuando las tengas)
   const escuelasDisponibles = [
     "Escuela Río Blanco", "Escuela Río Verde", "U.E. Baños", 
     "Unidad Educativa 04", "Unidad Educativa 05", "Unidad Educativa 06", 
@@ -41,21 +40,21 @@ const Lobby = () => {
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 md:p-10 relative overflow-hidden bg-[#020617]">
       
-      {/* 🟢 CURSOR TÁCTICO FIEL (Respuesta Directa) */}
+      {/* 🟢 CURSOR TÁCTICO FIEL (Capa Superior Absoluta) */}
       <div
-        className="custom-cursor fixed top-0 left-0 pointer-events-none z- hidden md:block"
+        className="custom-cursor fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
         style={{ 
           left: `${mousePos.x}px`, 
           top: `${mousePos.y}px`,
           transform: 'translate(-50%, -50%)'
         }}
       >
-        <div className="w-7 h-7 border-2 border-cyan-400 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.6)]">
+        <div className="w-7 h-7 border-2 border-cyan-400 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.6)] bg-transparent">
           <div className="w-1 h-1 bg-white rounded-full" />
         </div>
       </div>
 
-      {/* 🔵 BOKEH INTENSIFICADO (Luces de fondo con más presencia) */}
+      {/* 🔵 BOKEH INTENSIFICADO */}
       <div className="absolute inset-0 pointer-events-none z-0">
         <motion.div 
           animate={{ 
@@ -159,10 +158,10 @@ const Lobby = () => {
         </div>
       </motion.div>
 
-      {/* MODAL DE UNIDADES */}
+      {/* MODAL DE UNIDADES (También con z-index corregido para el cursor) */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z- flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[50] flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIsModalOpen(false)}
@@ -172,7 +171,7 @@ const Lobby = () => {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl bg-[#0f172a] border border-white/10 rounded-[2.5rem] shadow-3xl overflow-hidden"
+              className="relative w-full max-w-2xl bg-[#0f172a] border border-white/10 rounded-[2.5rem] shadow-3xl overflow-hidden z-[60]"
             >
               <div className="p-6 border-b border-white/5 flex items-center justify-between bg-slate-950/50">
                 <div className="flex items-center space-x-3">
