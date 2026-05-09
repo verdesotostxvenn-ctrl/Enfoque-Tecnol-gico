@@ -3,6 +3,7 @@ import { motion, useMotionValue } from 'framer-motion';
 import { ChevronLeft, Navigation, Briefcase, Users, Bell, CheckCircle2, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import Quiz from './Quiz'; // 👈 IMPORTAMOS EL QUIZ
 
 const MisionEvacuacion = () => {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ const MisionEvacuacion = () => {
   const [cursorVisible, setCursorVisible] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showQuiz, setShowQuiz] = useState(false); // 👈 ESTADO PARA LA TRIVIA
 
   // 🚀 RENDIMIENTO 1:1 (0 DELAY)
   const mouseX = useMotionValue(-100);
@@ -35,7 +37,9 @@ const MisionEvacuacion = () => {
     };
   }, [mouseX, mouseY]);
 
-  const completeMission = async () => {
+  // 👈 LÓGICA DE ASCENSO A NIVEL 4 (COMANDANTE)
+  const handleWinQuiz = async () => {
+    setShowQuiz(false);
     setLoading(true);
     const nombre = localStorage.getItem('agenteNombre');
     
@@ -47,6 +51,7 @@ const MisionEvacuacion = () => {
 
     if (!error) {
       setIsCompleted(true);
+      localStorage.setItem('agenteNivel', '4'); // 👈 ¡Sube al Rango Máximo!
       setTimeout(() => navigate('/hub'), 2000);
     } else {
       alert("Fallo en la comunicación con el servidor central.");
@@ -111,8 +116,9 @@ const MisionEvacuacion = () => {
           </div>
         </div>
 
+        {/* 👈 BOTÓN PARA ABRIR LA TRIVIA FINAL */}
         <button 
-          onClick={completeMission}
+          onClick={() => setShowQuiz(true)}
           disabled={loading || isCompleted}
           onMouseEnter={() => setIsHovering(true)}
           onMouseLeave={() => setIsHovering(false)}
@@ -125,13 +131,23 @@ const MisionEvacuacion = () => {
           {loading ? 'CARGANDO DATOS...' : isCompleted ? (
             <>
               <CheckCircle2 size={20} />
-              <span>MISIÓN COMPLETADA</span>
+              <span>COMANDANTE GRADUADO</span>
             </>
           ) : (
-            'CONFIRMAR CONOCIMIENTO'
+            'EXAMEN FINAL DE GRADUACIÓN'
           )}
         </button>
       </div>
+
+      {/* 👈 RENDERIZAMOS LA TRIVIA SI showQuiz ES TRUE */}
+      {showQuiz && (
+        <Quiz 
+          tipo="evacuacion" 
+          onClose={() => setShowQuiz(false)} 
+          onWin={handleWinQuiz} 
+        />
+      )}
+
     </div>
   );
 };
