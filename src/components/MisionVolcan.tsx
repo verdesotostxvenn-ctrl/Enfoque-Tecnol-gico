@@ -1,25 +1,39 @@
-import React, { useState, useEffect } from 'react';
-import { motion, useMotionValue } from 'framer-motion';
-import { ChevronLeft, ShieldCheck, EyeOff, Droplets, Activity, CheckCircle2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { motion, useMotionValue, useSpring } from 'framer-motion';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronLeft,
+  Droplets,
+  EyeOff,
+  Flame,
+  Mountain,
+  PlayCircle,
+  ShieldCheck,
+  Sparkles
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import Quiz from './Quiz';
 
 const MisionVolcan = () => {
   const navigate = useNavigate();
+
   const [isHovering, setIsHovering] = useState(false);
   const [cursorVisible, setCursorVisible] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
 
-  const mouseX = useMotionValue(-100);
-  const mouseY = useMotionValue(-100);
+  const rawMouseX = useMotionValue(-100);
+  const rawMouseY = useMotionValue(-100);
+  const mouseX = useSpring(rawMouseX, { stiffness: 1100, damping: 55 });
+  const mouseY = useSpring(rawMouseY, { stiffness: 1100, damping: 55 });
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      mouseX.set(e.clientX);
-      mouseY.set(e.clientY);
+      rawMouseX.set(e.clientX);
+      rawMouseY.set(e.clientY);
       setCursorVisible(true);
     };
 
@@ -35,7 +49,7 @@ const MisionVolcan = () => {
       document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
       document.documentElement.removeEventListener('mouseenter', handleMouseEnter);
     };
-  }, [mouseX, mouseY]);
+  }, [rawMouseX, rawMouseY]);
 
   const handleWinQuiz = async () => {
     setShowQuiz(false);
@@ -65,7 +79,10 @@ const MisionVolcan = () => {
         .eq('nombre', nombre);
 
       if (error) {
-        console.warn('Supabase no sincronizó Volcán, pero el progreso local fue guardado:', error.message);
+        console.warn(
+          'Supabase no sincronizó Volcán, pero el progreso local fue guardado:',
+          error.message
+        );
       }
     } catch (error) {
       console.warn('Fallo de conexión con Supabase. Progreso local guardado:', error);
@@ -76,140 +93,203 @@ const MisionVolcan = () => {
     setTimeout(() => {
       setLoading(false);
       navigate('/hub');
-    }, 1500);
+    }, 1300);
   };
 
+  const consejos = [
+    {
+      icono: <ShieldCheck size={20} />,
+      titulo: 'Protección facial',
+      texto: 'Usa mascarilla para evitar respirar ceniza.'
+    },
+    {
+      icono: <EyeOff size={20} />,
+      titulo: 'Visión segura',
+      texto: 'Evita lentes de contacto si hay ceniza en el ambiente.'
+    },
+    {
+      icono: <Droplets size={20} />,
+      titulo: 'Reserva hídrica',
+      texto: 'Cubre tanques y recipientes de agua.'
+    }
+  ];
+
   return (
-    <div className="min-h-screen bg-[#010413] text-white p-6 md:p-12 relative overflow-hidden cursor-none">
+    <main className="h-screen max-h-screen bg-[#010413] text-white relative overflow-hidden cursor-none p-3 md:p-5">
       <motion.div
         style={{
           x: mouseX,
           y: mouseY,
           translateX: '-50%',
-          translateY: '-50%',
-          willChange: 'transform'
+          translateY: '-50%'
         }}
         animate={{ opacity: cursorVisible ? 1 : 0 }}
         className="fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
       >
         <motion.div
           animate={{
-            scale: isHovering ? 1.4 : 1,
-            borderColor: isHovering ? '#fb923c' : '#f97316'
+            scale: isHovering ? 1.08 : 1,
+            borderColor: isHovering ? '#fb923c' : '#f97316',
+            backgroundColor: isHovering
+              ? 'rgba(251,146,60,0.08)'
+              : 'rgba(249,115,22,0.08)'
           }}
-          className="w-6 h-6 border-2 border-orange-500 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(249,115,22,0.3)] bg-white/5"
+          transition={{ duration: 0.1 }}
+          className="w-4 h-4 border rounded-full flex items-center justify-center shadow-[0_0_16px_rgba(249,115,22,0.55)] backdrop-blur-sm"
         >
-          <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_5px_#fff]" />
+          <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_8px_#fff]" />
         </motion.div>
       </motion.div>
 
-      <button
-        onClick={() => navigate('/hub')}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
-        className="relative z-10 flex items-center space-x-2 text-white/50 hover:text-orange-500 transition-colors mb-12"
-      >
-        <ChevronLeft size={20} />
-        <span className="text-[10px] font-black uppercase tracking-[0.3em]">
-          Abortar Misión
-        </span>
-      </button>
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
+          className="absolute left-1/2 top-1/2 w-[1100px] h-[1100px] -translate-x-1/2 -translate-y-1/2"
+        >
+          <div className="absolute top-0 left-1/2 w-96 h-96 bg-orange-500/35 rounded-full blur-[125px]" />
+          <div className="absolute bottom-10 right-0 w-[420px] h-[420px] bg-red-500/25 rounded-full blur-[135px]" />
+          <div className="absolute left-0 top-1/2 w-80 h-80 bg-yellow-400/18 rounded-full blur-[120px]" />
+        </motion.div>
 
-      <div className="relative z-10 max-w-5xl mx-auto">
-        <header className="mb-12">
-          <div className="flex items-center space-x-3 text-orange-500 mb-4">
-            <Activity size={18} className="animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-[0.5em]">
-              Protocolo de Ceniza: Activado
-            </span>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.045)_1px,transparent_1px)] [background-size:32px_32px] opacity-40" />
+      </div>
+
+      <section className="relative z-10 h-full max-w-7xl mx-auto grid grid-rows-[auto_1fr] gap-4">
+        <header className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-[2rem] px-5 py-4 flex items-center justify-between gap-4 shadow-2xl">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-orange-400 mb-1">
+              <Flame size={15} className="animate-pulse" />
+              <span className="text-[9px] font-black uppercase tracking-[0.35em]">
+                Protocolo de ceniza activado
+              </span>
+            </div>
+
+            <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter leading-none">
+              Alerta <span className="text-orange-500">Volcánica</span>
+            </h1>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white uppercase leading-none">
-            ALERTA <br />
-            <span className="text-orange-500">VOLCÁNICA</span>
-          </h1>
+          <button
+            onClick={() => navigate('/hub')}
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
+            className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3 rounded-2xl text-white/60 text-[10px] font-black uppercase tracking-widest hover:text-orange-400 hover:border-orange-400/40 transition-all"
+          >
+            <ChevronLeft size={16} />
+            <span className="hidden sm:inline">Volver al Hub</span>
+          </button>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          <div className="lg:col-span-2 space-y-8">
-            <div className="aspect-video w-full rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl bg-black/50 group relative">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_0.8fr] gap-4 min-h-0">
+          <section className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-[2rem] overflow-hidden min-h-0 grid grid-rows-[1fr_auto]">
+            <div className="relative bg-black/60 min-h-0">
               <iframe
-                className="w-full h-full"
+                className="absolute inset-0 w-full h-full"
                 src="https://www.youtube.com/embed/S2Y2P3w8Hps?autoplay=0&rel=0"
                 title="Prevención Volcán"
                 frameBorder="0"
                 allowFullScreen
               />
+
+              <div className="absolute left-4 top-4 bg-black/45 border border-white/10 backdrop-blur-xl rounded-2xl px-4 py-3">
+                <div className="flex items-center gap-2 text-orange-300">
+                  <Mountain size={16} />
+                  <span className="text-[9px] font-black uppercase tracking-[0.24em]">
+                    Misión 01
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div className="bg-slate-900/40 backdrop-blur-xl p-8 rounded-[2rem] border border-white/5">
-              <h3 className="text-orange-500 font-black text-xs uppercase tracking-widest mb-4">
-                Análisis de Misión
-              </h3>
-              <p className="text-slate-300 text-sm leading-relaxed font-medium">
-                El volcán Tungurahua es parte de nuestra identidad en el Distrito 18D03.
-                Aprender a convivir con su actividad es la base de nuestra resiliencia.
-                Asegúrate de identificar las zonas de lahares en Baños.
+            <div className="p-4 md:p-5 bg-slate-950/60 border-t border-white/10">
+              <div className="flex items-start gap-3">
+                <div className="bg-orange-500/15 border border-orange-400/20 p-3 rounded-2xl text-orange-300">
+                  <AlertTriangle size={20} />
+                </div>
+
+                <div>
+                  <h3 className="text-orange-300 font-black text-[10px] uppercase tracking-[0.25em] mb-1">
+                    Análisis de misión
+                  </h3>
+                  <p className="text-white/70 text-xs md:text-sm leading-relaxed font-semibold">
+                    El volcán Tungurahua forma parte de la identidad del Distrito 18D03.
+                    Aprende a proteger tus vías respiratorias, cuidar el agua y reconocer zonas de riesgo.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside className="grid grid-rows-[auto_1fr_auto] gap-4 min-h-0">
+            <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-[2rem] p-5">
+              <div className="flex items-center gap-2 text-orange-300 mb-2">
+                <Sparkles size={16} />
+                <span className="text-[9px] font-black uppercase tracking-[0.28em]">
+                  Objetivo
+                </span>
+              </div>
+              <p className="text-sm text-white/75 font-semibold leading-relaxed">
+                Mira la cápsula, recuerda los consejos tácticos y completa la evaluación para subir al Nivel 2.
               </p>
             </div>
-          </div>
 
-          <div className="flex flex-col space-y-4">
-            <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md">
-              <ShieldCheck className="text-orange-500 mb-3" size={24} />
-              <h4 className="font-black text-[10px] uppercase tracking-widest mb-2">
-                Protección Facial
-              </h4>
-              <p className="text-slate-400 text-[11px] leading-tight font-medium uppercase">
-                Usa mascarilla N95 para evitar respirar micro-cristales de roca (ceniza).
-              </p>
+            <div className="grid grid-cols-1 gap-3 min-h-0">
+              {consejos.map((item) => (
+                <motion.div
+                  key={item.titulo}
+                  whileHover={{ y: -3, scale: 1.01 }}
+                  className="bg-white/5 border border-white/10 rounded-[1.5rem] p-4 backdrop-blur-xl"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="bg-orange-500/15 border border-orange-400/20 p-2.5 rounded-2xl text-orange-300">
+                      {item.icono}
+                    </div>
+
+                    <div>
+                      <h4 className="font-black text-[10px] uppercase tracking-widest mb-1 text-white">
+                        {item.titulo}
+                      </h4>
+                      <p className="text-slate-400 text-[11px] leading-relaxed font-semibold uppercase">
+                        {item.texto}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
 
-            <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md">
-              <EyeOff className="text-orange-500 mb-3" size={24} />
-              <h4 className="font-black text-[10px] uppercase tracking-widest mb-2">
-                Visión Segura
-              </h4>
-              <p className="text-slate-400 text-[11px] leading-tight font-medium uppercase">
-                No uses lentes de contacto. La ceniza puede rayar tu córnea permanentemente.
-              </p>
-            </div>
-
-            <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md">
-              <Droplets className="text-orange-500 mb-3" size={24} />
-              <h4 className="font-black text-[10px] uppercase tracking-widest mb-2">
-                Reserva Hídrica
-              </h4>
-              <p className="text-slate-400 text-[11px] leading-tight font-medium uppercase">
-                Cubre tanques de agua. La ceniza acidifica y contamina el suministro.
-              </p>
-            </div>
-
-            <button
+            <motion.button
+              type="button"
               onClick={() => setShowQuiz(true)}
               disabled={loading || isCompleted}
               onMouseEnter={() => setIsHovering(true)}
               onMouseLeave={() => setIsHovering(false)}
-              className={`mt-4 w-full p-6 rounded-3xl font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center space-x-3 ${
+              whileHover={!loading && !isCompleted ? { scale: 1.02, y: -2 } : {}}
+              whileTap={!loading && !isCompleted ? { scale: 0.97 } : {}}
+              className={`w-full p-4 rounded-[1.5rem] font-black uppercase tracking-[0.22em] transition-all flex items-center justify-center gap-3 text-xs md:text-sm ${
                 isCompleted
                   ? 'bg-emerald-500 text-white'
-                  : 'bg-orange-600 hover:bg-orange-500 text-white shadow-[0_10px_30px_rgba(249,115,22,0.3)] active:scale-95'
-              }`}
+                  : 'bg-orange-600 hover:bg-orange-500 text-white shadow-[0_15px_35px_rgba(249,115,22,0.28)]'
+              } disabled:opacity-70`}
             >
               {loading ? (
-                'ENVIANDO REPORTE...'
+                'Actualizando nivel...'
               ) : isCompleted ? (
                 <>
-                  <CheckCircle2 size={20} />
-                  <span>MISIÓN LOGRADA</span>
+                  <CheckCircle2 size={18} />
+                  Misión lograda
                 </>
               ) : (
-                'INICIAR EVALUACIÓN'
+                <>
+                  <PlayCircle size={18} />
+                  Iniciar evaluación
+                </>
               )}
-            </button>
-          </div>
+            </motion.button>
+          </aside>
         </div>
-      </div>
+      </section>
 
       {showQuiz && (
         <Quiz
@@ -218,7 +298,7 @@ const MisionVolcan = () => {
           onWin={handleWinQuiz}
         />
       )}
-    </div>
+    </main>
   );
 };
 
