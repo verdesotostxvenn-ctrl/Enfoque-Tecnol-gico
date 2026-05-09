@@ -14,7 +14,6 @@ const MisionInundacion = () => {
       if (!cursorVisible) setCursorVisible(true);
     };
 
-    // Detectar cuando el ratón sale o entra de la ventana del navegador
     const handleMouseLeave = () => setCursorVisible(false);
     const handleMouseEnter = () => setCursorVisible(true);
 
@@ -30,12 +29,10 @@ const MisionInundacion = () => {
   }, [cursorVisible]);
 
   return (
-    // ¡AQUÍ ESTÁ LA MAGIA!: 'cursor-none' oculta el ratón blanco de Windows/Mac
     <div className="min-h-screen bg-[#020617] text-white p-6 md:p-12 relative overflow-hidden cursor-none">
       
-      {/* 🟢 CURSOR TÁCTICO */}
       <motion.div
-        animate={{ opacity: cursorVisible ? 1 : 0 }} // Se desvanece suavemente
+        animate={{ opacity: cursorVisible ? 1 : 0 }}
         transition={{ duration: 0.15 }}
         className="fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
         style={{ left: `${mousePos.x}px`, top: `${mousePos.y}px`, transform: 'translate(-50%, -50%)' }}
@@ -46,17 +43,15 @@ const MisionInundacion = () => {
       </motion.div>
 
       <button onClick={() => navigate('/hub')} className="relative z-10 flex items-center text-cyan-400 mb-8 hover:text-cyan-300">
-        <ChevronLeft size={20} /> <span className="text-xs font-black uppercase tracking-widest">Volver al Hub</span>
+        <ChevronLeft size={20} /> <span className="text-xs font-black uppercase tracking-widest text-white">Volver al Hub</span>
       </button>
 
       <div className="relative z-10 max-w-4xl mx-auto">
         <header className="mb-12">
-          <h2 className="text-blue-500 font-black text-xs uppercase tracking-[0.4em] mb-2">Protocolo Hídrico</h2>
+          <h2 className="text-blue-500 font-black text-xs uppercase tracking-[0.4em] mb-2 text-white">Protocolo Hídrico</h2>
           <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white">INUNDACIONES</h1>
         </header>
 
-        {/* 🎬 CAJA DEL VIDEO */}
-        {/* Estos eventos ocultan el cursor verde cuando entras al video */}
         <div 
           onMouseEnter={() => setCursorVisible(false)}
           onMouseLeave={() => setCursorVisible(true)}
@@ -64,7 +59,6 @@ const MisionInundacion = () => {
         >
           <iframe 
             className="w-full h-full"
-            // NOTA: Cambia este código 'YpS8Vf9fRpk' por la ID del video de YouTube que quieras usar
             src="https://www.youtube.com/embed/jfK_I5yQi8E" 
             title="Prevención Inundaciones"
             frameBorder="0"
@@ -75,12 +69,12 @@ const MisionInundacion = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-slate-900/50 p-8 rounded-3xl border border-blue-500/20 backdrop-blur-md">
             <ZapOff className="text-blue-500 mb-4" />
-            <h3 className="text-xl font-bold mb-2">Desconecta la Energía</h3>
+            <h3 className="text-xl font-bold mb-2 text-white">Desconecta la Energía</h3>
             <p className="text-slate-400 text-sm">Si el agua entra en casa, corta la luz de inmediato.</p>
           </div>
           <div className="bg-slate-900/50 p-8 rounded-3xl border border-blue-500/20 backdrop-blur-md">
             <MapPin className="text-blue-500 mb-4" />
-            <h3 className="text-xl font-bold mb-2">Zonas Altas</h3>
+            <h3 className="text-xl font-bold mb-2 text-white">Zonas Altas</h3>
             <p className="text-slate-400 text-sm">Ubica el punto más alto de tu escuela o comunidad.</p>
           </div>
         </div>
