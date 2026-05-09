@@ -2,9 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
-import { School, MapPin, User, ChevronRight, Activity, X, Users, HelpCircle } from 'lucide-react';
+import {
+  School,
+  MapPin,
+  User,
+  ChevronRight,
+  Activity,
+  X,
+  Users,
+  HelpCircle
+} from 'lucide-react';
 
 const Lobby = () => {
+  const navigate = useNavigate();
+
   const [nombre, setNombre] = useState('');
   const [escuela, setEscuela] = useState('');
   const [avatar, setAvatar] = useState('');
@@ -16,7 +27,20 @@ const Lobby = () => {
   const mouseX = useMotionValue(-100);
   const mouseY = useMotionValue(-100);
 
-  const navigate = useNavigate();
+  const escuelasDisponibles = [
+    'Escuela Río Blanco',
+    'Escuela Río Verde',
+    'U.E. Baños',
+    'Unidad Educativa 04',
+    'Unidad Educativa 05',
+    'Unidad Educativa 06',
+    'Unidad Educativa 07',
+    'Unidad Educativa 08',
+    'Unidad Educativa 09',
+    'Unidad Educativa 10',
+    'Unidad Educativa 11',
+    'Unidad Educativa 12'
+  ];
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -39,22 +63,7 @@ const Lobby = () => {
     };
   }, [mouseX, mouseY]);
 
-  const escuelasDisponibles = [
-    'Escuela Río Blanco',
-    'Escuela Río Verde',
-    'U.E. Baños',
-    'Unidad Educativa 04',
-    'Unidad Educativa 05',
-    'Unidad Educativa 06',
-    'Unidad Educativa 07',
-    'Unidad Educativa 08',
-    'Unidad Educativa 09',
-    'Unidad Educativa 10',
-    'Unidad Educativa 11',
-    'Unidad Educativa 12'
-  ];
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!nombre.trim() || !escuela || !avatar) return;
@@ -127,7 +136,11 @@ const Lobby = () => {
               x: [0, i % 2 ? 150 : -150, 0],
               y: [0, i % 2 ? -100 : 100, 0]
             }}
-            transition={{ duration: 30 + i * 5, repeat: Infinity, ease: 'linear' }}
+            transition={{
+              duration: 30 + i * 5,
+              repeat: Infinity,
+              ease: 'linear'
+            }}
             style={{
               width: '500px',
               height: '500px',
@@ -173,8 +186,8 @@ const Lobby = () => {
           </div>
 
           <div className="pt-6 border-t border-white/20">
-            <p className="text-slate-100 font-bold italic text-[11px] md:text-xs border-l-2 border-orange-500 pl-4 uppercase tracking-tighter shadow-orange-900/20">
-              &quot;Un buen conocimiento del riesgo ayuda a mejorar la resiliencia comunitaria&quot;
+            <p className="text-slate-100 font-bold italic text-[11px] md:text-xs border-l-2 border-orange-500 pl-4 uppercase tracking-tighter">
+              “Un buen conocimiento del riesgo ayuda a mejorar la resiliencia comunitaria”
             </p>
           </div>
         </div>
@@ -191,11 +204,11 @@ const Lobby = () => {
                 type="text"
                 placeholder="Escribe tu nombre..."
                 required
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
                 onMouseEnter={() => setIsHovering(true)}
                 onMouseLeave={() => setIsHovering(false)}
                 className="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-orange-500/50 transition-all text-lg font-bold text-white placeholder:text-slate-800"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
               />
             </div>
 
@@ -207,9 +220,9 @@ const Lobby = () => {
 
               <button
                 type="button"
+                onClick={() => setIsModalOpen(true)}
                 onMouseEnter={() => setIsHovering(true)}
                 onMouseLeave={() => setIsHovering(false)}
-                onClick={() => setIsModalOpen(true)}
                 className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${
                   escuela
                     ? 'border-blue-500/50 bg-blue-500/10 text-white'
@@ -229,7 +242,7 @@ const Lobby = () => {
             <div className="space-y-2">
               <label className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center">
                 <Users size={12} className="mr-2 text-white" />
-                Selecciona tu Agente (Nivel 1)
+                Selecciona tu Agente
               </label>
 
               <div className="grid grid-cols-2 gap-4">
@@ -238,19 +251,13 @@ const Lobby = () => {
                   onClick={() => setAvatar('chica')}
                   onMouseEnter={() => setIsHovering(true)}
                   onMouseLeave={() => setIsHovering(false)}
-                  className={`group flex items-center justify-center space-x-2 p-4 rounded-xl border transition-all duration-300 ${
+                  className={`flex items-center justify-center space-x-2 p-4 rounded-xl border transition-all ${
                     avatar === 'chica'
-                      ? 'bg-orange-500/20 border-orange-500 text-white scale-[1.03] shadow-[0_0_20px_rgba(249,115,22,0.3)] ring-1 ring-orange-500'
-                      : 'bg-black/40 border-white/10 text-slate-500 hover:bg-white/10 hover:border-white/40 hover:text-white hover:scale-[1.01]'
+                      ? 'bg-orange-500/20 border-orange-500 text-white scale-[1.03]'
+                      : 'bg-black/40 border-white/10 text-slate-500 hover:bg-white/10'
                   }`}
                 >
-                  <span
-                    className={`text-2xl transition-transform duration-300 ${
-                      avatar === 'chica' ? 'scale-110' : 'group-hover:scale-110'
-                    }`}
-                  >
-                    👧🏽
-                  </span>
+                  <span className="text-2xl">👧🏽</span>
                   <span className="font-black text-[9px] uppercase tracking-widest">Niña</span>
                 </button>
 
@@ -259,19 +266,13 @@ const Lobby = () => {
                   onClick={() => setAvatar('chico')}
                   onMouseEnter={() => setIsHovering(true)}
                   onMouseLeave={() => setIsHovering(false)}
-                  className={`group flex items-center justify-center space-x-2 p-4 rounded-xl border transition-all duration-300 ${
+                  className={`flex items-center justify-center space-x-2 p-4 rounded-xl border transition-all ${
                     avatar === 'chico'
-                      ? 'bg-blue-500/20 border-blue-500 text-white scale-[1.03] shadow-[0_0_20px_rgba(59,130,246,0.3)] ring-1 ring-blue-500'
-                      : 'bg-black/40 border-white/10 text-slate-500 hover:bg-white/10 hover:border-white/40 hover:text-white hover:scale-[1.01]'
+                      ? 'bg-blue-500/20 border-blue-500 text-white scale-[1.03]'
+                      : 'bg-black/40 border-white/10 text-slate-500 hover:bg-white/10'
                   }`}
                 >
-                  <span
-                    className={`text-2xl transition-transform duration-300 ${
-                      avatar === 'chico' ? 'scale-110' : 'group-hover:scale-110'
-                    }`}
-                  >
-                    👦🏽
-                  </span>
+                  <span className="text-2xl">👦🏽</span>
                   <span className="font-black text-[9px] uppercase tracking-widest">Niño</span>
                 </button>
               </div>
@@ -311,14 +312,12 @@ const Lobby = () => {
 
             <div className="flex items-start pr-14">
               <HelpCircle className="text-red-400 shrink-0 mt-1 mr-3" size={20} />
-
               <div>
                 <h4 className="text-red-300 font-black text-[10px] uppercase tracking-widest mb-1">
                   ¿Sabías que?
                 </h4>
                 <p className="text-white text-[11px] leading-relaxed font-semibold">
-                  El riesgo es una construcción social, es decir, no hay riesgo si no existen
-                  personas expuestas y vulnerables.
+                  El riesgo es una construcción social, es decir, no hay riesgo si no existen personas expuestas y vulnerables.
                 </p>
               </div>
             </div>
@@ -335,8 +334,6 @@ const Lobby = () => {
               exit={{ opacity: 0 }}
               onClick={() => setIsModalOpen(false)}
               className="absolute inset-0 bg-black/95 backdrop-blur-md cursor-pointer"
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => setIsHovering(false)}
             />
 
             <motion.div
@@ -347,11 +344,8 @@ const Lobby = () => {
             >
               <div className="p-5 border-b border-white/5 flex items-center justify-between bg-black/40 text-white font-black uppercase text-[10px] tracking-widest">
                 <span>Censo Escolar 18D03</span>
-
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  onMouseEnter={() => setIsHovering(true)}
-                  onMouseLeave={() => setIsHovering(false)}
                   className="hover:text-red-500 transition-colors"
                 >
                   <X size={18} />
@@ -366,8 +360,6 @@ const Lobby = () => {
                       setEscuela(item);
                       setIsModalOpen(false);
                     }}
-                    onMouseEnter={() => setIsHovering(true)}
-                    onMouseLeave={() => setIsHovering(false)}
                     className={`p-4 rounded-xl border transition-all text-left text-[11px] font-bold uppercase ${
                       escuela === item
                         ? 'bg-blue-600/20 border-blue-500 text-white shadow-lg'
@@ -386,4 +378,4 @@ const Lobby = () => {
   );
 };
 
-export default
+export default Lobby;
