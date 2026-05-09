@@ -103,7 +103,6 @@ const Lobby = () => {
 
   return (
     <div className="min-h-screen w-full bg-[#010413] text-white relative overflow-hidden flex items-center justify-center p-5 cursor-none">
-      {/* Cursor táctico */}
       <motion.div
         style={{
           x: mouseX,
@@ -125,7 +124,6 @@ const Lobby = () => {
         </motion.div>
       </motion.div>
 
-      {/* Fondo bokeh orbital */}
       <div className="absolute inset-0 pointer-events-none">
         <motion.div
           animate={{ rotate: 360 }}
@@ -156,7 +154,6 @@ const Lobby = () => {
         transition={{ duration: 0.55 }}
         className="relative z-10 w-full max-w-6xl bg-white/5 border border-white/10 rounded-[3rem] overflow-hidden grid grid-cols-1 lg:grid-cols-2 backdrop-blur-2xl shadow-[0_30px_120px_rgba(0,0,0,0.5)]"
       >
-        {/* Izquierda */}
         <div className="p-8 md:p-14 bg-slate-950/50 border-b lg:border-b-0 lg:border-r border-white/10 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
 
@@ -192,7 +189,6 @@ const Lobby = () => {
               </p>
             </div>
 
-            {/* Nube de idea */}
             <div className="mt-10 relative">
               <motion.div
                 animate={{ rotate: [-1.5, 1.5, -1.5], y: [0, -5, 0] }}
@@ -235,7 +231,6 @@ const Lobby = () => {
           </div>
         </div>
 
-        {/* Derecha */}
         <div className="p-8 md:p-14 bg-black/30">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -307,9 +302,7 @@ const Lobby = () => {
                     alt="Avatar niña"
                     className="w-24 h-24 mx-auto mb-3 rounded-3xl bg-white/10 p-2"
                   />
-                  <div className="text-[10px] font-black uppercase tracking-widest">
-                    Niña
-                  </div>
+                  <div className="text-[10px] font-black uppercase tracking-widest">Niña</div>
                   <div className="text-[8px] mt-1 text-orange-200/70 uppercase font-black tracking-widest">
                     Agente alerta
                   </div>
@@ -339,9 +332,7 @@ const Lobby = () => {
                     alt="Avatar niño"
                     className="w-24 h-24 mx-auto mb-3 rounded-3xl bg-white/10 p-2"
                   />
-                  <div className="text-[10px] font-black uppercase tracking-widest">
-                    Niño
-                  </div>
+                  <div className="text-[10px] font-black uppercase tracking-widest">Niño</div>
                   <div className="text-[8px] mt-1 text-cyan-200/70 uppercase font-black tracking-widest">
                     Agente táctico
                   </div>
@@ -376,18 +367,80 @@ const Lobby = () => {
         </div>
       </motion.div>
 
-      {/* Modal escuelas */}
       <AnimatePresence>
         {showEscuelas && (
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-5">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+          <motion.div
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-5"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <button
+              type="button"
               onClick={() => setShowEscuelas(false)}
               className="absolute inset-0 bg-black/80 backdrop-blur-xl"
+              aria-label="Cerrar selector de escuelas"
             />
 
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 30 }}
-              animate={{ opacity:
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 30 }}
+              className="relative w-full max-w-5xl bg-slate-950 border border-cyan-400/20 rounded-[3rem] p-6 shadow-[0_0_80px_rgba(34,211,238,0.18)]"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <p className="text-cyan-400 text-[10px] font-black uppercase tracking-[0.35em]">
+                    Censo Escolar 18D03
+                  </p>
+                  <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight mt-1">
+                    Elige tu base de entrenamiento
+                  </h3>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowEscuelas(false)}
+                  className="bg-white/10 hover:bg-red-500/20 border border-white/10 p-3 rounded-2xl transition-all"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {escuelasDisponibles.map((item) => (
+                  <motion.button
+                    key={item}
+                    type="button"
+                    onClick={() => {
+                      setEscuela(item);
+                      setShowEscuelas(false);
+                    }}
+                    whileHover={{ y: -5, scale: 1.03 }}
+                    whileTap={{ scale: 0.96 }}
+                    className={`p-4 rounded-2xl border text-left transition-all min-h-[90px] ${
+                      escuela === item
+                        ? 'bg-cyan-500/20 border-cyan-400 text-white'
+                        : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:border-cyan-400/50'
+                    }`}
+                  >
+                    <div className="flex flex-col gap-3">
+                      <div className="bg-cyan-400/10 p-2 rounded-xl text-cyan-300 w-fit">
+                        <School size={18} />
+                      </div>
+                      <span className="text-[10px] md:text-xs font-black uppercase tracking-wider leading-tight">
+                        {item}
+                      </span>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default Lobby;
