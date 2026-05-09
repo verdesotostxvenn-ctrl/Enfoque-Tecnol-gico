@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BrainCircuit, Star, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import { BrainCircuit, Star, AlertTriangle, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { supabase } from '../supabaseClient'; // Asegúrate de que la ruta sea correcta
 
 interface Question {
   pregunta: string;
@@ -19,6 +20,7 @@ const Quiz: React.FC<QuizProps> = ({ tipo, onWin, onClose }) => {
   const [selected, setSelected] = useState<number | null>(null);
   const [status, setStatus] = useState<'idle' | 'correct' | 'wrong'>('idle');
   const [score, setScore] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const preguntas: Record<string, Question[]> = {
     volcan: [
@@ -40,8 +42,45 @@ const Quiz: React.FC<QuizProps> = ({ tipo, onWin, onClose }) => {
 
   const actualQuestions = preguntas[tipo] || preguntas.volcan;
 
+  // Lógica para determinar el siguiente nivel basado en la misión actual
+  const handleLevelUp = async () => {
+    setIsSyncing(true);
+    const niveles = { volcan: 2, inundacion: 3, evacuacion: 4 };
+    const nuevoNivel = niveles[tipo];
+    const nombreAgente = localStorage.getItem('agenteNombre');
+
+    try {
+      if (nombreAgente) {
+        // 1. Reporte a la Base de Datos (Supabase)
+        const { error } = await supabase
+          .from('usuarios')
+          .update({ nivel: nuevoNivel })
+          .eq('nombre', nombreAgente);
+
+        if (error) throw error;
+
+        // 2. Actualización del "Chip de Memoria" Local
+        localStorage.setItem('agenteNivel', nuevoNivel.toString());
+        console.log(`🚀 Misión Confirmada. Agente ascendido a Nivel: ${nuevoNivel}`);
+      }
+      
+      // Pequeña pausa para que el niño sienta la importancia del proceso
+      setTimeout(() => {
+        onWin(); 
+      }, 1000);
+
+    } catch (err) {
+      console.error("❌ Error de comunicación con el centro de mando:", err);
+      // Aun si falla internet, permitimos que onWin ocurra para no frustrar al niño, 
+      // pero el localStorage ya debería estar listo.
+      onWin();
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleSelect = (index: number) => {
-    if (status !== 'idle') return; // Bloquea si ya está animando
+    if (status !== 'idle' || isSyncing) return; 
     setSelected(index);
 
     if (index === actualQuestions[step].correcta) {
@@ -53,7 +92,7 @@ const Quiz: React.FC<QuizProps> = ({ tipo, onWin, onClose }) => {
           setSelected(null);
           setStatus('idle');
         } else {
-          onWin(); // ¡Ganó!
+          handleLevelUp(); // Iniciamos el proceso de guardado
         }
       }, 1500);
     } else {
@@ -67,14 +106,13 @@ const Quiz: React.FC<QuizProps> = ({ tipo, onWin, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-      
       <motion.div 
         initial={{ scale: 0.5, opacity: 0, y: 50 }} 
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: "spring", bounce: 0.5 }}
         className="relative bg-gradient-to-b from-[#500000] to-[#2a0000] border-4 border-red-500/50 p-8 md:p-12 rounded-[3.5rem] max-w-2xl w-full shadow-[0_0_60px_rgba(239,68,68,0.3)]"
       >
-        {/* Puntero de la nube hacia abajo (estilo cómic/pensamiento) */}
+        {/* Nube de pensamiento - Puntero */}
         <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[25px] border-t-red-500/50"></div>
         <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[16px] border-l-transparent border-r-[16px] border-r-transparent border-t-[20px] border-t-[#2a0000]"></div>
 
@@ -88,11 +126,11 @@ const Quiz: React.FC<QuizProps> = ({ tipo, onWin, onClose }) => {
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center space-x-3 bg-red-500/20 px-4 py-2 rounded-2xl border border-red-500/30 w-fit">
             <BrainCircuit size={20} className="text-red-400" />
-            <span className="text-[12px] font-black uppercase tracking-[0.2em] text-red-200">Pregunta {step + 1} de {actualQuestions.length}</span>
+            <span className="text-[12px] font-black uppercase tracking-[0.2em] text-red-200">Misión: {tipo.toUpperCase()}</span>
           </div>
           
           <motion.div 
-            key={score} // Hace que rebote cuando el puntaje cambia
+            key={score}
             initial={{ scale: 1.5, color: '#facc15' }}
             animate={{ scale: 1, color: '#ffffff' }}
             className="flex items-center space-x-2 bg-yellow-500/20 px-4 py-2 rounded-2xl border border-yellow-500/50"
@@ -102,73 +140,81 @@ const Quiz: React.FC<QuizProps> = ({ tipo, onWin, onClose }) => {
           </motion.div>
         </header>
 
-        {/* PREGUNTA */}
-        <h2 className="text-2xl md:text-3xl font-black text-white leading-tight mb-8 text-center drop-shadow-md">
-          {actualQuestions[step].pregunta}
-        </h2>
+        {/* PREGUNTA O ESTADO DE SINCRONIZACIÓN */}
+        {isSyncing ? (
+          <div className="py-20 flex flex-col items-center justify-center space-y-4">
+            <Loader2 className="text-cyan-400 animate-spin" size={48} />
+            <h2 className="text-xl font-black text-white uppercase tracking-tighter text-center">
+              Enviando reporte al Distrito 18D03...
+            </h2>
+          </div>
+        ) : (
+          <>
+            <h2 className="text-2xl md:text-3xl font-black text-white leading-tight mb-8 text-center drop-shadow-md">
+              {actualQuestions[step].pregunta}
+            </h2>
 
-        {/* OPCIONES INTERACTIVAS */}
-        <div className="space-y-4 mb-8">
-          {actualQuestions[step].opciones.map((opcion, index) => {
-            // Estilos por defecto
-            let btnBg = "bg-black/40 border-white/10 hover:bg-white/10 hover:border-white/30 hover:scale-[1.02]";
-            let textColor = "text-slate-200";
-            let Icon = null;
-            let animation = {};
+            <div className="space-y-4 mb-8">
+              {actualQuestions[step].opciones.map((opcion, index) => {
+                let btnBg = "bg-black/40 border-white/10 hover:bg-white/10 hover:border-white/30 hover:scale-[1.02]";
+                let textColor = "text-slate-200";
+                let Icon = null;
+                let animation = {};
 
-            // Si esta opción fue seleccionada
-            if (selected === index) {
-              if (status === 'correct') {
-                btnBg = "bg-emerald-500 border-emerald-400 scale-[1.05] shadow-[0_0_30px_rgba(16,185,129,0.5)]";
-                textColor = "text-white";
-                Icon = <CheckCircle2 className="text-white" size={24} />;
-              } else if (status === 'wrong') {
-                btnBg = "bg-red-600 border-red-400 shadow-[0_0_30px_rgba(220,38,38,0.5)]";
-                textColor = "text-white";
-                Icon = <XCircle className="text-white" size={24} />;
-                animation = { x: [-10, 10, -10, 10, 0], transition: { duration: 0.4 } }; // EFECTO SHAKE (Tiembla)
-              }
-            } else if (status !== 'idle') {
-              // Si ya seleccionó una, oscurece las demás
-              btnBg = "bg-black/20 border-white/5 opacity-40";
-            }
+                if (selected === index) {
+                  if (status === 'correct') {
+                    btnBg = "bg-emerald-500 border-emerald-400 scale-[1.05] shadow-[0_0_30px_rgba(16,185,129,0.5)]";
+                    textColor = "text-white";
+                    Icon = <CheckCircle2 className="text-white" size={24} />;
+                  } else if (status === 'wrong') {
+                    btnBg = "bg-red-600 border-red-400 shadow-[0_0_30px_rgba(220,38,38,0.5)]";
+                    textColor = "text-white";
+                    Icon = <XCircle className="text-white" size={24} />;
+                    animation = { x: [-10, 10, -10, 10, 0], transition: { duration: 0.4 } };
+                  }
+                } else if (status !== 'idle') {
+                  btnBg = "bg-black/20 border-white/5 opacity-40";
+                }
 
-            return (
-              <motion.button
-                key={index}
-                onClick={() => handleSelect(index)}
-                disabled={status !== 'idle'}
-                whileTap={{ scale: 0.95 }}
-                animate={animation}
-                className={`w-full p-5 rounded-2xl border-2 font-black text-left md:text-lg transition-colors flex items-center justify-between ${btnBg} ${textColor}`}
-              >
-                <span>{opcion}</span>
-                {Icon && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>{Icon}</motion.div>}
-              </motion.button>
-            );
-          })}
-        </div>
+                return (
+                  <motion.button
+                    key={index}
+                    onClick={() => handleSelect(index)}
+                    disabled={status !== 'idle'}
+                    whileTap={{ scale: 0.95 }}
+                    animate={animation}
+                    className={`w-full p-5 rounded-2xl border-2 font-black text-left md:text-lg transition-colors flex items-center justify-between ${btnBg} ${textColor}`}
+                  >
+                    <span>{opcion}</span>
+                    {Icon && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>{Icon}</motion.div>}
+                  </motion.button>
+                );
+              })}
+            </div>
+          </>
+        )}
 
-        {/* MENSAJE DE FEEDBACK Y BOTÓN SALIR */}
+        {/* FEEDBACK INFERIOR */}
         <div className="flex items-center justify-between mt-4 h-10">
-          <button onClick={onClose} className="text-red-300/60 font-bold uppercase text-[11px] tracking-widest hover:text-white transition-colors">
-            Cancelar Misión
-          </button>
+          {!isSyncing && (
+            <button onClick={onClose} className="text-red-300/60 font-bold uppercase text-[11px] tracking-widest hover:text-white transition-colors">
+              Cancelar Misión
+            </button>
+          )}
 
           <AnimatePresence mode="wait">
             {status === 'wrong' && (
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="flex items-center text-red-400 font-bold text-sm uppercase tracking-widest">
-                <AlertTriangle size={16} className="mr-2" /> ¡Ups! Intenta de nuevo.
+                <AlertTriangle size={16} className="mr-2" /> ¡Cuidado Agente! Reintenta.
               </motion.div>
             )}
             {status === 'correct' && (
               <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center text-emerald-400 font-bold text-sm uppercase tracking-widest">
-                <Star size={16} className="mr-2 fill-emerald-400" /> ¡Excelente respuesta!
+                <Star size={16} className="mr-2 fill-emerald-400" /> ¡Misión casi lista!
               </motion.div>
             )}
           </AnimatePresence>
         </div>
-
       </motion.div>
     </div>
   );
