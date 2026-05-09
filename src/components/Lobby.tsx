@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
-import { School, ShieldCheck, MapPin, User, ChevronRight, Activity, X, Search, Database, Users, HelpCircle, BrainCircuit } from 'lucide-react';
+import { School, ShieldCheck, MapPin, User, ChevronRight, Activity, X, Search, Database, Users, HelpCircle } from 'lucide-react';
 
 const Lobby = () => {
   const [nombre, setNombre] = useState('');
@@ -13,7 +13,7 @@ const Lobby = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [cursorVisible, setCursorVisible] = useState(true);
 
-  // 🚀 OPTIMIZACIÓN: Valores directos para 0% de delay (movimiento 1:1 instantáneo)
+  // 🚀 OPTIMIZACIÓN MÁXIMA: Valores directos para 0% de delay
   const mouseX = useMotionValue(-100);
   const mouseY = useMotionValue(-100);
 
@@ -53,6 +53,7 @@ const Lobby = () => {
 
     localStorage.setItem('agenteNombre', nombre);
     localStorage.setItem('agenteAvatar', avatar);
+    // 💾 SISTEMA DE RANGO: Empezamos en Nivel 1
     localStorage.setItem('agenteNivel', '1');
 
     const { error } = await supabase.from('agentes').insert([{ nombre, institucion: escuela }]);
@@ -65,6 +66,7 @@ const Lobby = () => {
   };
 
   return (
+    // 🛠️ 'h-screen overflow-hidden' elimina el scroll lateral derecho
     <div className="h-screen w-full flex items-center justify-center p-4 md:p-6 relative overflow-hidden bg-[#010413] cursor-none">
       
       {/* 🖱️ CURSOR TÁCTICO REDUCIDO (Instantáneo) */}
@@ -86,20 +88,20 @@ const Lobby = () => {
         </motion.div>
       </motion.div>
 
-      {/* 🟢 BOKEH DINÁMICO */}
+      {/* 🟢 BOKEH DINÁMICO OPTIMIZADO (Menos carga gráfica para 60fps) */}
       <div className="absolute inset-0 pointer-events-none z-0">
-        {[...Array(3)].map((_, i) => (
+        {[...Array(2)].map((_, i) => ( // Reducido de 3 a 2 para performance
           <motion.div
             key={i}
-            className="absolute rounded-full blur-[120px] opacity-[0.15]"
+            className="absolute rounded-full blur-[120px] opacity-[0.1]"
             animate={{
-              x: [0, i%2? 200 : -200, 0],
-              y: [0, i%2? -150 : 150, 0],
+              x: [0, i%2? 150 : -150, 0], // Movimientos más cortos
+              y: [0, i%2? -100 : 100, 0],
             }}
-            transition={{ duration: 25 + i * 5, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: 30 + i * 5, repeat: Infinity, ease: "linear" }}
             style={{
-              width: '600px', height: '600px',
-              left: `${20 + i * 25}%`, top: `${15 + i * 20}%`,
+              width: '500px', height: '500px', // Ligeramente más pequeños
+              left: `${25 + i * 30}%`, top: `${20 + i * 25}%`,
               background: i % 2 === 0 ? '#f97316' : '#2563eb'
             }}
           />
@@ -118,7 +120,7 @@ const Lobby = () => {
             <h1 className="text-[clamp(2.2rem,5vw,3.8rem)] font-black leading-[0.9] tracking-tighter mb-6 text-white uppercase">
               MISIÓN <br /><span className="text-orange-500">PREVENCIÓN</span>
             </h1>
-            <p className="text-slate-200 text-sm md:text-base leading-relaxed max-w-sm mb-10">
+            <p className="text-slate-200 text-sm md:text-base leading-relaxed max-w-sm mb-10 opacity-80">
               Plataforma de educación en Gestión de Riesgos de Desastres para el distrito 18D03.
             </p>
 
@@ -194,8 +196,8 @@ const Lobby = () => {
             </button>
           </form>
 
-          {/* ☁️ NUBE "SABÍAS QUE" */}
-          <div className="mt-8 relative bg-red-600/10 border border-red-500/30 p-6 rounded-[2.8rem] backdrop-blur-xl">
+          {/* ☁️ NUBE "SABÍAS QUE" ILUMINADA */}
+          <div className="mt-8 relative bg-red-600/10 border border-red-500/40 p-6 rounded-[2.8rem] backdrop-blur-xl">
             <div className="absolute top-[-10px] left-10 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[10px] border-b-red-500/30"></div>
             <div className="absolute top-4 right-8 flex space-x-3">
               <motion.span animate={{ y: [0, -6, 0] }} transition={{ duration: 2, repeat: Infinity }} className="text-2xl">💡</motion.span>
@@ -205,6 +207,7 @@ const Lobby = () => {
               <HelpCircle className="text-red-400 shrink-0 mt-1 mr-3" size={20} />
               <div>
                 <h4 className="text-red-300 font-black text-[10px] uppercase tracking-widest mb-1">¿Sabías que?</h4>
+                {/* 🛠️ AÑADIDO: 'font-semibold' y texto blanco puro para mejor lectura */}
                 <p className="text-white text-[11px] leading-relaxed font-semibold">
                   El riesgo es una construcción social, es decir, no hay riesgo si no existen personas expuestas y vulnerables.
                 </p>
