@@ -68,7 +68,7 @@ const Lobby = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#010413] text-white p-5 md:p-10 flex items-center justify-center overflow-hidden">
+    <div className="min-h-screen w-full bg-[#010413] text-white p-5 md:p-10 flex items-center justify-center overflow-hidden cursor-auto">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-orange-500/20 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-500/20 rounded-full blur-[120px]" />
@@ -125,7 +125,7 @@ const Lobby = () => {
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 placeholder="Escribe tu nombre..."
-                className="w-full bg-black/50 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-orange-500"
+                className="w-full bg-black/50 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-orange-500 cursor-text"
                 required
               />
             </div>
@@ -140,7 +140,7 @@ const Lobby = () => {
                 <select
                   value={escuela}
                   onChange={(e) => setEscuela(e.target.value)}
-                  className="w-full appearance-none bg-black/50 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-cyan-400"
+                  className="w-full appearance-none bg-black/50 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-cyan-400 cursor-pointer"
                   required
                 >
                   <option value="">Seleccionar escuela...</option>
@@ -151,7 +151,7 @@ const Lobby = () => {
                   ))}
                 </select>
 
-                <MapPin className="absolute right-5 top-1/2 -translate-y-1/2 text-cyan-400" size={18} />
+                <MapPin className="absolute right-5 top-1/2 -translate-y-1/2 text-cyan-400 pointer-events-none" size={18} />
               </div>
             </div>
 
@@ -165,7 +165,7 @@ const Lobby = () => {
                 <button
                   type="button"
                   onClick={() => setAvatar('chica')}
-                  className={`p-5 rounded-3xl border transition-all ${
+                  className={`p-5 rounded-3xl border transition-all cursor-pointer ${
                     avatar === 'chica'
                       ? 'bg-orange-500/20 border-orange-500 scale-[1.03] shadow-[0_0_25px_rgba(249,115,22,0.25)]'
                       : 'bg-white/5 border-white/10 hover:bg-white/10'
@@ -178,7 +178,7 @@ const Lobby = () => {
                 <button
                   type="button"
                   onClick={() => setAvatar('chico')}
-                  className={`p-5 rounded-3xl border transition-all ${
+                  className={`p-5 rounded-3xl border transition-all cursor-pointer ${
                     avatar === 'chico'
                       ? 'bg-cyan-500/20 border-cyan-400 scale-[1.03] shadow-[0_0_25px_rgba(34,211,238,0.25)]'
                       : 'bg-white/5 border-white/10 hover:bg-white/10'
@@ -193,7 +193,7 @@ const Lobby = () => {
             <button
               type="submit"
               disabled={loading || !nombre.trim() || !escuela || !avatar}
-              className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-30 rounded-2xl p-5 text-white font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-2"
+              className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-30 rounded-2xl p-5 text-white font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
             >
               {loading ? 'Preparando misión...' : 'Comenzar aventura'}
               {!loading && <ChevronRight size={18} />}
