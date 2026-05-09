@@ -7,9 +7,9 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Esta es la pantalla de inicio */}
+        {/* Ruta principal */}
         <Route path="/" element={<Lobby />} />
-        {/* Esta es la pantalla a la que saltará después del registro */}
+        {/* Ruta del Hub táctico */}
         <Route path="/hub" element={<Hub />} />
       </Routes>
     </Router>
