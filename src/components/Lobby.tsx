@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { School, ShieldCheck, MapPin, User, ChevronRight, Info, Database } from 'lucide-react';
+import { School, ShieldCheck, MapPin, User, ChevronRight, Activity, Zap, Lock } from 'lucide-react';
 
 const Lobby = () => {
   const [nombre, setNombre] = useState('');
@@ -14,124 +14,160 @@ const Lobby = () => {
     { id: 'banos', nombre: 'U.E. Baños', icono: <School className="w-5 h-5" /> }
   ];
 
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.8, staggerChildren: 0.15 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, x: -10 },
+    visible: { opacity: 1, x: 0 }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre || !escuela) return;
-    
     setLoading(true);
-    const { error } = await supabase
-      .from('agentes')
-      .insert([{ nombre, institucion: escuela }]);
-
-    if (error) {
-      alert('Error de enlace con el servidor central.');
-    } else {
-      alert('Registro completado. Iniciando sistema educativo.');
-    }
+    const { error } = await supabase.from('agentes').insert([{ nombre, institucion: escuela }]);
+    if (error) alert('Enlace fallido con el centro de datos.');
+    else alert('Acceso Concedido. Iniciando Misión.');
     setLoading(false);
   };
 
   return (
-    <div className="bg-institutional min-h-screen w-full flex items-center justify-center p-4 sm:p-8">
+    <div className="bg-command-center min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-10 relative overflow-hidden">
+      
+      {/* Elementos de fondo decorativos móviles */}
       <motion.div 
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-6xl bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden flex flex-col lg:flex-row"
+        animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
+        transition={{ duration: 10, repeat: Infinity }}
+        className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-[120px]"
+      />
+
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="relative w-full max-w-6xl bg-slate-900/60 backdrop-blur-3xl rounded-[3rem] border border-white/10 shadow-[0_35px_100px_-15px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col lg:flex-row"
       >
-        {/* PANEL INFORMATIVO (ESTILO DASHBOARD) */}
-        <div className="w-full lg:w-5/12 p-8 lg:p-14 border-b lg:border-b-0 lg:border-r border-white/5 bg-slate-950/30">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center space-x-3 text-emerald-400 mb-10"
-          >
-            <div className="p-2 bg-emerald-500/10 rounded-lg">
-              <Database size={16} />
+        {/* PANEL IZQUIERDO: BRANDING INSTITUCIONAL */}
+        <div className="w-full lg:w-5/12 p-10 lg:p-16 border-b lg:border-b-0 lg:border-r border-white/5 flex flex-col justify-between">
+          <motion.div variants={itemVariants} className="space-y-8">
+            <div className="flex items-center space-x-3 text-cyan-400">
+              <div className="p-2 bg-cyan-500/10 rounded-xl border border-cyan-500/20 animate-pulse">
+                <Activity size={18} />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-[0.5em]">Sistema de Respuesta Activo</span>
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Servidor Central Activo</span>
+
+            <div className="space-y-2">
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-black leading-[0.85] tracking-tighter">
+                MISIÓN <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">
+                  PREVENCIÓN
+                </span>
+              </h1>
+              <div className="h-1 w-24 bg-gradient-to-r from-cyan-500 to-transparent rounded-full mt-4"></div>
+            </div>
+
+            <p className="text-slate-400 text-sm md:text-base leading-relaxed max-w-xs font-medium">
+              Protocolo educativo de gestión de riesgos territoriales para el <span className="text-white font-bold underline decoration-cyan-500/50">Distrito 18D03</span>.
+            </p>
           </motion.div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[0.9] mb-6">
-            MISIÓN <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">
-              PREVENCIÓN
-            </span>
-          </h1>
-
-          <p className="text-slate-400 text-sm lg:text-base leading-relaxed mb-10 max-w-sm">
-            Plataforma de gestión de riesgos diseñada para la seguridad del <span className="text-white font-semibold">Distrito 18D03</span>.
-          </p>
-
-          <div className="hidden lg:block space-y-4">
-            <div className="flex items-center space-x-4 text-xs text-slate-500 font-medium">
-              <div className="w-8 h-[1px] bg-white/10" />
-              <span>ESTÁNDARES GUBERNAMENTALES</span>
+          <motion.div variants={itemVariants} className="mt-12 lg:mt-0 flex items-center space-x-4">
+            <div className="flex -space-x-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center">
+                  <Zap size={12} className="text-cyan-400" />
+                </div>
+              ))}
             </div>
-          </div>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Nodos Conectados</span>
+          </motion.div>
         </div>
 
-        {/* PANEL DE ACCIÓN (REGISTRO) */}
-        <div className="w-full lg:w-7/12 p-8 lg:p-14">
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center">
-                <User size={14} className="mr-2" /> Identificación Obligatoria
+        {/* PANEL DERECHO: INTERFAZ DE REGISTRO */}
+        <div className="w-full lg:w-7/12 p-10 lg:p-16 flex flex-col justify-center relative bg-slate-950/20">
+          <form onSubmit={handleSubmit} className="space-y-10 relative z-10">
+            
+            <motion.div variants={itemVariants} className="space-y-4">
+              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 flex items-center">
+                <User size={14} className="mr-2 text-cyan-500" /> Verificación de Identidad
               </label>
-              <input
-                type="text"
-                placeholder="Nombre del Estudiante..."
-                required
-                className="w-full bg-black/20 border border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all text-lg placeholder:text-slate-700"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-              />
-            </div>
+              <div className="relative group">
+                <input
+                  type="text"
+                  placeholder="Ingresa tu nombre completo..."
+                  required
+                  className="w-full bg-slate-950/50 border border-white/5 rounded-2xl px-6 py-5 focus:outline-none focus:border-cyan-500/50 focus:ring-4 focus:ring-cyan-500/5 transition-all text-xl font-bold placeholder:text-slate-800"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                />
+              </div>
+            </motion.div>
 
-            <div className="space-y-4">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center">
-                <School size={14} className="mr-2" /> Unidad Educativa Local
+            <motion.div variants={itemVariants} className="space-y-5">
+              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 flex items-center">
+                <School size={14} className="mr-2 text-emerald-500" /> Despliegue de Unidad Educativa
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {escuelas.map((item) => (
                   <motion.button
                     key={item.id}
                     type="button"
-                    whileHover={{ scale: 1.02, backgroundColor: "rgba(255,255,255,0.02)" }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={{ y: -5, scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => setEscuela(item.nombre)}
-                    className={`flex flex-col items-center justify-center p-5 rounded-2xl border transition-all ${
+                    className={`group flex flex-col items-center justify-center p-6 rounded-3xl border-2 transition-all ${
                       escuela === item.nombre 
-                      ? 'border-emerald-500 bg-emerald-500/5 text-white shadow-lg shadow-emerald-500/10' 
-                      : 'border-white/5 text-slate-500 hover:border-white/10'
+                      ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_15px_30px_-10px_rgba(16,185,129,0.3)]' 
+                      : 'border-white/5 bg-slate-900/40 text-slate-500 hover:border-white/10 hover:bg-slate-800/40'
                     }`}
                   >
-                    <div className={`mb-3 p-2 rounded-lg ${escuela === item.nombre ? 'bg-emerald-500 text-black' : 'bg-white/5'}`}>
+                    <div className={`mb-3 p-3 rounded-xl transition-colors ${escuela === item.nombre ? 'bg-emerald-500 text-black' : 'bg-slate-800 group-hover:bg-slate-700'}`}>
                       {item.icono}
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-tight">{item.nombre}</span>
+                    <span className="text-[10px] font-black uppercase tracking-tighter text-center leading-tight">
+                      {item.nombre}
+                    </span>
                   </motion.button>
                 ))}
               </div>
-            </div>
+            </motion.div>
 
-            <button
+            <motion.button
+              variants={itemVariants}
               type="submit"
               disabled={loading || !nombre || !escuela}
-              className="group w-full bg-gradient-to-r from-emerald-500 to-cyan-500 p-5 rounded-2xl text-black font-black uppercase tracking-widest text-sm shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all disabled:opacity-20 active:scale-[0.99]"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 p-6 font-black uppercase tracking-[0.3em] text-black shadow-2xl shadow-cyan-500/20 disabled:opacity-30 transition-all"
             >
-              <span className="flex items-center justify-center">
-                {loading ? 'SINCRONIZANDO...' : 'INICIAR PROTOCOLO'}
-                <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" size={18} />
+              <div className="scan-line opacity-20" />
+              <span className="relative z-10 flex items-center justify-center text-sm">
+                {loading ? 'AUTENTICANDO...' : 'INICIAR PROTOCOLO'}
+                <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" size={20} />
               </span>
-            </button>
+            </motion.button>
           </form>
 
-          <div className="mt-12 flex items-center justify-between text-[9px] font-bold text-slate-600 uppercase tracking-[0.2em]">
+          <motion.div 
+            variants={itemVariants}
+            className="mt-12 flex items-center justify-between text-[9px] font-black text-slate-600 uppercase tracking-[0.4em]"
+          >
             <div className="flex items-center">
-              <Info size={12} className="mr-2" /> Privacidad Protegida
+              <Lock size={12} className="mr-2 text-emerald-500/50" /> Protocolo de Datos Seguro
             </div>
-            <span>V 1.0.2</span>
-          </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>V 1.1.0</span>
+            </div>
+          </motion.div>
         </div>
       </motion.div>
     </div>
