@@ -1,25 +1,41 @@
-import React, { useState, useEffect } from 'react';
-import { motion, useMotionValue } from 'framer-motion';
-import { ChevronLeft, Briefcase, Users, Bell, CheckCircle2, Activity } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { motion, useMotionValue, useSpring } from 'framer-motion';
+import {
+  Bell,
+  Briefcase,
+  CheckCircle2,
+  ChevronLeft,
+  Flag,
+  MapPinned,
+  PlayCircle,
+  Route,
+  ShieldCheck,
+  Sparkles,
+  Trophy,
+  Users
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import Quiz from './Quiz';
 
 const MisionEvacuacion = () => {
   const navigate = useNavigate();
+
   const [isHovering, setIsHovering] = useState(false);
   const [cursorVisible, setCursorVisible] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
 
-  const mouseX = useMotionValue(-100);
-  const mouseY = useMotionValue(-100);
+  const rawMouseX = useMotionValue(-100);
+  const rawMouseY = useMotionValue(-100);
+  const mouseX = useSpring(rawMouseX, { stiffness: 1100, damping: 55 });
+  const mouseY = useSpring(rawMouseY, { stiffness: 1100, damping: 55 });
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      mouseX.set(e.clientX);
-      mouseY.set(e.clientY);
+      rawMouseX.set(e.clientX);
+      rawMouseY.set(e.clientY);
       setCursorVisible(true);
     };
 
@@ -35,7 +51,7 @@ const MisionEvacuacion = () => {
       document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
       document.documentElement.removeEventListener('mouseenter', handleMouseEnter);
     };
-  }, [mouseX, mouseY]);
+  }, [rawMouseX, rawMouseY]);
 
   const handleWinQuiz = async () => {
     setShowQuiz(false);
@@ -65,7 +81,10 @@ const MisionEvacuacion = () => {
         .eq('nombre', nombre);
 
       if (error) {
-        console.warn('Supabase no sincronizó Evacuación, pero el progreso local fue guardado:', error.message);
+        console.warn(
+          'Supabase no sincronizó Evacuación, pero el progreso local fue guardado:',
+          error.message
+        );
       }
     } catch (error) {
       console.warn('Fallo de conexión con Supabase. Progreso local guardado:', error);
@@ -76,128 +95,242 @@ const MisionEvacuacion = () => {
     setTimeout(() => {
       setLoading(false);
       navigate('/hub');
-    }, 1500);
+    }, 1300);
   };
 
+  const consejos = [
+    {
+      icono: <Briefcase size={20} />,
+      titulo: 'Kit de supervivencia',
+      texto: 'Botiquín, linterna, radio y agua embotellada.'
+    },
+    {
+      icono: <Users size={20} />,
+      titulo: 'Punto familiar',
+      texto: 'Define un lugar seguro para reunirse.'
+    },
+    {
+      icono: <MapPinned size={20} />,
+      titulo: 'Ruta señalizada',
+      texto: 'Sigue la señalética verde y evita zonas de riesgo.'
+    }
+  ];
+
   return (
-    <div className="min-h-screen bg-[#010413] text-white p-6 md:p-12 relative overflow-hidden cursor-none">
+    <main className="h-screen max-h-screen bg-[#010413] text-white relative overflow-hidden cursor-none p-3 md:p-5">
       <motion.div
         style={{
           x: mouseX,
           y: mouseY,
           translateX: '-50%',
-          translateY: '-50%',
-          willChange: 'transform'
+          translateY: '-50%'
         }}
         animate={{ opacity: cursorVisible ? 1 : 0 }}
         className="fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
       >
         <motion.div
           animate={{
-            scale: isHovering ? 1.4 : 1,
-            borderColor: isHovering ? '#34d399' : '#10b981'
+            scale: isHovering ? 1.08 : 1,
+            borderColor: isHovering ? '#34d399' : '#10b981',
+            backgroundColor: isHovering
+              ? 'rgba(52,211,153,0.08)'
+              : 'rgba(16,185,129,0.08)'
           }}
-          className="w-6 h-6 border-2 border-emerald-500 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.3)] bg-white/5"
+          transition={{ duration: 0.1 }}
+          className="w-4 h-4 border rounded-full flex items-center justify-center shadow-[0_0_16px_rgba(16,185,129,0.6)] backdrop-blur-sm"
         >
-          <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_5px_#fff]" />
+          <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_8px_#fff]" />
         </motion.div>
       </motion.div>
 
-      <button
-        onClick={() => navigate('/hub')}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
-        className="relative z-10 flex items-center space-x-2 text-white/50 hover:text-emerald-400 transition-colors mb-12"
-      >
-        <ChevronLeft size={20} />
-        <span className="text-[10px] font-black uppercase tracking-[0.3em]">
-          Regresar al Hub
-        </span>
-      </button>
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
+          className="absolute left-1/2 top-1/2 w-[1120px] h-[1120px] -translate-x-1/2 -translate-y-1/2"
+        >
+          <div className="absolute top-0 left-1/2 w-96 h-96 bg-emerald-500/35 rounded-full blur-[125px]" />
+          <div className="absolute bottom-10 right-0 w-[430px] h-[430px] bg-teal-500/28 rounded-full blur-[135px]" />
+          <div className="absolute left-0 top-1/2 w-80 h-80 bg-cyan-300/18 rounded-full blur-[120px]" />
+        </motion.div>
 
-      <div className="relative z-10 max-w-4xl mx-auto">
-        <header className="mb-12 text-center">
-          <div className="flex justify-center items-center space-x-3 text-emerald-500 mb-4">
-            <Activity size={18} className="animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-[0.5em]">
-              Logística de Emergencia
-            </span>
+        <motion.div
+          animate={{
+            x: [-95, 110, -95],
+            y: [40, -70, 40],
+            opacity: [0.24, 0.5, 0.24]
+          }}
+          transition={{ duration: 6.2, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -bottom-28 -right-24 w-[510px] h-[510px] bg-emerald-500/25 rounded-full blur-[130px]"
+        />
+
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.045)_1px,transparent_1px)] [background-size:32px_32px] opacity-40" />
+      </div>
+
+      <section className="relative z-10 h-full max-w-7xl mx-auto grid grid-rows-[auto_1fr] gap-4">
+        <header className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-[2rem] px-5 py-4 flex items-center justify-between gap-4 shadow-2xl">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-emerald-300 mb-1">
+              <Route size={15} className="animate-pulse" />
+              <span className="text-[9px] font-black uppercase tracking-[0.35em]">
+                Logística de emergencia activada
+              </span>
+            </div>
+
+            <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter leading-none">
+              Rutas de <span className="text-emerald-400">Evacuación</span>
+            </h1>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white uppercase">
-            RUTAS DE <br />
-            <span className="text-emerald-500">EVACUACIÓN</span>
-          </h1>
+          <button
+            onClick={() => navigate('/hub')}
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
+            className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3 rounded-2xl text-white/60 text-[10px] font-black uppercase tracking-widest hover:text-emerald-300 hover:border-emerald-400/40 transition-all"
+          >
+            <ChevronLeft size={16} />
+            <span className="hidden sm:inline">Volver al Hub</span>
+          </button>
         </header>
 
-        <div className="bg-emerald-500/5 border border-emerald-500/20 p-10 rounded-[3rem] mb-12 flex flex-col items-center backdrop-blur-xl relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+        <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-4 min-h-0">
+          <section className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-[2rem] overflow-hidden min-h-0 grid grid-rows-[auto_1fr_auto]">
+            <div className="p-5 border-b border-white/10 bg-slate-950/40">
+              <div className="flex items-start gap-4">
+                <motion.div
+                  animate={{ rotate: [-4, 4, -4], scale: [1, 1.05, 1] }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                  className="bg-emerald-500/15 border border-emerald-400/20 p-4 rounded-[1.5rem] text-emerald-300"
+                >
+                  <Bell size={34} />
+                </motion.div>
 
-          <Bell size={48} className="text-emerald-500 mb-6 animate-ring" />
-
-          <p className="text-center text-xl md:text-2xl font-bold max-w-2xl text-white leading-tight">
-            Sigue siempre la señalética verde. Mantener la calma es tu herramienta más poderosa
-            para salvar vidas.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-          <div className="flex space-x-6 items-start bg-slate-900/40 p-8 rounded-[2rem] border border-white/5 backdrop-blur-sm">
-            <div className="bg-emerald-500/20 p-4 rounded-2xl text-emerald-500 shrink-0 shadow-lg shadow-emerald-500/10">
-              <Briefcase />
+                <div>
+                  <p className="text-emerald-300 text-[10px] font-black uppercase tracking-[0.3em] mb-2">
+                    Mensaje central
+                  </p>
+                  <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tighter leading-none">
+                    Mantener la calma salva vidas
+                  </h2>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <h3 className="font-black text-lg mb-1 text-white uppercase tracking-tighter">
-                Kit de Supervivencia
-              </h3>
-              <p className="text-slate-400 text-xs font-medium leading-relaxed">
-                Debe contener: Botiquín de primer auxilio, linterna con pilas extra, radio AM/FM
-                y agua embotellada.
+            <div className="relative p-6 flex items-center justify-center overflow-hidden">
+              <motion.div
+                animate={{ x: ['-120%', '120%'] }}
+                transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute top-0 bottom-0 w-28 bg-emerald-300/10 blur-xl rotate-12"
+              />
+
+              <div className="relative z-10 max-w-2xl text-center">
+                <motion.div
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                  className="mx-auto mb-6 w-24 h-24 rounded-[2rem] bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center text-emerald-300 shadow-[0_0_50px_rgba(16,185,129,0.18)]"
+                >
+                  <Flag size={48} />
+                </motion.div>
+
+                <p className="text-xl md:text-3xl font-black text-white leading-tight mb-4">
+                  Sigue siempre la señalética verde y avanza hacia el punto seguro más cercano.
+                </p>
+
+                <p className="text-sm md:text-base text-white/60 font-semibold leading-relaxed">
+                  Esta es la evaluación final. Al aprobarla, el agente obtiene el rango de
+                  Comandante y desbloquea su credencial digital.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 md:p-5 bg-slate-950/60 border-t border-white/10">
+              <div className="flex items-start gap-3">
+                <div className="bg-emerald-500/15 border border-emerald-400/20 p-3 rounded-2xl text-emerald-300">
+                  <ShieldCheck size={20} />
+                </div>
+
+                <div>
+                  <h3 className="text-emerald-300 font-black text-[10px] uppercase tracking-[0.25em] mb-1">
+                    Análisis de misión
+                  </h3>
+                  <p className="text-white/70 text-xs md:text-sm leading-relaxed font-semibold">
+                    Una evacuación segura depende de conocer la ruta, mantener la calma y reunirse
+                    en puntos previamente definidos por la familia o comunidad educativa.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside className="grid grid-rows-[auto_1fr_auto] gap-4 min-h-0">
+            <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-[2rem] p-5">
+              <div className="flex items-center gap-2 text-emerald-300 mb-2">
+                <Sparkles size={16} />
+                <span className="text-[9px] font-black uppercase tracking-[0.28em]">
+                  Objetivo final
+                </span>
+              </div>
+              <p className="text-sm text-white/75 font-semibold leading-relaxed">
+                Repasa las reglas de evacuación, completa el examen final y desbloquea el rango Comandante.
               </p>
             </div>
-          </div>
 
-          <div className="flex space-x-6 items-start bg-slate-900/40 p-8 rounded-[2rem] border border-white/5 backdrop-blur-sm">
-            <div className="bg-emerald-500/20 p-4 rounded-2xl text-emerald-500 shrink-0 shadow-lg shadow-emerald-500/10">
-              <Users />
+            <div className="grid grid-cols-1 gap-3 min-h-0">
+              {consejos.map((item) => (
+                <motion.div
+                  key={item.titulo}
+                  whileHover={{ y: -3, scale: 1.01 }}
+                  className="bg-white/5 border border-white/10 rounded-[1.5rem] p-4 backdrop-blur-xl"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="bg-emerald-500/15 border border-emerald-400/20 p-2.5 rounded-2xl text-emerald-300">
+                      {item.icono}
+                    </div>
+
+                    <div>
+                      <h4 className="font-black text-[10px] uppercase tracking-widest mb-1 text-white">
+                        {item.titulo}
+                      </h4>
+                      <p className="text-slate-400 text-[11px] leading-relaxed font-semibold uppercase">
+                        {item.texto}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
 
-            <div>
-              <h3 className="font-black text-lg mb-1 text-white uppercase tracking-tighter">
-                Puntos Seguros
-              </h3>
-              <p className="text-slate-400 text-xs font-medium leading-relaxed">
-                Establece un punto de encuentro familiar fuera de la zona de riesgo. Conoce los
-                albergues del distrito.
-              </p>
-            </div>
-          </div>
+            <motion.button
+              type="button"
+              onClick={() => setShowQuiz(true)}
+              disabled={loading || isCompleted}
+              onMouseEnter={() => setIsHovering(true)}
+              onMouseLeave={() => setIsHovering(false)}
+              whileHover={!loading && !isCompleted ? { scale: 1.02, y: -2 } : {}}
+              whileTap={!loading && !isCompleted ? { scale: 0.97 } : {}}
+              className={`w-full p-4 rounded-[1.5rem] font-black uppercase tracking-[0.22em] transition-all flex items-center justify-center gap-3 text-xs md:text-sm ${
+                isCompleted
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_15px_35px_rgba(16,185,129,0.28)]'
+              } disabled:opacity-70`}
+            >
+              {loading ? (
+                'Graduando agente...'
+              ) : isCompleted ? (
+                <>
+                  <CheckCircle2 size={18} />
+                  Comandante graduado
+                </>
+              ) : (
+                <>
+                  <PlayCircle size={18} />
+                  Examen final
+                </>
+              )}
+            </motion.button>
+          </aside>
         </div>
-
-        <button
-          onClick={() => setShowQuiz(true)}
-          disabled={loading || isCompleted}
-          onMouseEnter={() => setIsHovering(true)}
-          onMouseLeave={() => setIsHovering(false)}
-          className={`w-full p-6 rounded-[2rem] font-black uppercase tracking-[0.4em] transition-all flex items-center justify-center space-x-3 text-sm ${
-            isCompleted
-              ? 'bg-emerald-500 text-white'
-              : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_15px_40px_rgba(16,185,129,0.3)] active:scale-95'
-          }`}
-        >
-          {loading ? (
-            'CARGANDO DATOS...'
-          ) : isCompleted ? (
-            <>
-              <CheckCircle2 size={20} />
-              <span>COMANDANTE GRADUADO</span>
-            </>
-          ) : (
-            'EXAMEN FINAL DE GRADUACIÓN'
-          )}
-        </button>
-      </div>
+      </section>
 
       {showQuiz && (
         <Quiz
@@ -206,7 +339,7 @@ const MisionEvacuacion = () => {
           onWin={handleWinQuiz}
         />
       )}
-    </div>
+    </main>
   );
 };
 
