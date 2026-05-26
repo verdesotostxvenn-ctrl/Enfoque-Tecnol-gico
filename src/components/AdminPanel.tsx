@@ -17,7 +17,6 @@ import {
   ShieldAlert,
   Timer,
   Trophy,
-  UserRound,
   Users,
   XCircle
 } from 'lucide-react';
@@ -91,6 +90,7 @@ const AdminPanel = () => {
   const [errorMsg, setErrorMsg] = useState('');
 
   const [busqueda, setBusqueda] = useState('');
+  const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
   const [filtroEscuela, setFiltroEscuela] = useState('todas');
   const [edadDesde, setEdadDesde] = useState('todas');
   const [edadHasta, setEdadHasta] = useState('todas');
@@ -145,9 +145,11 @@ const AdminPanel = () => {
       const edad = agente.edad;
       const fecha = dateInputValue(agente.created_at);
 
+      const busquedaNormalizada = normalizeText(busqueda);
+      const nombreNormalizado = normalizeText(nombre);
+
       const coincideBusqueda =
-        nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        escuela.toLowerCase().includes(busqueda.toLowerCase());
+        !busquedaNormalizada || nombreNormalizado.includes(busquedaNormalizada);
 
       const coincideEscuela =
         filtroEscuela === 'todas' || escuela === filtroEscuela;
@@ -190,6 +192,27 @@ const AdminPanel = () => {
     fechaFin,
     filtroEscenario
   ]);
+
+  const sugerenciasNombres = useMemo(() => {
+    const busquedaNormalizada = normalizeText(busqueda);
+
+    if (!busquedaNormalizada) return [];
+
+    const nombresUnicos = new Map<string, string>();
+
+    agentes.forEach((agente) => {
+      const nombre = (agente.nombre || '').trim();
+      const nombreNormalizado = normalizeText(nombre);
+
+      if (!nombre || !nombreNormalizado.includes(busquedaNormalizada)) return;
+
+      nombresUnicos.set(nombreNormalizado, nombre);
+    });
+
+    return Array.from(nombresUnicos.values())
+      .sort((a, b) => a.localeCompare(b))
+      .slice(0, 6);
+  }, [agentes, busqueda]);
 
   const totalParticipantes = agentesFiltrados.length;
 
@@ -308,6 +331,7 @@ const AdminPanel = () => {
 
   const limpiarFiltros = () => {
     setBusqueda('');
+    setMostrarSugerencias(false);
     setFiltroEscuela('todas');
     setEdadDesde('todas');
     setEdadHasta('todas');
@@ -608,20 +632,75 @@ const AdminPanel = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
-            <label className="xl:col-span-2">
+            <label className="relative xl:col-span-2">
               <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
-                Buscar estudiante o escuela
+                Buscar por nombre del estudiante
               </span>
+
               <div className="mt-2 flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 focus-within:border-cyan-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-cyan-100">
                 <Search size={16} className="text-cyan-700" />
                 <input
                   type="text"
                   value={busqueda}
-                  onChange={(event) => setBusqueda(event.target.value)}
-                  placeholder="Ej. Unidad Educativa Baños..."
+                  onChange={(event) => {
+                    setBusqueda(event.target.value);
+                    setMostrarSugerencias(true);
+                  }}
+                  onFocus={() => setMostrarSugerencias(true)}
+                  onBlur={() => {
+                    window.setTimeout(() => setMostrarSugerencias(false), 150);
+                  }}
+                  placeholder="Ej. María, Juan, José..."
                   className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none"
+                  autoComplete="off"
                 />
+
+                {busqueda && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBusqueda('');
+                      setMostrarSugerencias(false);
+                    }}
+                    className="rounded-xl p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                    aria-label="Limpiar búsqueda"
+                  >
+                    <XCircle size={16} />
+                  </button>
+                )}
               </div>
+
+              <AnimatePresence>
+                {mostrarSugerencias && busqueda.trim() && sugerenciasNombres.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.16 }}
+                    className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+                  >
+                    <div className="border-b border-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                      Coincidencias por nombre
+                    </div>
+
+                    {sugerenciasNombres.map((nombre) => (
+                      <button
+                        key={nombre}
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          setBusqueda(nombre);
+                          setMostrarSugerencias(false);
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-800"
+                      >
+                        <Users size={15} className="text-cyan-700" />
+                        {nombre}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </label>
 
             <label>
@@ -1196,6 +1275,15 @@ const TableHead = ({ children }: { children: React.ReactNode }) => {
       {children}
     </th>
   );
+};
+
+const normalizeText = (value: string) => {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ');
 };
 
 const getProgressPercent = (agente: Agente) => {
