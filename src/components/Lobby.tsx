@@ -66,7 +66,7 @@ const LobbyUltra = () => {
 
   const [nombre, setNombre] = useState('');
   const [escuela, setEscuela] = useState('');
-  const [edad, setEdad] = useState(9); 
+  const [edad, setEdad] = useState(9); // Nuevo estado
   const [avatar, setAvatar] = useState<'chica' | 'chico' | ''>('');
   const [hoverAvatar, setHoverAvatar] = useState<'chica' | 'chico' | ''>('');
   const [loading, setLoading] = useState(false);
@@ -110,6 +110,13 @@ const LobbyUltra = () => {
     return () => window.removeEventListener('mousemove', moveCursor);
   }, [rawMouseX, rawMouseY]);
 
+  useEffect(() => {
+    Object.values(avatarImages).forEach((src) => {
+      const image = new Image();
+      image.src = src;
+    });
+  }, []);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -121,7 +128,7 @@ const LobbyUltra = () => {
 
     localStorage.setItem('agenteNombre', nombreLimpio);
     localStorage.setItem('agenteEscuela', escuela);
-    localStorage.setItem('agenteEdad', edad.toString()); 
+    localStorage.setItem('agenteEdad', edad.toString()); // Guardado
     localStorage.setItem('agenteAvatar', avatar);
     localStorage.setItem('agenteNivel', '1');
     localStorage.setItem('misionVolcanCompletada', 'false');
@@ -133,7 +140,7 @@ const LobbyUltra = () => {
         {
           nombre: nombreLimpio,
           institucion: escuela,
-          edad: edad, 
+          edad: edad, // Inserción
           avatar,
           nivel: 1,
           mision_volcan: false,
@@ -144,10 +151,13 @@ const LobbyUltra = () => {
       ]);
 
       if (error) {
-        console.warn('Supabase no sincronizó:', error.message);
+        console.warn(
+          'Supabase no sincronizó, pero el agente fue guardado localmente:',
+          error.message
+        );
       }
     } catch (error) {
-      console.warn('Fallo de red con Supabase:', error);
+      console.warn('Fallo de red con Supabase. Registro local guardado:', error);
     }
 
     window.dispatchEvent(new Event('agenteNivelActualizado'));
