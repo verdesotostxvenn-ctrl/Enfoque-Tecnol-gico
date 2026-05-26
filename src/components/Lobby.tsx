@@ -49,7 +49,7 @@ const escuelasDisponibles = [
   'Unidad Arena Breakout'
 ];
 
-const edadesDisponibles = [6, 7, 8, 9, 10, 11, 12, 13, 14];
+const edadesDisponibles = [6, 7, 8, 9, 10, 11];
 
 const sabiasQueFrases = [
   '¡Los desastres NO son naturales! Lo natural es que llueva o tiemble; el desastre ocurre únicamente cuando no estamos preparados para ello.',
@@ -345,7 +345,7 @@ const LobbyUltra = () => {
                 <Users size={12} className="mr-2 text-purple-400" />
                 Tu Edad ({edad} años)
               </label>
-              <div className="grid grid-cols-3 md:grid-cols-9 gap-2 w-full">
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-2 w-full">
                 {edadesDisponibles.map((item) => (
                   <button
                     key={item}
