@@ -19,7 +19,7 @@ import {
   Users,
   X
 } from 'lucide-react';
-import { supabase } from '../supabaseClient'; // Asegúrate de que esta ruta sea correcta en tu proyecto
+import { supabase } from '../supabaseClient';
 
 const avatarImages = {
   chica: 'https://blogger.googleusercontent.com/img/a/AVvXsEh_PnIcFYcgmsvgfKqk4Mr0s40x0a5f1_pIFmBRlR0oVInL1-uaLQIez5BrYNp-ua4-mBmHqb2A8Ox4tElSIJx3LtHnBaO-cGTxzHomjYO1f2X6KQzCYn8I0LmpqNe6o1UiXhc814JjCv0hWJ3kME5gcDJ1czrxl7xYge9BE214gnYyrIHHqxwuTMyoxPjd',
@@ -41,7 +41,7 @@ const escuelasDisponibles = [
   'Unidad Educativa 12'
 ];
 
-// 💡 ARREGLO DE 9 FRASES DINÁMICAS (Exactamente como las pediste)
+// 💡 ARREGLO DE 9 FRASES DINÁMICAS
 const sabiasQueFrases = [
   '¡Los desastres NO son naturales! Lo natural es que llueva o tiemble; el desastre ocurre únicamente cuando no estamos preparados para ello.',
   'La "vulnerabilidad" es como salir a la lluvia sin paraguas. Mientras más conozcamos los peligros de nuestro entorno, menos vulnerables seremos.',
@@ -59,13 +59,14 @@ const LobbyUltra = () => {
 
   const [nombre, setNombre] = useState('');
   const [escuela, setEscuela] = useState('');
-  const [avatar, setAvatar] = useState<'chica' | 'chico' | ''>('');
-  const [hoverAvatar, setHoverAvatar] = useState<'chica' | 'chico' | ''>('');
+  
+  // 🛠️ FIX TS1135: Eliminamos los genéricos de TypeScript que confundían a Vercel
+  const [avatar, setAvatar] = useState('');
+  const [hoverAvatar, setHoverAvatar] = useState('');
+  
   const [loading, setLoading] = useState(false);
   const [showEscuelas, setShowEscuelas] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
-  
-  // 🧠 ESTADO PARA EL ÍNDICE DE LA FRASE ACTUAL
   const [fraseIndex, setFraseIndex] = useState(0);
 
   const rawMouseX = useMotionValue(0);
@@ -76,21 +77,16 @@ const LobbyUltra = () => {
   const bokehX = useTransform(rawMouseX,, [-45, 45]);
   const bokehY = useTransform(rawMouseY,, [-32, 32]);
 
-  // 🛠️ EFECTO SEGURO PARA TS1135: Cambia la frase cada 8 segundos
+  // EFECTO PARA CAMBIAR LA FRASE CADA 8 SEGUNDOS
   useEffect(() => {
-    const timerId = window.setInterval(() => {
-      setFraseIndex(function(currentIndex) {
-        return (currentIndex + 1) % 9; // 9 es la longitud de sabiasQueFrases
-      });
+    const intervalId = window.setInterval(() => {
+      setFraseIndex((prev) => (prev + 1) % sabiasQueFrases.length);
     }, 8000);
-
-    return () => {
-      window.clearInterval(timerId);
-    };
+    return () => window.clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
-    const moveCursor = (event: MouseEvent) => {
+    const moveCursor = (event: any) => {
       rawMouseX.set(event.clientX);
       rawMouseY.set(event.clientY);
     };
@@ -106,7 +102,7 @@ const LobbyUltra = () => {
     });
   }, []);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: any) => {
     event.preventDefault();
 
     if (!nombre.trim() || !escuela || !avatar) return;
@@ -138,10 +134,7 @@ const LobbyUltra = () => {
       ]);
 
       if (error) {
-        console.warn(
-          'Supabase no sincronizó, pero el agente fue guardado localmente:',
-          error.message
-        );
+        console.warn('Supabase no sincronizó, guardado localmente:', error.message);
       }
     } catch (error) {
       console.warn('Fallo de red con Supabase. Registro local guardado:', error);
@@ -170,9 +163,7 @@ const LobbyUltra = () => {
           animate={{
             scale: isHovering ? 1.05 : 1,
             borderColor: isHovering ? '#fb923c' : '#22d3ee',
-            backgroundColor: isHovering
-              ? 'rgba(251,146,60,0.08)'
-              : 'rgba(34,211,238,0.08)'
+            backgroundColor: isHovering ? 'rgba(251,146,60,0.08)' : 'rgba(34,211,238,0.08)'
           }}
           transition={{ duration: 0.1 }}
           className="w-3.5 h-3.5 rounded-full border flex items-center justify-center shadow-[0_0_14px_rgba(34,211,238,0.8)] backdrop-blur-sm"
@@ -198,33 +189,19 @@ const LobbyUltra = () => {
         </motion.div>
 
         <motion.div
-          animate={{
-            x: [-100, 125, -100],
-            y: [45, -85, 45],
-            scale: [1, 1.18, 1],
-            opacity: [0.35, 0.68, 0.35]
-          }}
+          animate={{ x: [-100, 125, -100], y: [45, -85, 45], scale: [1, 1.18, 1], opacity: [0.35, 0.68, 0.35] }}
           transition={{ duration: 5.8, repeat: Infinity, ease: 'easeInOut' }}
           className="absolute -top-32 -left-32 w-[560px] h-[560px] bg-orange-500/38 rounded-full blur-[130px]"
         />
 
         <motion.div
-          animate={{
-            x: [100, -120, 100],
-            y: [-45, 80, -45],
-            scale: [1.12, 1, 1.12],
-            opacity: [0.3, 0.62, 0.3]
-          }}
+          animate={{ x: [100, -120, 100], y: [-45, 80, -45], scale: [1.12, 1, 1.12], opacity: [0.3, 0.62, 0.3] }}
           transition={{ duration: 6.8, repeat: Infinity, ease: 'easeInOut' }}
           className="absolute -bottom-36 -right-32 w-[610px] h-[610px] bg-cyan-400/38 rounded-full blur-[135px]"
         />
 
         <motion.div
-          animate={{
-            x: [-55, 70, -55],
-            y: [-25, 35, -25],
-            opacity: [0.2, 0.46, 0.2]
-          }}
+          animate={{ x: [-55, 70, -55], y: [-25, 35, -25], opacity: [0.2, 0.46, 0.2] }}
           transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
           className="absolute top-1/4 right-1/4 w-[380px] h-[380px] bg-fuchsia-500/25 rounded-full blur-[125px]"
         />
@@ -250,21 +227,12 @@ const LobbyUltra = () => {
             </div>
 
             <motion.div
-              animate={{
-                textShadow: [
-                  '0 0 14px rgba(249,115,22,0.4)',
-                  '0 0 30px rgba(34,211,238,0.4)',
-                  '0 0 14px rgba(249,115,22,0.4)'
-                ]
-              }}
+              animate={{ textShadow: ['0 0 14px rgba(249,115,22,0.4)', '0 0 30px rgba(34,211,238,0.4)', '0 0 14px rgba(249,115,22,0.4)'] }}
               transition={{ duration: 3, repeat: Infinity }}
               className="relative mb-4"
             >
               <motion.div
-                animate={{
-                  rotate: [0, 10, -10, 0],
-                  scale: [1, 1.12, 1]
-                }}
+                animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.12, 1] }}
                 transition={{ duration: 2.5, repeat: Infinity }}
                 className="absolute -right-1 -top-4 text-cyan-300/90"
               >
@@ -279,7 +247,7 @@ const LobbyUltra = () => {
               </h1>
             </motion.div>
 
-            {/* 🛠️ TEXTO OFICIAL AJUSTADO SEGÚN IMAGEN */}
+            {/* 🛠️ TEXTO OFICIAL */}
             <p className="text-slate-300 text-[11px] md:text-sm leading-relaxed max-w-md mb-2">
               Plataforma de educación en Gestión de Riesgos de Desastres para el distrito 18D03.
             </p>
@@ -354,14 +322,8 @@ const LobbyUltra = () => {
                 <motion.button
                   type="button"
                   onClick={() => setAvatar('chica')}
-                  onMouseEnter={() => {
-                    setHoverAvatar('chica');
-                    setIsHovering(true);
-                  }}
-                  onMouseLeave={() => {
-                    setHoverAvatar('');
-                    setIsHovering(false);
-                  }}
+                  onMouseEnter={() => { setHoverAvatar('chica'); setIsHovering(true); }}
+                  onMouseLeave={() => { setHoverAvatar(''); setIsHovering(false); }}
                   whileHover={{ y: -4, scale: 1.02 }}
                   whileTap={{ scale: 0.96 }}
                   className={`p-3 rounded-[1.5rem] border transition-all ${
@@ -383,14 +345,8 @@ const LobbyUltra = () => {
                 <motion.button
                   type="button"
                   onClick={() => setAvatar('chico')}
-                  onMouseEnter={() => {
-                    setHoverAvatar('chico');
-                    setIsHovering(true);
-                  }}
-                  onMouseLeave={() => {
-                    setHoverAvatar('');
-                    setIsHovering(false);
-                  }}
+                  onMouseEnter={() => { setHoverAvatar('chico'); setIsHovering(true); }}
+                  onMouseLeave={() => { setHoverAvatar(''); setIsHovering(false); }}
                   whileHover={{ y: -4, scale: 1.02 }}
                   whileTap={{ scale: 0.96 }}
                   className={`p-3 rounded-[1.5rem] border transition-all ${
@@ -421,10 +377,7 @@ const LobbyUltra = () => {
               className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-30 rounded-2xl p-3.5 text-white font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed shadow-[0_15px_35px_rgba(249,115,22,0.28)] text-xs md:text-sm"
             >
               {loading ? (
-                <motion.span
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 1.2, repeat: Infinity }}
-                >
+                <motion.span animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.2, repeat: Infinity }}>
                   Preparando misión...
                 </motion.span>
               ) : (
@@ -438,10 +391,7 @@ const LobbyUltra = () => {
 
           <div className="mt-3 flex justify-end">
             <motion.div
-              animate={{
-                y: [0, -3, 0],
-                rotate: [-0.4, 0.4, -0.4]
-              }}
+              animate={{ y: [0, -3, 0], rotate: [-0.4, 0.4, -0.4] }}
               transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
               className="relative w-full max-w-[430px] bg-slate-950/55 border border-white/10 rounded-[2.2rem] rounded-tr-[3rem] rounded-bl-[1.2rem] p-4 backdrop-blur-xl shadow-[0_0_24px_rgba(34,211,238,0.10)] overflow-hidden"
             >
@@ -475,16 +425,10 @@ const LobbyUltra = () => {
                 </div>
 
                 <div className="flex flex-col gap-1 text-xl">
-                  <motion.span
-                    animate={{ y: [0, -6, 0], rotate: [-8, 8, -8] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
+                  <motion.span animate={{ y: [0, -6, 0], rotate: [-8, 8, -8] }} transition={{ duration: 2, repeat: Infinity }}>
                     💡
                   </motion.span>
-                  <motion.span
-                    animate={{ y: [0, -5, 0], scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2.4, repeat: Infinity }}
-                  >
+                  <motion.span animate={{ y: [0, -5, 0], scale: [1, 1.1, 1] }} transition={{ duration: 2.4, repeat: Infinity }}>
                     🧠
                   </motion.span>
                 </div>
