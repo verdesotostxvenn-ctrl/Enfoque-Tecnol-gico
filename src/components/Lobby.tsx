@@ -19,7 +19,7 @@ import {
   Users,
   X
 } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../supabaseClient'; // Asegúrate de que esta ruta sea correcta en tu proyecto
 
 const avatarImages = {
   chica: 'https://blogger.googleusercontent.com/img/a/AVvXsEh_PnIcFYcgmsvgfKqk4Mr0s40x0a5f1_pIFmBRlR0oVInL1-uaLQIez5BrYNp-ua4-mBmHqb2A8Ox4tElSIJx3LtHnBaO-cGTxzHomjYO1f2X6KQzCYn8I0LmpqNe6o1UiXhc814JjCv0hWJ3kME5gcDJ1czrxl7xYge9BE214gnYyrIHHqxwuTMyoxPjd',
@@ -41,17 +41,17 @@ const escuelasDisponibles = [
   'Unidad Educativa 12'
 ];
 
-// 💡 ARREGLO DE FRASES DINÁMICAS
+// 💡 ARREGLO DE 9 FRASES DINÁMICAS (Exactamente como las pediste)
 const sabiasQueFrases = [
-  "¡Los desastres NO son naturales! Lo natural es que llueva o tiemble; el desastre ocurre únicamente cuando no estamos preparados para ello.",
-  "La \"vulnerabilidad\" es como salir a la lluvia sin paraguas. Mientras más conozcamos los peligros de nuestro entorno, menos vulnerables seremos.",
-  "¡Tu Mochila de Emergencia es tu escudo protector! Debe contener todo lo necesario para cuidarte durante 3 días o 72 horas.",
-  "Una urgencia la puede solventar la comunidad o la escuela, pero una emergencia real ¡Necesita que llamemos a los verdaderos héroes del ECU 911!",
-  "Hacer llamadas de broma al 9-1-1 es muy peligroso. Podrías hacer que una ambulancia pierda tiempo y no llegue a salvar una vida real.",
-  "¡Tu familia es tu mejor equipo de rescate! Tener un Plan Familiar de Emergencias les ayuda a saber exactamente qué hacer y dónde encontrarse si algo pasa.",
-  "Nuestro hermoso cantón convive con ríos, montañas y el gran volcán Tungurahua. ¡Conocer las Zonas Seguras y rutas de evacuación es nuestro súper poder!",
-  "Si la tierra empieza a temblar, debes actuar como un ninja. Solo recuerda los tres pasos vitales: ¡Agáchate, cúbrete debajo de una mesa y agárrate fuerte!",
-  "Al escuchar la alarma de evacuación, somos como tortugas sabias y no como liebres asustadas. Caminar rápido pero sin correr evita que nos lastimemos."
+  '¡Los desastres NO son naturales! Lo natural es que llueva o tiemble; el desastre ocurre únicamente cuando no estamos preparados para ello.',
+  'La "vulnerabilidad" es como salir a la lluvia sin paraguas. Mientras más conozcamos los peligros de nuestro entorno, menos vulnerables seremos.',
+  '¡Tu Mochila de Emergencia es tu escudo protector! Debe contener todo lo necesario para cuidarte durante 3 días o 72 horas.',
+  'Una urgencia la puede solventar la comunidad o la escuela, pero una emergencia real ¡Necesita que llamemos a los verdaderos héroes del ECU 911!',
+  'Hacer llamadas de broma al 9-1-1 es muy peligroso. Podrías hacer que una ambulancia pierda tiempo y no llegue a salvar una vida real.',
+  '¡Tu familia es tu mejor equipo de rescate! Tener un Plan Familiar de Emergencias les ayuda a saber exactamente qué hacer y dónde encontrarse si algo pasa.',
+  'Nuestro hermoso cantón convive con ríos, montañas y el gran volcán Tungurahua. ¡Conocer las Zonas Seguras y rutas de evacuación es nuestro súper poder!',
+  'Si la tierra empieza a temblar, debes actuar como un ninja. Solo recuerda los tres pasos vitales: ¡Agáchate, cúbrete debajo de una mesa y agárrate fuerte!',
+  'Al escuchar la alarma de evacuación, somos como tortugas sabias y no como liebres asustadas. Caminar rápido pero sin correr evita que nos lastimemos.'
 ];
 
 const LobbyUltra = () => {
@@ -76,12 +76,17 @@ const LobbyUltra = () => {
   const bokehX = useTransform(rawMouseX,, [-45, 45]);
   const bokehY = useTransform(rawMouseY,, [-32, 32]);
 
-  // EFECTO PARA CAMBIAR LA FRASE CADA 8 SEGUNDOS
+  // 🛠️ EFECTO SEGURO PARA TS1135: Cambia la frase cada 8 segundos
   useEffect(() => {
-    const interval = setInterval(() => {
-      setFraseIndex((prev) => (prev + 1) % sabiasQueFrases.length);
+    const timerId = window.setInterval(() => {
+      setFraseIndex(function(currentIndex) {
+        return (currentIndex + 1) % 9; // 9 es la longitud de sabiasQueFrases
+      });
     }, 8000);
-    return () => clearInterval(interval);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
   }, []);
 
   useEffect(() => {
@@ -236,7 +241,7 @@ const LobbyUltra = () => {
         <aside className="relative overflow-hidden bg-slate-950/55 border-b lg:border-b-0 lg:border-r border-white/10 p-4 md:p-6 flex flex-col justify-between">
           <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-transparent to-cyan-500/10 pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col items-start">
+          <div className="relative z-10 flex flex-col items-start w-full">
             <div className="flex items-center gap-3 text-orange-500 mb-3">
               <Activity size={14} className="animate-pulse" />
               <span className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.35em]">
@@ -274,14 +279,14 @@ const LobbyUltra = () => {
               </h1>
             </motion.div>
 
-            {/* 🛠️ TEXTO OFICIAL ACTUALIZADO */}
+            {/* 🛠️ TEXTO OFICIAL AJUSTADO SEGÚN IMAGEN */}
             <p className="text-slate-300 text-[11px] md:text-sm leading-relaxed max-w-md mb-2">
               Plataforma de educación en Gestión de Riesgos de Desastres para el distrito 18D03.
             </p>
 
-            {/* 🛠️ LOGO CENTRADO Y AJUSTADO */}
-            <div className="w-full flex justify-center py-6">
-              <div className="relative w-40 md:w-48 mx-auto">
+            {/* 🛠️ LOGO CENTRADO PERFECTAMENTE */}
+            <div className="w-full flex justify-center py-8">
+              <div className="relative w-40 md:w-48 mx-auto flex justify-center">
                 <div className="absolute inset-0 bg-red-600/30 blur-3xl rounded-full" />
                 <img
                   src="https://blogger.googleusercontent.com/img/a/AVvXsEhwwQia3e2LdO2aVrT1GFE6Cojzx6-lve9qceOZH3IiwXtV3wYKFiTioE7lSASVOnjdUexdIJwv9PUVScy_iupzCzzbbGUp7S1ByxBcJWK8fsZVexSyKj2oh7VgnJZ7iC4bkUjuko0R7SH-Lzgii-JsZmRgbdNWqQlwFlQ194py9fA-fCIIhM1HrHesW3pv"
@@ -342,7 +347,7 @@ const LobbyUltra = () => {
             <div>
               <label className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.24em] text-slate-400 flex items-center mb-1.5">
                 <Users size={12} className="mr-2 text-white" />
-                Selecciona tu agente
+                Selecciona tu agente (Nivel 1)
               </label>
 
               <div className="grid grid-cols-2 gap-3">
@@ -371,7 +376,7 @@ const LobbyUltra = () => {
                     className="w-[4.5rem] h-[4.5rem] md:w-[5rem] md:h-[5rem] mx-auto mb-1.5 rounded-full bg-white/10 p-1.5 object-cover"
                   />
                   <div className="text-[9px] font-black uppercase tracking-widest">
-                    Niña
+                    Agente Femenina
                   </div>
                 </motion.button>
 
@@ -400,7 +405,7 @@ const LobbyUltra = () => {
                     className="w-[4.5rem] h-[4.5rem] md:w-[5rem] md:h-[5rem] mx-auto mb-1.5 rounded-full bg-white/10 p-1.5 object-cover"
                   />
                   <div className="text-[9px] font-black uppercase tracking-widest">
-                    Niño
+                    Agente Masculino
                   </div>
                 </motion.button>
               </div>
@@ -454,7 +459,7 @@ const LobbyUltra = () => {
                     ¿Sabías que...
                   </h4>
 
-                  {/* 🛠️ TEXTOS DINÁMICOS ANIMADOS */}
+                  {/* 🛠️ TEXTOS DINÁMICOS ANIMADOS (Las 9 frases) */}
                   <AnimatePresence mode="wait">
                     <motion.p
                       key={fraseIndex}
