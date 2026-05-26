@@ -42,7 +42,6 @@ const escuelasDisponibles = [
   'Unidad Educativa 12'
 ];
 
-// 💡 ARREGLO DE 9 FRASES DINÁMICAS
 const sabiasQueFrases = [
   '¡Los desastres NO son naturales! Lo natural es que llueva o tiemble; el desastre ocurre únicamente cuando no estamos preparados para ello.',
   'La "vulnerabilidad" es como salir a la lluvia sin paraguas. Mientras más conozcamos los peligros de nuestro entorno, menos vulnerables seremos.',
@@ -66,7 +65,6 @@ const LobbyUltra = () => {
   const [showEscuelas, setShowEscuelas] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
 
-  // 🧠 ESTADOS PARA EL CARRUSEL ALEATORIO
   const [frases, setFrases] = useState<string[]>([]);
   const [fraseIndex, setFraseIndex] = useState(0);
 
@@ -75,16 +73,14 @@ const LobbyUltra = () => {
   const mouseX = useSpring(rawMouseX, { stiffness: 1300, damping: 65 });
   const mouseY = useSpring(rawMouseY, { stiffness: 1300, damping: 65 });
   
-  const bokehX = useTransform(rawMouseX, 0, 1400, -45, 45);
-const bokehY = useTransform(rawMouseY, 0, 900, -32, 32);
+  const bokehX = useTransform(rawMouseX, [0, 1400], [-45, 45]);
+  const bokehY = useTransform(rawMouseY, [0, 900], [-32, 32]);
 
-  // 1️⃣ Mezclar las frases aleatoriamente al cargar la página
   useEffect(() => {
     const mezcladas = [...sabiasQueFrases].sort(() => Math.random() - 0.5);
     setFrases(mezcladas);
   }, []);
 
-  // 2️⃣ Temporizador inteligente (Cambia cada 10 seg, se reinicia si el usuario hace clic)
   useEffect(() => {
     if (frases.length === 0) return;
     const intervalId = window.setInterval(() => {
@@ -93,7 +89,6 @@ const bokehY = useTransform(rawMouseY, 0, 900, -32, 32);
     return () => window.clearInterval(intervalId);
   }, [frases, fraseIndex]);
 
-  // 3️⃣ Funciones para los botones de las flechas
   const nextFrase = () => setFraseIndex((prev) => (prev + 1) % frases.length);
   const prevFrase = () => setFraseIndex((prev) => (prev - 1 + frases.length) % frases.length);
 
@@ -172,7 +167,7 @@ const bokehY = useTransform(rawMouseY, 0, 900, -32, 32);
           translateX: '-50%',
           translateY: '-50%'
         }}
-        className="fixed top-0 left-0 pointer-events-none z- hidden md:block"
+        className="fixed top-0 left-0 pointer-events-none z-50 hidden md:block"
       >
         <motion.div
           animate={{
@@ -287,12 +282,10 @@ const bokehY = useTransform(rawMouseY, 0, 900, -32, 32);
               </h1>
             </motion.div>
 
-            {/* TEXTO OFICIAL ACTUALIZADO */}
             <p className="text-slate-300 text-[11px] md:text-sm leading-relaxed max-w-md mb-2">
               Plataforma de educación en Gestión de Riesgos de Desastres para el distrito 18D03
             </p>
 
-            {/* LOGO CENTRADO CORRECTAMENTE */}
             <div className="w-full flex justify-center py-6">
               <div className="relative w-40 md:w-48 mx-auto flex justify-center">
                 <div className="absolute inset-0 bg-red-600/30 blur-3xl rounded-full" />
@@ -467,7 +460,6 @@ const bokehY = useTransform(rawMouseY, 0, 900, -32, 32);
                     <h4 className="text-orange-300 font-black text-[9px] uppercase tracking-[0.25em]">
                       ¿Sabías que...?
                     </h4>
-                    {/* BOTONES DE NAVEGACIÓN (FLECHAS) */}
                     <div className="flex items-center gap-2 text-white/40">
                       <button
                         type="button"
@@ -531,7 +523,7 @@ const bokehY = useTransform(rawMouseY, 0, 900, -32, 32);
       <AnimatePresence>
         {showEscuelas && (
           <motion.div
-            className="fixed inset-0 z- flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
