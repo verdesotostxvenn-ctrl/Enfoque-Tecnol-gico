@@ -75,6 +75,8 @@ const LobbyUltra = () => {
   const mouseX = useSpring(rawMouseX, { stiffness: 1300, damping: 65 });
   const mouseY = useSpring(rawMouseY, { stiffness: 1300, damping: 65 });
   
+  // 🛠️ SOLUCIÓN ANTIBLOQUEO: Usamos Array.from en lugar de corchetes 
+  // para que el chat no borre nada al copiar.
   const bokehX = useTransform(rawMouseX, Array.from(), Array.from([-45, 45]));
   const bokehY = useTransform(rawMouseY, Array.from(), Array.from([-32, 32]));
 
