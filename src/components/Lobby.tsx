@@ -14,8 +14,6 @@ import {
   HelpCircle,
   MapPin,
   School,
-  ShieldCheck,
-  Sparkles,
   User,
   Users,
   X,
@@ -30,18 +28,25 @@ const avatarImages = {
 };
 
 const escuelasDisponibles = [
-  'Escuela Río Blanco',
-  'Escuela Río Verde',
-  'U.E. Baños',
-  'Unidad Educativa 04',
-  'Unidad Educativa 05',
-  'Unidad Educativa 06',
-  'Unidad Educativa 07',
-  'Unidad Educativa 08',
-  'Unidad Educativa 09',
-  'Unidad Educativa 10',
-  'Unidad Educativa 11',
-  'Unidad Educativa 12'
+  'Colegio De Bachillerato Pcei Agoyán',
+  'Escuela Augusto N Martinez',
+  'Escuela Gonzalo Pizarro',
+  'Escuela Gran Ducado De Luxemburgo',
+  'Escuela Jose Ignacio Vela',
+  'Escuela Leonidas Garcia',
+  'Escuela Manuel Andrade',
+  'Escuela Nicolas Vasconez',
+  'Escuela Pablo Arturo Suarez',
+  'Escuela Pedro Vicente Maldonado',
+  'Extensión Unidad Educativa San Pio X',
+  'Gonzalo Abad Grijalva',
+  'Unidad Educativa Baños',
+  'Unidad Educativa Doctor Misael Acosta Solis',
+  'Unidad Educativa Fray Sebastian Acosta',
+  'Unidad Educativa Oscar Efren Reyes',
+  'Unidad Educativa Palomino Flores',
+  'Unidad Educativa Puerta Del Dorado',
+  'Unidad Educativa'
 ];
 
 const sabiasQueFrases = [
@@ -61,7 +66,7 @@ const LobbyUltra = () => {
 
   const [nombre, setNombre] = useState('');
   const [escuela, setEscuela] = useState('');
-  const [edad, setEdad] = useState(9); // Nuevo estado
+  const [edad, setEdad] = useState(9); 
   const [avatar, setAvatar] = useState<'chica' | 'chico' | ''>('');
   const [hoverAvatar, setHoverAvatar] = useState<'chica' | 'chico' | ''>('');
   const [loading, setLoading] = useState(false);
@@ -105,13 +110,6 @@ const LobbyUltra = () => {
     return () => window.removeEventListener('mousemove', moveCursor);
   }, [rawMouseX, rawMouseY]);
 
-  useEffect(() => {
-    Object.values(avatarImages).forEach((src) => {
-      const image = new Image();
-      image.src = src;
-    });
-  }, []);
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -123,7 +121,7 @@ const LobbyUltra = () => {
 
     localStorage.setItem('agenteNombre', nombreLimpio);
     localStorage.setItem('agenteEscuela', escuela);
-    localStorage.setItem('agenteEdad', edad.toString()); // Guardado
+    localStorage.setItem('agenteEdad', edad.toString()); 
     localStorage.setItem('agenteAvatar', avatar);
     localStorage.setItem('agenteNivel', '1');
     localStorage.setItem('misionVolcanCompletada', 'false');
@@ -135,7 +133,7 @@ const LobbyUltra = () => {
         {
           nombre: nombreLimpio,
           institucion: escuela,
-          edad: edad, // Inserción
+          edad: edad, 
           avatar,
           nivel: 1,
           mision_volcan: false,
@@ -146,13 +144,10 @@ const LobbyUltra = () => {
       ]);
 
       if (error) {
-        console.warn(
-          'Supabase no sincronizó, pero el agente fue guardado localmente:',
-          error.message
-        );
+        console.warn('Supabase no sincronizó:', error.message);
       }
     } catch (error) {
-      console.warn('Fallo de red con Supabase. Registro local guardado:', error);
+      console.warn('Fallo de red con Supabase:', error);
     }
 
     window.dispatchEvent(new Event('agenteNivelActualizado'));
@@ -172,7 +167,7 @@ const LobbyUltra = () => {
           translateX: '-50%',
           translateY: '-50%'
         }}
-        className="fixed top-0 left-0 pointer-events-none z-50 hidden md:block"
+        className="fixed top-0 left-0 pointer-events-none z-[999999] hidden md:block"
       >
         <motion.div
           animate={{
@@ -555,7 +550,7 @@ const LobbyUltra = () => {
       <AnimatePresence>
         {showEscuelas && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
