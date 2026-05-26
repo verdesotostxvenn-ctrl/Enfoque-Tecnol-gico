@@ -74,8 +74,8 @@ const LobbyUltra = () => {
   const mouseX = useSpring(rawMouseX, { stiffness: 1300, damping: 65 });
   const mouseY = useSpring(rawMouseY, { stiffness: 1300, damping: 65 });
 
-  const bokehX = useTransform(rawMouseX,, [-45, 45]);
-  const bokehY = useTransform(rawMouseY,, [-32, 32]);
+  const bokehX = useTransform(rawMouseX, Array(0, 1400), Array(-45, 45));
+  const bokehY = useTransform(rawMouseY, Array(0, 900), Array(-32, 32));
 
   // EFECTO PARA CAMBIAR LA FRASE CADA 8 SEGUNDOS
   useEffect(() => {
