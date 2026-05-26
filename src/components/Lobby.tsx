@@ -74,9 +74,9 @@ const LobbyUltra = () => {
   const rawMouseY = useMotionValue(0);
   const mouseX = useSpring(rawMouseX, { stiffness: 1300, damping: 65 });
   const mouseY = useSpring(rawMouseY, { stiffness: 1300, damping: 65 });
-
-  const bokehX = useTransform(rawMouseX,, [-45, 45]);
-  const bokehY = useTransform(rawMouseY,, [-32, 32]);
+  
+  const bokehX = useTransform(rawMouseX, Array.from(), Array.from([-45, 45]));
+  const bokehY = useTransform(rawMouseY, Array.from(), Array.from([-32, 32]));
 
   // 1️⃣ Mezclar las frases aleatoriamente al cargar la página
   useEffect(() => {
