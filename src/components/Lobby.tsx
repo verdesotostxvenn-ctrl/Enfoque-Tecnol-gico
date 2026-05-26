@@ -46,7 +46,7 @@ const escuelasDisponibles = [
   'Unidad Educativa Oscar Efren Reyes',
   'Unidad Educativa Palomino Flores',
   'Unidad Educativa Puerta Del Dorado',
-  'Esta unidad aun no me confirman asi que dejemosla igual dentro para yo despues cambiarla'
+  'Unidad Arena Breakout'
 ];
 
 const edadesDisponibles = [6, 7, 8, 9, 10, 11, 12, 13, 14];
