@@ -18,9 +18,7 @@ import {
   Sparkles,
   User,
   Users,
-  X,
-  Minus,
-  Plus
+  X
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
@@ -43,6 +41,8 @@ const escuelasDisponibles = [
   'Unidad Educativa 11',
   'Unidad Educativa 12'
 ];
+
+const edadesDisponibles = [6, 7, 8, 9, 10, 11, 12, 13, 14];
 
 const sabiasQueFrases = [
   '¡Los desastres NO son naturales! Lo natural es que llueva o tiemble; el desastre ocurre únicamente cuando no estamos preparados para ello.',
@@ -165,29 +165,31 @@ const LobbyUltra = () => {
 
   return (
     <main className="h-screen max-h-screen w-full bg-[#010413] text-white relative overflow-hidden flex items-center justify-center p-2 md:p-4 cursor-none">
-      <motion.div
-        style={{
-          x: mouseX,
-          y: mouseY,
-          translateX: '-50%',
-          translateY: '-50%'
-        }}
-        className="fixed top-0 left-0 pointer-events-none z-50 hidden md:block"
-      >
+      {!showEscuelas && (
         <motion.div
-          animate={{
-            scale: isHovering ? 1.05 : 1,
-            borderColor: isHovering ? '#fb923c' : '#22d3ee',
-            backgroundColor: isHovering
-              ? 'rgba(251,146,60,0.08)'
-              : 'rgba(34,211,238,0.08)'
+          style={{
+            x: mouseX,
+            y: mouseY,
+            translateX: '-50%',
+            translateY: '-50%'
           }}
-          transition={{ duration: 0.1 }}
-          className="w-3.5 h-3.5 rounded-full border flex items-center justify-center shadow-[0_0_14px_rgba(34,211,238,0.8)] backdrop-blur-sm"
+          className="fixed top-0 left-0 pointer-events-none z-50 hidden md:block"
         >
-          <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_8px_#fff]" />
+          <motion.div
+            animate={{
+              scale: isHovering ? 1.05 : 1,
+              borderColor: isHovering ? '#fb923c' : '#22d3ee',
+              backgroundColor: isHovering
+                ? 'rgba(251,146,60,0.08)'
+                : 'rgba(34,211,238,0.08)'
+            }}
+            transition={{ duration: 0.1 }}
+            className="w-3.5 h-3.5 rounded-full border flex items-center justify-center shadow-[0_0_14px_rgba(34,211,238,0.8)] backdrop-blur-sm"
+          >
+            <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_8px_#fff]" />
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
 
       <motion.div
         style={{ x: bokehX, y: bokehY }}
@@ -336,24 +338,24 @@ const LobbyUltra = () => {
                 <Users size={12} className="mr-2 text-purple-400" />
                 Tu Edad ({edad} años)
               </label>
-              <div className="flex items-center gap-3 w-full">
-                <button
-                  type="button"
-                  onClick={() => setEdad(Math.max(6, edad - 1))}
-                  className="bg-black/50 border border-white/10 p-3 rounded-2xl text-white hover:border-purple-400 transition-all"
-                >
-                  <Minus size={16} />
-                </button>
-                <div className="flex-1 bg-black/50 border border-white/10 rounded-2xl p-3 text-center font-black text-lg text-purple-400">
-                  {edad}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEdad(Math.min(14, edad + 1))}
-                  className="bg-black/50 border border-white/10 p-3 rounded-2xl text-white hover:border-purple-400 transition-all"
-                >
-                  <Plus size={16} />
-                </button>
+              <div className="grid grid-cols-3 md:grid-cols-9 gap-2 w-full">
+                {edadesDisponibles.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setEdad(item)}
+                    onMouseEnter={() => setIsHovering(true)}
+                    onMouseLeave={() => setIsHovering(false)}
+                    aria-pressed={edad === item}
+                    className={`rounded-2xl border p-3 text-center font-black text-sm transition-all ${
+                      edad === item
+                        ? 'bg-purple-500/25 border-purple-400 text-white shadow-[0_0_22px_rgba(192,132,252,0.35)] scale-[1.02]'
+                        : 'bg-black/50 border-white/10 text-slate-300 hover:border-purple-400/60 hover:bg-white/10'
+                    }`}
+                  >
+                    {item}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -555,7 +557,7 @@ const LobbyUltra = () => {
       <AnimatePresence>
         {showEscuelas && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 cursor-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
