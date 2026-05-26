@@ -18,7 +18,9 @@ import {
   Sparkles,
   User,
   Users,
-  X
+  X,
+  Minus,
+  Plus
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
@@ -59,6 +61,7 @@ const LobbyUltra = () => {
 
   const [nombre, setNombre] = useState('');
   const [escuela, setEscuela] = useState('');
+  const [edad, setEdad] = useState(9); // Nuevo estado
   const [avatar, setAvatar] = useState<'chica' | 'chico' | ''>('');
   const [hoverAvatar, setHoverAvatar] = useState<'chica' | 'chico' | ''>('');
   const [loading, setLoading] = useState(false);
@@ -120,6 +123,7 @@ const LobbyUltra = () => {
 
     localStorage.setItem('agenteNombre', nombreLimpio);
     localStorage.setItem('agenteEscuela', escuela);
+    localStorage.setItem('agenteEdad', edad.toString()); // Guardado
     localStorage.setItem('agenteAvatar', avatar);
     localStorage.setItem('agenteNivel', '1');
     localStorage.setItem('misionVolcanCompletada', 'false');
@@ -131,6 +135,7 @@ const LobbyUltra = () => {
         {
           nombre: nombreLimpio,
           institucion: escuela,
+          edad: edad, // Inserción
           avatar,
           nivel: 1,
           mision_volcan: false,
@@ -323,6 +328,33 @@ const LobbyUltra = () => {
                 placeholder="Escribe tu nombre..."
                 className="w-full bg-black/50 border border-white/10 rounded-2xl px-4 py-3 text-white font-bold outline-none focus:border-orange-500 transition-all text-sm"
               />
+            </div>
+
+            {/* Selector de Edad */}
+            <div>
+              <label className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.24em] text-slate-400 flex items-center mb-1.5">
+                <Users size={12} className="mr-2 text-purple-400" />
+                Tu Edad ({edad} años)
+              </label>
+              <div className="flex items-center gap-3 w-full">
+                <button
+                  type="button"
+                  onClick={() => setEdad(Math.max(6, edad - 1))}
+                  className="bg-black/50 border border-white/10 p-3 rounded-2xl text-white hover:border-purple-400 transition-all"
+                >
+                  <Minus size={16} />
+                </button>
+                <div className="flex-1 bg-black/50 border border-white/10 rounded-2xl p-3 text-center font-black text-lg text-purple-400">
+                  {edad}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEdad(Math.min(14, edad + 1))}
+                  className="bg-black/50 border border-white/10 p-3 rounded-2xl text-white hover:border-purple-400 transition-all"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
             </div>
 
             <div>
