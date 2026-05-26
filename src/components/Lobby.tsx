@@ -73,11 +73,11 @@ const LobbyUltra = () => {
 
   const rawMouseX = useMotionValue(0);
   const rawMouseY = useMotionValue(0);
-  const mouseX = useSpring(rawMouseX, { stiffness: 1300, damping: 65 });
-  const mouseY = useSpring(rawMouseY, { stiffness: 1300, damping: 65 });
+  const mouseX = useSpring(rawMouseX, { stiffness: 2200, damping: 48, mass: 0.18 });
+  const mouseY = useSpring(rawMouseY, { stiffness: 2200, damping: 48, mass: 0.18 });
   
-  const bokehX = useTransform(rawMouseX, [0, 1400], [-45, 45]);
-  const bokehY = useTransform(rawMouseY, [0, 900], [-32, 32]);
+  const bokehX = useTransform(rawMouseX, [0, 1400], [-18, 18]);
+  const bokehY = useTransform(rawMouseY, [0, 900], [-12, 12]);
 
   useEffect(() => {
     const mezcladas = [...sabiasQueFrases].sort(() => Math.random() - 0.5);
@@ -96,14 +96,16 @@ const LobbyUltra = () => {
   const prevFrase = () => setFraseIndex((prev) => (prev - 1 + frases.length) % frases.length);
 
   useEffect(() => {
+    if (showEscuelas) return;
+
     const moveCursor = (event: MouseEvent) => {
       rawMouseX.set(event.clientX);
       rawMouseY.set(event.clientY);
     };
 
-    window.addEventListener('mousemove', moveCursor);
+    window.addEventListener('mousemove', moveCursor, { passive: true });
     return () => window.removeEventListener('mousemove', moveCursor);
-  }, [rawMouseX, rawMouseY]);
+  }, [rawMouseX, rawMouseY, showEscuelas]);
 
   useEffect(() => {
     Object.values(avatarImages).forEach((src) => {
@@ -164,7 +166,11 @@ const LobbyUltra = () => {
   };
 
   return (
-    <main className="h-screen max-h-screen w-full bg-[#010413] text-white relative overflow-hidden flex items-center justify-center p-2 md:p-4 cursor-none">
+    <main
+      className={`h-screen max-h-screen w-full bg-[#010413] text-white relative overflow-hidden flex items-center justify-center p-2 md:p-4 ${
+        showEscuelas ? 'cursor-auto' : 'cursor-none'
+      }`}
+    >
       {!showEscuelas && (
         <motion.div
           style={{
@@ -173,7 +179,7 @@ const LobbyUltra = () => {
             translateX: '-50%',
             translateY: '-50%'
           }}
-          className="fixed top-0 left-0 pointer-events-none z-50 hidden md:block"
+          className="fixed top-0 left-0 pointer-events-none z-50 hidden md:block transform-gpu will-change-transform"
         >
           <motion.div
             animate={{
@@ -193,7 +199,7 @@ const LobbyUltra = () => {
 
       <motion.div
         style={{ x: bokehX, y: bokehY }}
-        className="absolute inset-0 pointer-events-none overflow-hidden"
+        className="absolute inset-0 pointer-events-none overflow-hidden transform-gpu will-change-transform"
       >
         <motion.div
           animate={{ rotate: 360 }}
@@ -472,85 +478,118 @@ const LobbyUltra = () => {
           </form>
 
           <div className="mt-3 flex justify-end">
-            <motion.div
-              animate={{
-                y: [0, -3, 0],
-                rotate: [-0.4, 0.4, -0.4]
-              }}
-              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-              className="relative w-full max-w-[430px] bg-slate-950/55 border border-white/10 rounded-[2.2rem] rounded-tr-[3rem] rounded-bl-[1.2rem] p-4 backdrop-blur-xl shadow-[0_0_24px_rgba(34,211,238,0.10)] overflow-hidden"
-            >
-              <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
-              <div className="absolute -right-3 -top-3 w-12 h-12 bg-cyan-400/10 rounded-full blur-lg" />
-              <div className="absolute right-7 -bottom-2 w-6 h-6 bg-slate-950/55 border-r border-b border-white/10 rotate-45" />
+            <div className="relative w-full max-w-[460px] pb-6">
+              <motion.div
+                animate={{
+                  y: [0, -4, 0],
+                  rotate: [-0.35, 0.35, -0.35]
+                }}
+                transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
+                className="relative bg-slate-950/60 border border-cyan-300/20 rounded-[2.8rem] rounded-tr-[3.8rem] rounded-bl-[3.4rem] p-4 md:p-5 backdrop-blur-xl shadow-[0_0_32px_rgba(34,211,238,0.14)] overflow-hidden"
+              >
+                <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/50 to-transparent" />
+                <div className="absolute -right-8 -top-8 w-28 h-28 bg-cyan-400/12 rounded-full blur-2xl" />
+                <div className="absolute -left-10 -bottom-10 w-28 h-28 bg-orange-400/10 rounded-full blur-2xl" />
 
-              <div className="relative z-10 grid grid-cols-[auto_1fr_auto] items-start gap-3">
-                <div className="bg-white/5 border border-white/10 p-2 rounded-2xl text-orange-300">
-                  <HelpCircle size={18} />
-                </div>
+                <div className="relative z-10 grid grid-cols-[auto_1fr] items-start gap-3">
+                  <motion.div
+                    animate={{
+                      scale: [1, 1.08, 1],
+                      rotate: [-4, 5, -4]
+                    }}
+                    transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                    className="relative bg-orange-400/15 border border-orange-300/25 p-3 rounded-full text-orange-200 shadow-[0_0_22px_rgba(251,146,60,0.16)]"
+                  >
+                    <HelpCircle size={18} />
+                    <span className="absolute -right-1 -top-2 text-lg">💡</span>
+                  </motion.div>
 
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className="text-orange-300 font-black text-[9px] uppercase tracking-[0.25em]">
-                      ¿Sabías que...?
-                    </h4>
-                    <div className="flex items-center gap-2 text-white/40">
-                      <button
-                        type="button"
-                        onClick={prevFrase}
-                        onMouseEnter={() => setIsHovering(true)}
-                        onMouseLeave={() => setIsHovering(false)}
-                        className="hover:text-cyan-400 transition-colors"
-                      >
-                        <ChevronLeft size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={nextFrase}
-                        onMouseEnter={() => setIsHovering(true)}
-                        onMouseLeave={() => setIsHovering(false)}
-                        className="hover:text-cyan-400 transition-colors"
-                      >
-                        <ChevronRight size={14} />
-                      </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div>
+                        <p className="text-cyan-200/70 text-[8px] font-black uppercase tracking-[0.28em]">
+                          Pista de prevención
+                        </p>
+                        <h4 className="text-orange-300 font-black text-[10px] md:text-xs uppercase tracking-[0.24em]">
+                          ¿Sabías que...?
+                        </h4>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-white/55">
+                        <button
+                          type="button"
+                          onClick={prevFrase}
+                          onMouseEnter={() => setIsHovering(true)}
+                          onMouseLeave={() => setIsHovering(false)}
+                          className="bg-white/5 hover:bg-cyan-400/15 hover:text-cyan-300 border border-white/10 hover:border-cyan-300/35 p-2 rounded-full transition-all"
+                          aria-label="Ver dato anterior"
+                        >
+                          <ChevronLeft size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={nextFrase}
+                          onMouseEnter={() => setIsHovering(true)}
+                          onMouseLeave={() => setIsHovering(false)}
+                          className="bg-white/5 hover:bg-cyan-400/15 hover:text-cyan-300 border border-white/10 hover:border-cyan-300/35 p-2 rounded-full transition-all"
+                          aria-label="Ver siguiente dato"
+                        >
+                          <ChevronRight size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="min-h-[4.8rem] pr-2">
+                      <AnimatePresence mode="wait">
+                        {frases.length > 0 && (
+                          <motion.p
+                            key={fraseIndex}
+                            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                            transition={{ duration: 0.28 }}
+                            className="text-white/88 text-[11px] md:text-xs leading-relaxed font-semibold"
+                          >
+                            {frases[fraseIndex]}
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    <div className="mt-2 flex items-center gap-2 text-[8px] font-black uppercase tracking-[0.22em] text-emerald-200/70">
+                      <ShieldCheck size={12} />
+                      Agente preparado
                     </div>
                   </div>
-
-                  <div className="min-h-[4.5rem]">
-                    <AnimatePresence mode="wait">
-                      {frases.length > 0 && (
-                        <motion.p
-                          key={fraseIndex}
-                          initial={{ opacity: 0, x: 10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          transition={{ duration: 0.3 }}
-                          className="text-white/85 text-[11px] md:text-xs leading-relaxed font-semibold max-w-[270px]"
-                        >
-                          {frases[fraseIndex]}
-                        </motion.p>
-                      )}
-                    </AnimatePresence>
-                  </div>
                 </div>
 
-                <div className="flex flex-col gap-1 text-xl">
-                  <motion.span
-                    animate={{ y: [0, -6, 0], rotate: [-8, 8, -8] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    💡
-                  </motion.span>
-                  <motion.span
-                    animate={{ y: [0, -5, 0], scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2.4, repeat: Infinity }}
-                  >
-                    🧠
-                  </motion.span>
-                </div>
-              </div>
-            </motion.div>
+                <motion.span
+                  animate={{ y: [0, -7, 0], rotate: [-8, 8, -8] }}
+                  transition={{ duration: 2.4, repeat: Infinity }}
+                  className="absolute right-5 bottom-4 text-xl"
+                >
+                  🧠
+                </motion.span>
+              </motion.div>
+
+              <motion.div
+                animate={{ scale: [1, 1.08, 1], opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute right-20 bottom-2 w-6 h-6 bg-slate-950/70 border border-cyan-300/20 rounded-full shadow-[0_0_18px_rgba(34,211,238,0.12)]"
+              />
+              <motion.div
+                animate={{ scale: [1, 1.15, 1], opacity: [0.55, 0.9, 0.55] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute right-12 -bottom-1 w-4 h-4 bg-slate-950/65 border border-cyan-300/20 rounded-full"
+              />
+              <motion.div
+                animate={{ scale: [1, 1.2, 1], opacity: [0.45, 0.8, 0.45] }}
+                transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute right-3 -bottom-3 w-2.5 h-2.5 bg-slate-950/60 border border-cyan-300/20 rounded-full"
+              />
+            </div>
           </div>
+
         </section>
       </motion.section>
 
