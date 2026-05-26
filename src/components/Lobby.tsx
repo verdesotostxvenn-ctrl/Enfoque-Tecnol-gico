@@ -9,6 +9,7 @@ import {
 } from 'framer-motion';
 import {
   Activity,
+  ChevronLeft,
   ChevronRight,
   HelpCircle,
   MapPin,
@@ -41,6 +42,19 @@ const escuelasDisponibles = [
   'Unidad Educativa 12'
 ];
 
+// 💡 ARREGLO DE 9 FRASES DINÁMICAS
+const sabiasQueFrases = [
+  '¡Los desastres NO son naturales! Lo natural es que llueva o tiemble; el desastre ocurre únicamente cuando no estamos preparados para ello.',
+  'La "vulnerabilidad" es como salir a la lluvia sin paraguas. Mientras más conozcamos los peligros de nuestro entorno, menos vulnerables seremos.',
+  '¡Tu Mochila de Emergencia es tu escudo protector! Debe contener todo lo necesario para cuidarte durante 3 días o 72 horas.',
+  'Una urgencia la puede solventar la comunidad o la escuela, pero una emergencia real ¡Necesita que llamemos a los verdaderos héroes del ECU 911!',
+  'Hacer llamadas de broma al 9-1-1 es muy peligroso. Podrías hacer que una ambulancia pierda tiempo y no llegue a salvar una vida real.',
+  '¡Tu familia es tu mejor equipo de rescate! Tener un Plan Familiar de Emergencias les ayuda a saber exactamente qué hacer y dónde encontrarse si algo pasa.',
+  'Nuestro hermoso cantón convive con ríos, montañas y el gran volcán Tungurahua. ¡Conocer las Zonas Seguras y rutas de evacuación es nuestro súper poder!',
+  'Si la tierra empieza a temblar, debes actuar como un ninja. Solo recuerda los tres pasos vitales: ¡Agáchate, cúbrete debajo de una mesa y agárrate fuerte!',
+  'Al escuchar la alarma de evacuación, somos como tortugas sabias y no como liebres asustadas. Caminar rápido pero sin correr evita que nos lastimemos.'
+];
+
 const LobbyUltra = () => {
   const navigate = useNavigate();
 
@@ -52,13 +66,36 @@ const LobbyUltra = () => {
   const [showEscuelas, setShowEscuelas] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
 
+  // 🧠 ESTADOS PARA EL CARRUSEL ALEATORIO
+  const [frases, setFrases] = useState<string[]>([]);
+  const [fraseIndex, setFraseIndex] = useState(0);
+
   const rawMouseX = useMotionValue(0);
   const rawMouseY = useMotionValue(0);
   const mouseX = useSpring(rawMouseX, { stiffness: 1300, damping: 65 });
   const mouseY = useSpring(rawMouseY, { stiffness: 1300, damping: 65 });
 
-  const bokehX = useTransform(rawMouseX, [0, 1400], [-45, 45]);
-  const bokehY = useTransform(rawMouseY, [0, 900], [-32, 32]);
+  const bokehX = useTransform(rawMouseX,, [-45, 45]);
+  const bokehY = useTransform(rawMouseY,, [-32, 32]);
+
+  // 1️⃣ Mezclar las frases aleatoriamente al cargar la página
+  useEffect(() => {
+    const mezcladas = [...sabiasQueFrases].sort(() => Math.random() - 0.5);
+    setFrases(mezcladas);
+  }, []);
+
+  // 2️⃣ Temporizador inteligente (Cambia cada 10 seg, se reinicia si el usuario hace clic)
+  useEffect(() => {
+    if (frases.length === 0) return;
+    const intervalId = window.setInterval(() => {
+      setFraseIndex((prev) => (prev + 1) % frases.length);
+    }, 10000);
+    return () => window.clearInterval(intervalId);
+  }, [frases, fraseIndex]);
+
+  // 3️⃣ Funciones para los botones de las flechas
+  const nextFrase = () => setFraseIndex((prev) => (prev + 1) % frases.length);
+  const prevFrase = () => setFraseIndex((prev) => (prev - 1 + frases.length) % frases.length);
 
   useEffect(() => {
     const moveCursor = (event: MouseEvent) => {
@@ -135,7 +172,7 @@ const LobbyUltra = () => {
           translateX: '-50%',
           translateY: '-50%'
         }}
-        className="fixed top-0 left-0 pointer-events-none z-[999999] hidden md:block"
+        className="fixed top-0 left-0 pointer-events-none z- hidden md:block"
       >
         <motion.div
           animate={{
@@ -248,24 +285,23 @@ const LobbyUltra = () => {
                   Prevención
                 </span>
               </h1>
-
-              <div className="mt-3 flex items-center gap-2 text-[8px] md:text-[9px] font-black uppercase tracking-[0.24em] text-cyan-200/80">
-                <ShieldCheck size={14} />
-                Academia infantil de gestión de riesgos
-              </div>
             </motion.div>
 
-            <p className="text-slate-300 text-[11px] md:text-sm leading-relaxed max-w-md mb-4">
-              Plataforma educativa de gestión de riesgos para entrenar agentes infantiles en prevención, emergencia y evacuación.
+            {/* TEXTO OFICIAL ACTUALIZADO */}
+            <p className="text-slate-300 text-[11px] md:text-sm leading-relaxed max-w-md mb-2">
+              Plataforma de educación en Gestión de Riesgos de Desastres para el distrito 18D03
             </p>
 
-            <div className="relative w-32 md:w-44">
-              <div className="absolute inset-0 bg-orange-500/45 blur-3xl rounded-full" />
-              <img
-                src="https://blogger.googleusercontent.com/img/a/AVvXsEhwwQia3e2LdO2aVrT1GFE6Cojzx6-lve9qceOZH3IiwXtV3wYKFiTioE7lSASVOnjdUexdIJwv9PUVScy_iupzCzzbbGUp7S1ByxBcJWK8fsZVexSyKj2oh7VgnJZ7iC4bkUjuko0R7SH-Lzgii-JsZmRgbdNWqQlwFlQ194py9fA-fCIIhM1HrHesW3pv"
-                alt="Logo"
-                className="relative z-10 w-full h-auto drop-shadow-2xl"
-              />
+            {/* LOGO CENTRADO CORRECTAMENTE */}
+            <div className="w-full flex justify-center py-6">
+              <div className="relative w-40 md:w-48 mx-auto flex justify-center">
+                <div className="absolute inset-0 bg-red-600/30 blur-3xl rounded-full" />
+                <img
+                  src="https://blogger.googleusercontent.com/img/a/AVvXsEhwwQia3e2LdO2aVrT1GFE6Cojzx6-lve9qceOZH3IiwXtV3wYKFiTioE7lSASVOnjdUexdIJwv9PUVScy_iupzCzzbbGUp7S1ByxBcJWK8fsZVexSyKj2oh7VgnJZ7iC4bkUjuko0R7SH-Lzgii-JsZmRgbdNWqQlwFlQ194py9fA-fCIIhM1HrHesW3pv"
+                  alt="Logo"
+                  className="relative z-10 w-full h-auto drop-shadow-2xl"
+                />
+              </div>
             </div>
           </div>
 
@@ -426,14 +462,50 @@ const LobbyUltra = () => {
                   <HelpCircle size={18} />
                 </div>
 
-                <div>
-                  <h4 className="text-orange-300 font-black text-[9px] uppercase tracking-[0.25em] mb-1">
-                    ¿Sabías que?
-                  </h4>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="text-orange-300 font-black text-[9px] uppercase tracking-[0.25em]">
+                      ¿Sabías que...?
+                    </h4>
+                    {/* BOTONES DE NAVEGACIÓN (FLECHAS) */}
+                    <div className="flex items-center gap-2 text-white/40">
+                      <button
+                        type="button"
+                        onClick={prevFrase}
+                        onMouseEnter={() => setIsHovering(true)}
+                        onMouseLeave={() => setIsHovering(false)}
+                        className="hover:text-cyan-400 transition-colors"
+                      >
+                        <ChevronLeft size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={nextFrase}
+                        onMouseEnter={() => setIsHovering(true)}
+                        onMouseLeave={() => setIsHovering(false)}
+                        className="hover:text-cyan-400 transition-colors"
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  </div>
 
-                  <p className="text-white/85 text-[11px] md:text-xs leading-relaxed font-semibold max-w-[270px]">
-                    El riesgo es una construcción social: no hay riesgo si no existen personas expuestas y vulnerables.
-                  </p>
+                  <div className="min-h-[4.5rem]">
+                    <AnimatePresence mode="wait">
+                      {frases.length > 0 && (
+                        <motion.p
+                          key={fraseIndex}
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          transition={{ duration: 0.3 }}
+                          className="text-white/85 text-[11px] md:text-xs leading-relaxed font-semibold max-w-[270px]"
+                        >
+                          {frases[fraseIndex]}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-1 text-xl">
@@ -459,7 +531,7 @@ const LobbyUltra = () => {
       <AnimatePresence>
         {showEscuelas && (
           <motion.div
-            className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
+            className="fixed inset-0 z- flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
