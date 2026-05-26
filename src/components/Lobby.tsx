@@ -96,8 +96,6 @@ const LobbyUltra = () => {
   const prevFrase = () => setFraseIndex((prev) => (prev - 1 + frases.length) % frases.length);
 
   useEffect(() => {
-    if (showEscuelas) return;
-
     const moveCursor = (event: MouseEvent) => {
       rawMouseX.set(event.clientX);
       rawMouseY.set(event.clientY);
@@ -105,7 +103,7 @@ const LobbyUltra = () => {
 
     window.addEventListener('mousemove', moveCursor, { passive: true });
     return () => window.removeEventListener('mousemove', moveCursor);
-  }, [rawMouseX, rawMouseY, showEscuelas]);
+  }, [rawMouseX, rawMouseY]);
 
   useEffect(() => {
     Object.values(avatarImages).forEach((src) => {
@@ -167,20 +165,17 @@ const LobbyUltra = () => {
 
   return (
     <main
-      className={`h-screen max-h-screen w-full bg-[#010413] text-white relative overflow-hidden flex items-center justify-center p-2 md:p-4 ${
-        showEscuelas ? 'cursor-auto' : 'cursor-none'
-      }`}
+      className="h-screen max-h-screen w-full bg-[#010413] text-white relative overflow-hidden flex items-center justify-center p-2 md:p-4 cursor-none"
     >
-      {!showEscuelas && (
-        <motion.div
-          style={{
-            x: mouseX,
-            y: mouseY,
-            translateX: '-50%',
-            translateY: '-50%'
-          }}
-          className="fixed top-0 left-0 pointer-events-none z-50 hidden md:block transform-gpu will-change-transform"
-        >
+      <motion.div
+        style={{
+          x: mouseX,
+          y: mouseY,
+          translateX: '-50%',
+          translateY: '-50%'
+        }}
+        className="fixed top-0 left-0 pointer-events-none z-[9999] hidden md:block transform-gpu will-change-transform"
+      >
           <motion.div
             animate={{
               scale: isHovering ? 1.05 : 1,
@@ -194,8 +189,7 @@ const LobbyUltra = () => {
           >
             <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_8px_#fff]" />
           </motion.div>
-        </motion.div>
-      )}
+      </motion.div>
 
       <motion.div
         style={{ x: bokehX, y: bokehY }}
@@ -596,7 +590,7 @@ const LobbyUltra = () => {
       <AnimatePresence>
         {showEscuelas && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 cursor-auto"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 cursor-none"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
