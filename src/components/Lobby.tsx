@@ -28,18 +28,25 @@ const avatarImages = {
 };
 
 const escuelasDisponibles = [
-  'Escuela Río Blanco',
-  'Escuela Río Verde',
-  'U.E. Baños',
-  'Unidad Educativa 04',
-  'Unidad Educativa 05',
-  'Unidad Educativa 06',
-  'Unidad Educativa 07',
-  'Unidad Educativa 08',
-  'Unidad Educativa 09',
-  'Unidad Educativa 10',
-  'Unidad Educativa 11',
-  'Unidad Educativa 12'
+  'Colegio De Bachillerato Pcei Agoyán',
+  'Escuela Augusto N Martinez',
+  'Escuela Gonzalo Pizarro',
+  'Escuela Gran Ducado De Luxemburgo',
+  'Escuela Jose Ignacio Vela',
+  'Escuela Leonidas Garcia',
+  'Escuela Manuel Andrade',
+  'Escuela Nicolas Vasconez',
+  'Escuela Pablo Arturo Suarez',
+  'Escuela Pedro Vicente Maldonado',
+  'Extensión Unidad Educativa San Pio X',
+  'Gonzalo Abad Grijalva',
+  'Unidad Educativa Baños',
+  'Unidad Educativa Doctor Misael Acosta Solis',
+  'Unidad Educativa Fray Sebastian Acosta',
+  'Unidad Educativa Oscar Efren Reyes',
+  'Unidad Educativa Palomino Flores',
+  'Unidad Educativa Puerta Del Dorado',
+  'Esta unidad aun no me confirman asi que dejemosla igual dentro para yo despues cambiarla'
 ];
 
 const edadesDisponibles = [6, 7, 8, 9, 10, 11, 12, 13, 14];
