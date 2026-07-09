@@ -8,6 +8,7 @@ import MisionEvacuacion from './components/MisionEvacuacion';
 import AdminPanel from './components/AdminPanel';
 import CustomCursor from './components/CustomCursor';
 import MapasPage from './components/MapasPage';
+import MapasAdminPage from './components/MapasAdminPage';
 import VideosPage from './components/VideosPage';
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
 
         {/* Panel administrativo */}
         <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/admin/mapas" element={<MapasAdminPage />} />
       </Routes>
     </Router>
   );
