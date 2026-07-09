@@ -1,11 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Database, Info, Maximize2, Minus, Move, Plus, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Database, Info, Layers3, Maximize2, Minus, Move, Plus, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { isSupabaseConfigured, supabase } from '../supabaseClient';
-import { renderGeoTiffSource, susceptibilityLegend } from '../utils/geotiffRenderer';
+import { PaletteName, renderGeoTiffSource, susceptibilityPalettes } from '../utils/geotiffRenderer';
 
 const FALLBACK_MAPA_URL = 'https://blogger.googleusercontent.com/img/a/AVvXsEgoBR_tyDWvpHNWIIr4exwvwEhWkAJKojndFPjuAEU9rITfY1DmsDPkKDo6TN7q6DwlfiCUrkWt4XIa-Vmp88WdgghLYYVPJRJyt_UEIHDtrkpQ_6guba1jv5pCpwD5hs50Fyzmnk76qagF_CAXoQTzm9EfVRMIwCRBqXhp7L4_-Ez2wLhczbzcB37WWqo';
+
+const paletteLabels: Record<PaletteName, string> = {
+  institucional: 'Original',
+  semaforo: 'Semáforo',
+  contraste: 'Contraste',
+  azul: 'Azul',
+  gris: 'Gris'
+};
 
 type MapaRecord = {
   id: string;
@@ -24,11 +32,18 @@ const MapasPage = () => {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [mapaUrl, setMapaUrl] = useState(FALLBACK_MAPA_URL);
+  const [previewUrl, setPreviewUrl] = useState(FALLBACK_MAPA_URL);
+  const [tifUrl, setTifUrl] = useState('');
   const [titulo, setTitulo] = useState('Mapa de amenaza por inundaciones');
   const [descripcion, setDescripcion] = useState('Visualiza el mapa temático de susceptibilidad. Puedes acercar, alejar y mover el mapa para revisar las zonas de riesgo.');
   const [estado, setEstado] = useState('Cargando mapa publicado...');
   const [isLoading, setIsLoading] = useState(true);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [activePalette, setActivePalette] = useState<PaletteName>('institucional');
+  const [counts, setCounts] = useState<Record<number, number> | null>(null);
+  const [renderMode, setRenderMode] = useState<'tif' | 'preview' | 'fallback'>('fallback');
+
+  const selectedLegend = useMemo(() => susceptibilityPalettes[activePalette], [activePalette]);
 
   useEffect(() => {
     const cargarMapaPublicado = async () => {
@@ -39,6 +54,8 @@ const MapasPage = () => {
         if (!isSupabaseConfigured) {
           setEstado('Mostrando mapa base. Supabase todavía no está configurado para mapas publicados.');
           setMapaUrl(FALLBACK_MAPA_URL);
+          setPreviewUrl(FALLBACK_MAPA_URL);
+          setRenderMode('fallback');
           return;
         }
 
@@ -55,33 +72,37 @@ const MapasPage = () => {
         if (!mapa) {
           setEstado('Mostrando mapa base. Aún no hay un GeoTIFF publicado desde /admin/mapas.');
           setMapaUrl(FALLBACK_MAPA_URL);
+          setPreviewUrl(FALLBACK_MAPA_URL);
+          setRenderMode('fallback');
           return;
         }
 
         setTitulo(mapa.titulo || 'Mapa de amenaza por inundaciones');
         setDescripcion(mapa.descripcion || 'Mapa temático de susceptibilidad por inundaciones.');
         setUpdatedAt(mapa.updated_at);
+        setPreviewUrl(mapa.preview_url || FALLBACK_MAPA_URL);
 
-        if (mapa.preview_url) {
-          setMapaUrl(mapa.preview_url);
-          setEstado('Mapa publicado cargado desde Supabase Storage.');
+        if (mapa.tif_url) {
+          setTifUrl(mapa.tif_url);
+          setEstado('GeoTIFF publicado encontrado. Preparando simbología editable...');
           return;
         }
 
-        if (mapa.tif_url) {
-          setEstado('Renderizando GeoTIFF publicado...');
-          const rendered = await renderGeoTiffSource(mapa.tif_url, 1600);
-          setMapaUrl(rendered.dataUrl);
-          setEstado('GeoTIFF publicado renderizado correctamente.');
+        if (mapa.preview_url) {
+          setMapaUrl(mapa.preview_url);
+          setRenderMode('preview');
+          setEstado('Mapa publicado como imagen. Para cambiar colores en vivo, publica también el .tif.');
           return;
         }
 
         setEstado('Registro encontrado, pero no tiene archivo de mapa.');
         setMapaUrl(FALLBACK_MAPA_URL);
+        setRenderMode('fallback');
       } catch (error) {
         console.error(error);
         setEstado('No se pudo cargar el mapa publicado. Mostrando mapa base.');
         setMapaUrl(FALLBACK_MAPA_URL);
+        setRenderMode('fallback');
       } finally {
         setIsLoading(false);
       }
@@ -89,6 +110,42 @@ const MapasPage = () => {
 
     cargarMapaPublicado();
   }, []);
+
+  useEffect(() => {
+    if (!tifUrl) return;
+
+    let cancelled = false;
+
+    const renderizar = async () => {
+      setIsLoading(true);
+      setEstado(`Renderizando GeoTIFF con paleta ${paletteLabels[activePalette]}...`);
+
+      try {
+        const rendered = await renderGeoTiffSource(tifUrl, 1600, selectedLegend);
+        if (cancelled) return;
+
+        setMapaUrl(rendered.dataUrl);
+        setCounts(rendered.counts);
+        setRenderMode('tif');
+        setEstado('GeoTIFF renderizado. Puedes cambiar colores, mover, acercar y revisar la leyenda.');
+      } catch (error) {
+        console.error(error);
+        if (cancelled) return;
+
+        setMapaUrl(previewUrl || FALLBACK_MAPA_URL);
+        setRenderMode(previewUrl ? 'preview' : 'fallback');
+        setEstado('No se pudo leer el .tif en el navegador. Mostrando vista previa PNG.');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    renderizar();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tifUrl, activePalette, previewUrl, selectedLegend]);
 
   const zoomIn = () => setZoom((prev) => Math.min(prev + 0.2, 4));
   const zoomOut = () => setZoom((prev) => Math.max(prev - 0.2, 0.65));
@@ -170,13 +227,13 @@ const MapasPage = () => {
             <div className="rounded-[1.7rem] border border-cyan-300/20 bg-cyan-400/10 p-4 flex items-start gap-3">
               <Info className="text-cyan-300 shrink-0" size={22} />
               <p className="text-sm text-cyan-50/80 font-semibold leading-relaxed">
-                Los estudiantes solo ven el mapa publicado. La carga de archivos se hace aparte en el panel de gestión.
+                Los estudiantes ven el mapa publicado. Si hay GeoTIFF disponible, pueden cambiar la simbología de colores en vivo.
               </p>
             </div>
           </div>
         </header>
 
-        <section className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-5">
+        <section className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-5">
           <div className="rounded-[2rem] border border-white/10 bg-slate-950/70 p-4 md:p-5 shadow-2xl">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -204,7 +261,7 @@ const MapasPage = () => {
               {isLoading && (
                 <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                   <div className="rounded-2xl border border-white/10 bg-slate-950/90 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-cyan-100">
-                    Cargando mapa...
+                    Procesando mapa...
                   </div>
                 </div>
               )}
@@ -228,20 +285,56 @@ const MapasPage = () => {
               <div className="absolute bottom-4 left-4 rounded-2xl bg-black/55 px-4 py-3 text-xs font-bold text-white/80 backdrop-blur-md border border-white/10 flex items-center gap-2">
                 <Move size={16} className="text-cyan-300" /> Mover con el mouse o touch
               </div>
+
+              <div className="absolute bottom-4 right-4 rounded-2xl bg-black/55 px-4 py-3 text-xs font-bold text-white/80 backdrop-blur-md border border-white/10">
+                Modo: {renderMode === 'tif' ? 'GeoTIFF editable' : renderMode === 'preview' ? 'PNG publicado' : 'Base'}
+              </div>
             </div>
           </div>
 
           <aside className="space-y-4">
             <div className="rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <Layers3 className="text-cyan-300" size={22} />
+                <div>
+                  <p className="text-cyan-300 text-[10px] font-black uppercase tracking-[0.3em]">Simbología</p>
+                  <h2 className="text-2xl font-black">Cambiar colores</h2>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {(Object.keys(susceptibilityPalettes) as PaletteName[]).map((palette) => (
+                  <button
+                    key={palette}
+                    onClick={() => setActivePalette(palette)}
+                    disabled={renderMode !== 'tif' && !tifUrl}
+                    className={`rounded-2xl border px-3 py-2 text-xs font-black uppercase tracking-[0.12em] transition-all ${
+                      activePalette === palette
+                        ? 'border-cyan-300 bg-cyan-400 text-slate-950'
+                        : 'border-white/10 bg-slate-950/55 text-slate-300 hover:border-cyan-300/50'
+                    }`}
+                  >
+                    {paletteLabels[palette]}
+                  </button>
+                ))}
+              </div>
+              {renderMode !== 'tif' && (
+                <p className="mt-3 text-xs font-bold text-orange-200/80">
+                  Para cambiar colores en vivo, el visor necesita leer el .tif publicado. Si falla, muestra el PNG como respaldo.
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur-2xl">
               <p className="text-orange-300 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Leyenda</p>
               <h2 className="text-2xl font-black mb-4">Susceptibilidad</h2>
               <div className="space-y-3">
-                {susceptibilityLegend.map((item) => (
+                {selectedLegend.map((item) => (
                   <div key={item.label} className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/55 p-3">
                     <div className="flex items-center gap-3">
                       <span className="h-6 w-10 rounded-lg border border-white/20" style={{ backgroundColor: item.color }} />
                       <span className="font-black text-sm">{item.label}</span>
                     </div>
+                    {counts && <span className="text-[10px] font-bold text-slate-500">{counts[item.value]?.toLocaleString('es-EC')}</span>}
                   </div>
                 ))}
               </div>
