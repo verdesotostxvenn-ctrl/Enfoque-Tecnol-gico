@@ -17,6 +17,7 @@ export type MapResource = {
   accent: string;
 };
 
+// Subtítulos de tarjetas vacíos para mantener las tarjetas limpias y sin textos secundarios.
 export const MAP_RESOURCES: MapResource[] = [
   {
     id: 'inundaciones',
