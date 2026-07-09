@@ -1,11 +1,30 @@
 import { createClient } from '@supabase/supabase-js';
 
-/**
- * Táctica de Blindaje: Cast al tipo 'any' para evitar que TypeScript 
- * bloquee el acceso a las variables de entorno durante el build en Netlify.
- */
-const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = ((import.meta as any).env?.VITE_SUPABASE_URL || '') as string;
+const supabaseAnonKey = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '') as string;
 
-// Creamos el puente satelital con Supabase
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const emptyResponse = { data: null, error: null };
+
+const createOfflineSupabase = () => ({
+  from: () => ({
+    insert: async () => emptyResponse,
+    update: () => ({
+      eq: async () => emptyResponse
+    }),
+    select: () => ({
+      order: async () => ({ data: [], error: null })
+    })
+  })
+});
+
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+if (!isSupabaseConfigured) {
+  console.warn(
+    'Supabase no está configurado. La app funcionará con progreso local hasta agregar VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.'
+  );
+}
+
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : (createOfflineSupabase() as any);
