@@ -3,7 +3,14 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle2, Database, FileArchive, ImagePlus, UploadCloud, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { isSupabaseConfigured, supabase } from '../supabaseClient';
-import { dataUrlToBlob, renderGeoTiffSource, susceptibilityLegend, type RenderedGeoTiff } from '../utils/geotiffRenderer';
+import {
+  dataUrlToBlob,
+  loadGeoTiffRaster,
+  rasterToPortablePayload,
+  renderRasterToDataUrl,
+  susceptibilityLegend,
+  type GeoTiffRaster
+} from '../utils/geotiffRenderer';
 
 type FolderInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   webkitdirectory?: string;
@@ -22,7 +29,8 @@ const cleanPath = (value: string) => {
 const MapasAdminPage = () => {
   const navigate = useNavigate();
   const [files, setFiles] = useState<File[]>([]);
-  const [rendered, setRendered] = useState<RenderedGeoTiff | null>(null);
+  const [raster, setRaster] = useState<GeoTiffRaster | null>(null);
+  const [previewDataUrl, setPreviewDataUrl] = useState('');
   const [status, setStatus] = useState('Selecciona la carpeta o todos los archivos del mapa GIS.');
   const [isRendering, setIsRendering] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -40,7 +48,8 @@ const MapasAdminPage = () => {
     onChange: async (event) => {
       const selected = Array.from(event.currentTarget.files || []);
       setFiles(selected);
-      setRendered(null);
+      setRaster(null);
+      setPreviewDataUrl('');
       setLastError('');
 
       const tif = selected.find((file) => /\.tiff?$/i.test(file.name));
@@ -51,12 +60,13 @@ const MapasAdminPage = () => {
       }
 
       setIsRendering(true);
-      setStatus(`Leyendo ${tif.name} y aplicando colores por valores 1–5...`);
+      setStatus(`Leyendo ${tif.name}, extrayendo valores 1–5 y preparando vista web...`);
 
       try {
-        const result = await renderGeoTiffSource(tif, 1600);
-        setRendered(result);
-        setStatus('Vista previa lista. Si se ve bien, puedes publicar el mapa.');
+        const loadedRaster = await loadGeoTiffRaster(tif, 1200);
+        setRaster(loadedRaster);
+        setPreviewDataUrl(renderRasterToDataUrl(loadedRaster, susceptibilityLegend));
+        setStatus('Vista previa lista. Se publicará PNG + raster.json para que /mapas sea interactivo.');
       } catch (error) {
         console.error(error);
         setLastError('No se pudo leer el GeoTIFF. Revisa que el .tif no esté dañado o comprimido en un formato no soportado por navegador.');
@@ -73,14 +83,14 @@ const MapasAdminPage = () => {
       return;
     }
 
-    if (!tifFile || !rendered) {
+    if (!tifFile || !raster || !previewDataUrl) {
       setLastError('Primero selecciona la carpeta y espera la vista previa del .tif.');
       return;
     }
 
     setIsPublishing(true);
     setLastError('');
-    setStatus('Subiendo archivos a Supabase Storage...');
+    setStatus('Subiendo archivos originales a Supabase Storage...');
 
     try {
       const folder = `inundaciones/${Date.now()}`;
@@ -104,7 +114,7 @@ const MapasAdminPage = () => {
       }
 
       setStatus('Subiendo vista previa PNG optimizada...');
-      const previewBlob = await dataUrlToBlob(rendered.dataUrl);
+      const previewBlob = await dataUrlToBlob(previewDataUrl);
       const previewPath = `${folder}/preview-renderizado.png`;
       const { error: previewError } = await supabase.storage.from('mapas').upload(previewPath, previewBlob, {
         upsert: true,
@@ -113,6 +123,17 @@ const MapasAdminPage = () => {
 
       if (previewError) throw previewError;
 
+      setStatus('Subiendo raster.json para interacción rápida...');
+      const rasterPayload = rasterToPortablePayload(raster);
+      const rasterBlob = new Blob([JSON.stringify(rasterPayload)], { type: 'application/json' });
+      const rasterPath = `${folder}/raster.json`;
+      const { error: rasterError } = await supabase.storage.from('mapas').upload(rasterPath, rasterBlob, {
+        upsert: true,
+        contentType: 'application/json'
+      });
+
+      if (rasterError) throw rasterError;
+
       const { data: tifPublic } = supabase.storage.from('mapas').getPublicUrl(tifStoragePath);
       const { data: previewPublic } = supabase.storage.from('mapas').getPublicUrl(previewPath);
 
@@ -120,7 +141,7 @@ const MapasAdminPage = () => {
       const { error: dbError } = await supabase.from('mapas_recursos').upsert({
         id: 'inundaciones',
         titulo: 'Mapa de amenaza por inundaciones',
-        descripcion: 'Mapa temático de susceptibilidad por inundaciones. El visor permite mover, acercar y revisar las zonas de amenaza.',
+        descripcion: 'Mapa temático de susceptibilidad por inundaciones. El visor permite mover, acercar, identificar niveles de amenaza y cambiar la simbología.',
         tif_url: tifPublic.publicUrl,
         preview_url: previewPublic.publicUrl,
         storage_folder: folder,
@@ -129,7 +150,7 @@ const MapasAdminPage = () => {
 
       if (dbError) throw dbError;
 
-      setStatus('Mapa publicado correctamente. Ahora los niños lo verán en /mapas.');
+      setStatus('Mapa publicado correctamente. Ahora /mapas tendrá colores editables y tooltip de amenaza.');
     } catch (error) {
       console.error(error);
       setLastError('No se pudo publicar. Revisa que exista el bucket mapas, la tabla mapas_recursos y las políticas de Supabase.');
@@ -179,7 +200,7 @@ const MapasAdminPage = () => {
                 <h2 className="text-xl font-black">Archivos del mapa</h2>
               </div>
               <p className="text-sm text-slate-300 font-semibold leading-relaxed">
-                Selecciona la carpeta o todos los archivos juntos: .tif, .tfw, .aux.xml, .ovr, .dbf, .cpg. El visor usará el .tif y guardará el resto como respaldo.
+                Selecciona la carpeta o todos los archivos juntos: .tif, .tfw, .aux.xml, .ovr, .dbf, .cpg. El sistema publicará un raster.json para que los niños puedan interactuar sin cargar el .tif pesado.
               </p>
             </div>
 
@@ -204,11 +225,12 @@ const MapasAdminPage = () => {
               <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-300 mb-2">Selección</p>
               <p className="text-sm font-semibold text-slate-300">Archivos: {files.length}</p>
               <p className="text-sm font-semibold text-slate-300">GeoTIFF: {tifFile ? tifFile.name : 'No encontrado'}</p>
+              <p className="text-sm font-semibold text-slate-300">Raster web: {raster ? `${raster.width} × ${raster.height}` : 'Pendiente'}</p>
             </div>
 
             <button
               onClick={publicarMapa}
-              disabled={!rendered || isRendering || isPublishing}
+              disabled={!raster || !previewDataUrl || isRendering || isPublishing}
               className="w-full rounded-2xl bg-cyan-400 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-slate-950 hover:bg-cyan-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               <Database size={18} /> {isPublishing ? 'Publicando...' : 'Publicar para estudiantes'}
@@ -221,30 +243,30 @@ const MapasAdminPage = () => {
                 <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-300">Vista previa</p>
                 <h2 className="text-2xl font-black">Render por valores 1–5</h2>
               </div>
-              {rendered && (
+              {raster && (
                 <div className="rounded-2xl bg-emerald-400/10 border border-emerald-300/20 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-emerald-200 flex items-center gap-2">
                   <CheckCircle2 size={16} /> Lista
                 </div>
               )}
             </div>
 
-            <div className="relative min-h-[520px] overflow-hidden rounded-[1.6rem] border border-white/10 bg-black flex items-center justify-center">
+            <div className="relative min-h-[520px] overflow-hidden rounded-[1.6rem] border border-white/10 bg-white flex items-center justify-center">
               {isRendering && (
                 <div className="text-center">
-                  <ImagePlus className="mx-auto mb-4 text-cyan-300 animate-pulse" size={54} />
-                  <p className="text-lg font-black">Renderizando GeoTIFF...</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-400">Puede tardar si el archivo es pesado.</p>
+                  <ImagePlus className="mx-auto mb-4 text-cyan-500 animate-pulse" size={54} />
+                  <p className="text-lg font-black text-slate-900">Renderizando GeoTIFF...</p>
+                  <p className="mt-2 text-sm font-semibold text-slate-500">Puede tardar si el archivo es pesado.</p>
                 </div>
               )}
 
-              {!isRendering && rendered && (
-                <img src={rendered.dataUrl} alt="Vista previa del mapa renderizado" className="max-h-[70vh] max-w-full object-contain" />
+              {!isRendering && previewDataUrl && (
+                <img src={previewDataUrl} alt="Vista previa del mapa renderizado" className="max-h-[70vh] max-w-full object-contain" />
               )}
 
-              {!isRendering && !rendered && (
+              {!isRendering && !previewDataUrl && (
                 <div className="text-center p-8">
-                  <ImagePlus className="mx-auto mb-4 text-slate-600" size={54} />
-                  <p className="text-lg font-black text-slate-300">Aún no hay vista previa</p>
+                  <ImagePlus className="mx-auto mb-4 text-slate-400" size={54} />
+                  <p className="text-lg font-black text-slate-700">Aún no hay vista previa</p>
                   <p className="mt-2 text-sm font-semibold text-slate-500">Selecciona la carpeta para generar el mapa de colores.</p>
                 </div>
               )}
@@ -256,7 +278,7 @@ const MapasAdminPage = () => {
                   <div className="h-8 rounded-xl border border-white/20 mb-2" style={{ backgroundColor: item.color }} />
                   <p className="text-xs font-black">{item.label}</p>
                   <p className="text-[10px] text-slate-500 font-bold">Valor {item.value}</p>
-                  {rendered && <p className="text-[10px] text-slate-400 font-bold">{rendered.counts[item.value].toLocaleString('es-EC')} celdas</p>}
+                  {raster && <p className="text-[10px] text-slate-400 font-bold">{raster.counts[item.value].toLocaleString('es-EC')} celdas</p>}
                 </div>
               ))}
             </div>
