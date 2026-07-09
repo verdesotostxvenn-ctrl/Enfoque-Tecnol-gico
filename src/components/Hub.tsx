@@ -44,6 +44,7 @@ type Herramienta = {
   icono: React.ReactNode;
   color: string;
   imageUrl: string;
+  path?: string;
 };
 
 const AVATARES: Record<AvatarTipo, Record<number, string>> = {
@@ -107,18 +108,20 @@ const herramientas: Herramienta[] = [
   {
     titulo: 'Videos',
     desc: 'Cápsulas educativas por módulo para reforzar lo aprendido antes de cada evaluación.',
-    estado: 'Listo para enlazar',
+    estado: 'Abrir recurso',
     icono: <Video size={22} />,
     color: 'from-red-500 to-orange-500',
-    imageUrl: 'https://blogger.googleusercontent.com/img/a/AVvXsEg3Z97xOcrRyfstwiOmmNt36hBNLqBkVHl3vDUKeSXCG0f6sYvn2UQC4J32qLK--bjnOQgE-v8vMaFnMxAahM-oH4RBVnGv585nENefIXUMRzgVZ4ZMp4YcdwWvT9g6P6Nlg8fmg30wLQbzOaUzFut7vfyIwl_g8FfSdQHDWbFFr1VAVFjgR8dwMMYdi9s'
+    imageUrl: 'https://blogger.googleusercontent.com/img/a/AVvXsEg3Z97xOcrRyfstwiOmmNt36hBNLqBkVHl3vDUKeSXCG0f6sYvn2UQC4J32qLK--bjnOQgE-v8vMaFnMxAahM-oH4RBVnGv585nENefIXUMRzgVZ4ZMp4YcdwWvT9g6P6Nlg8fmg30wLQbzOaUzFut7vfyIwl_g8FfSdQHDWbFFr1VAVFjgR8dwMMYdi9s',
+    path: '/videos'
   },
   {
     titulo: 'Mapas',
-    desc: 'Espacio para rutas de evacuación, zonas seguras y puntos de encuentro del Distrito 18D03.',
-    estado: 'Pendiente de mapas',
+    desc: 'Visor interactivo de amenaza por inundaciones con zoom, movimiento y leyenda de susceptibilidad.',
+    estado: 'Abrir mapa',
     icono: <Map size={22} />,
     color: 'from-cyan-500 to-blue-500',
-    imageUrl: 'https://blogger.googleusercontent.com/img/a/AVvXsEhi5QIyoWjSYO8DWR8X_cuioQ_mN43bQCKUc5g1R3NCcjWHrW8Ji4hfTAxxAh1qdtpTe_s0DAnJLtzngolcArlKccUmMYCrBegn-ftGx0DjN0hlg0GvPv3Fyzhpl1EJAGfWoHrPwtSed-wRGmfaWrZqUybJhxvisoHBdzx4EIH6dMtZjf7FhxvoSRzQ22w'
+    imageUrl: 'https://blogger.googleusercontent.com/img/a/AVvXsEgoBR_tyDWvpHNWIIr4exwvwEhWkAJKojndFPjuAEU9rITfY1DmsDPkKDo6TN7q6DwlfiCUrkWt4XIa-Vmp88WdgghLYYVPJRJyt_UEIHDtrkpQ_6guba1jv5pCpwD5hs50Fyzmnk76qagF_CAXoQTzm9EfVRMIwCRBqXhp7L4_-Ez2wLhczbzcB37WWqo',
+    path: '/mapas'
   },
   {
     titulo: 'Línea de tiempo',
@@ -380,25 +383,40 @@ const Hub = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            {herramientas.map((item) => (
-              <article key={item.titulo} className="rounded-[1.7rem] bg-slate-950/65 border border-white/10 overflow-hidden relative">
-                <div className="relative h-32 overflow-hidden">
-                  <img src={item.imageUrl} alt={item.titulo} className="absolute inset-0 h-full w-full object-cover" />
-                  <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-70 mix-blend-multiply`} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/25 to-transparent" />
-                  <div className="absolute bottom-4 left-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white backdrop-blur-md shadow-lg">
-                    {item.icono}
+            {herramientas.map((item) => {
+              const clickeable = Boolean(item.path);
+
+              return (
+                <motion.article
+                  key={item.titulo}
+                  whileHover={clickeable ? { y: -4 } : undefined}
+                  onClick={() => item.path && navigate(item.path)}
+                  data-cursor={clickeable ? 'interactive' : undefined}
+                  className={`rounded-[1.7rem] bg-slate-950/65 border border-white/10 overflow-hidden relative transition-all ${
+                    clickeable ? 'hover:border-cyan-300/50 hover:bg-slate-900/80' : ''
+                  }`}
+                >
+                  <div className="relative h-32 overflow-hidden">
+                    <img src={item.imageUrl} alt={item.titulo} className="absolute inset-0 h-full w-full object-cover" />
+                    <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-70 mix-blend-multiply`} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/25 to-transparent" />
+                    <div className="absolute bottom-4 left-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white backdrop-blur-md shadow-lg">
+                      {item.icono}
+                    </div>
                   </div>
-                </div>
-                <div className="p-5">
-                  <h3 className="text-xl font-black">{item.titulo}</h3>
-                  <p className="text-slate-400 text-sm font-semibold leading-relaxed mt-2">{item.desc}</p>
-                  <div className="mt-4 rounded-full bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200 w-fit">
-                    {item.estado}
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-xl font-black">{item.titulo}</h3>
+                      {clickeable && <ChevronRight className="text-cyan-300 shrink-0" size={18} />}
+                    </div>
+                    <p className="text-slate-400 text-sm font-semibold leading-relaxed mt-2">{item.desc}</p>
+                    <div className="mt-4 rounded-full bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200 w-fit">
+                      {item.estado}
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </motion.article>
+              );
+            })}
           </div>
         </section>
       </section>
