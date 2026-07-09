@@ -275,96 +275,116 @@ const MapasPage = () => {
   };
 
   return (
-    <main className="min-h-screen bg-[#010413] text-white p-4 md:p-6 relative overflow-hidden">
+    <main className="min-h-screen bg-[#010413] text-white p-3 md:p-5 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-44 -left-32 h-[34rem] w-[34rem] rounded-full bg-cyan-500/20 blur-[130px]" />
         <div className="absolute -bottom-44 -right-32 h-[34rem] w-[34rem] rounded-full bg-emerald-500/18 blur-[130px]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.045)_1px,transparent_1px)] [background-size:34px_34px] opacity-35" />
       </div>
 
-      <section className="relative z-10 mx-auto max-w-7xl space-y-5">
-        <header className="rounded-[2rem] border border-white/10 bg-white/5 p-5 md:p-7 backdrop-blur-2xl shadow-[0_30px_100px_rgba(0,0,0,0.35)]">
+      <section className="relative z-10 mx-auto max-w-[96rem] space-y-4">
+        <header className="rounded-[2rem] border border-white/10 bg-white/5 p-4 md:p-6 backdrop-blur-2xl shadow-[0_30px_100px_rgba(0,0,0,0.35)]">
           <div className="flex flex-wrap gap-3 mb-5">
             <button onClick={() => navigate('/hub')} className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 hover:bg-white/15"><ArrowLeft size={16} /> Volver al centro de mando</button>
             <button onClick={() => navigate('/admin/mapas')} className="inline-flex items-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 hover:bg-cyan-400/20"><Database size={16} /> Gestión de mapas</button>
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-[1fr_0.85fr] lg:items-end">
+          <div className="grid gap-4 lg:grid-cols-[1fr_0.75fr] lg:items-end">
             <div>
               <p className="text-cyan-300 text-[10px] font-black uppercase tracking-[0.32em] mb-2">Caja de herramientas / Mapas</p>
-              <h1 className="text-3xl md:text-6xl font-black tracking-tight leading-none">{titulo}</h1>
-              <p className="mt-4 max-w-3xl text-slate-300 font-semibold leading-relaxed">{descripcion}</p>
+              <h1 className="text-3xl md:text-5xl xl:text-6xl font-black tracking-tight leading-none">{titulo}</h1>
+              <p className="mt-3 max-w-3xl text-slate-300 font-semibold leading-relaxed">{descripcion}</p>
             </div>
             <div className="rounded-[1.7rem] border border-cyan-300/20 bg-cyan-400/10 p-4 flex items-start gap-3"><Info className="text-cyan-300 shrink-0" size={22} /><p className="text-sm text-cyan-50/80 font-semibold leading-relaxed">Selecciona un mapa, cambia la simbología y activa instituciones para cruzar información.</p></div>
           </div>
         </header>
 
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <section className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-3">
           {MAP_RESOURCES.map((resource) => {
             const isPublished = publishedIds.has(resource.id);
             return (
-              <button key={resource.id} onClick={() => setSelectedMapId(resource.id)} className={`rounded-[1.6rem] border p-4 text-left transition-all ${selectedMapId === resource.id ? 'border-cyan-300 bg-cyan-400/15 shadow-[0_0_30px_rgba(34,211,238,0.18)]' : 'border-white/10 bg-white/5 hover:border-cyan-300/40'}`}>
-                <div className={`mb-4 h-2 rounded-full bg-gradient-to-r ${resource.accent}`} />
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Mapa de amenaza</p>
-                  <span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] ${isPublished ? 'bg-emerald-400/15 text-emerald-200 border border-emerald-300/20' : 'bg-orange-400/10 text-orange-200 border border-orange-300/20'}`}>{isPublished ? 'Publicado' : 'Pendiente'}</span>
+              <button key={resource.id} onClick={() => setSelectedMapId(resource.id)} className={`rounded-[1.35rem] border p-3 text-left transition-all ${selectedMapId === resource.id ? 'border-cyan-300 bg-cyan-400/15 shadow-[0_0_30px_rgba(34,211,238,0.18)]' : 'border-white/10 bg-white/5 hover:border-cyan-300/40'}`}>
+                <div className={`mb-3 h-1.5 rounded-full bg-gradient-to-r ${resource.accent}`} />
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Amenaza</p>
+                  <span className={`rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] ${isPublished ? 'bg-emerald-400/15 text-emerald-200 border border-emerald-300/20' : 'bg-orange-400/10 text-orange-200 border border-orange-300/20'}`}>{isPublished ? 'Publicado' : 'Pendiente'}</span>
                 </div>
-                <h2 className="mt-1 text-2xl font-black">{resource.shortTitle}</h2>
-                <p className="mt-2 text-sm font-semibold text-slate-400">{resource.subtitle}</p>
+                <h2 className="mt-1 text-lg md:text-xl font-black leading-tight">{resource.shortTitle}</h2>
+                <p className="mt-1 text-xs md:text-sm font-semibold text-slate-400">{resource.subtitle}</p>
               </button>
             );
           })}
         </section>
 
-        <section className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-5 items-start">
-          <div className="rounded-[2rem] border border-white/10 bg-slate-950/70 p-4 md:p-5 shadow-2xl xl:sticky xl:top-4 self-start">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div><p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-300">Visor interactivo</p><p className="text-sm text-slate-400 font-semibold mt-1">{estado}</p></div>
-              <div className="flex gap-2"><ControlButton label="Alejar" onClick={zoomOut}><Minus size={17} /></ControlButton><ControlButton label="Acercar" onClick={zoomIn}><Plus size={17} /></ControlButton><ControlButton label="Reiniciar" onClick={resetView}><RotateCcw size={17} /></ControlButton><ControlButton label="Pantalla completa" onClick={toggleFullscreen}><Maximize2 size={17} /></ControlButton></div>
-            </div>
+        <section className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-3 md:p-4 shadow-2xl backdrop-blur-2xl">
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_370px] gap-4 items-stretch">
+            <div className="rounded-[1.6rem] border border-white/10 bg-slate-950/75 p-4 min-h-0">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <div><p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-300">Visor interactivo</p><p className="text-sm text-slate-400 font-semibold mt-1">{estado}</p></div>
+                <div className="flex gap-2"><ControlButton label="Alejar" onClick={zoomOut}><Minus size={17} /></ControlButton><ControlButton label="Acercar" onClick={zoomIn}><Plus size={17} /></ControlButton><ControlButton label="Reiniciar" onClick={resetView}><RotateCcw size={17} /></ControlButton><ControlButton label="Pantalla completa" onClick={toggleFullscreen}><Maximize2 size={17} /></ControlButton></div>
+              </div>
 
-            <div ref={viewerRef} data-cursor="interactive" onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={() => { setDragging(false); setHoverInfo(null); setActivePoint(null); }} onPointerCancel={() => { setDragging(false); setHoverInfo(null); setActivePoint(null); }} className={`relative h-[62vh] min-h-[420px] overflow-hidden rounded-[1.6rem] border border-white/10 bg-white select-none ${dragging ? 'cursor-grabbing' : hasVisibleMap ? 'cursor-grab' : 'cursor-default'}`}>
-              {(isLoading || isRecoloring) && <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/55 backdrop-blur-[2px]"><div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-slate-900 shadow-xl">{isLoading ? 'Cargando mapa...' : 'Cambiando colores...'}</div></div>}
+              <div ref={viewerRef} data-cursor="interactive" onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={() => { setDragging(false); setHoverInfo(null); setActivePoint(null); }} onPointerCancel={() => { setDragging(false); setHoverInfo(null); setActivePoint(null); }} className={`relative h-[58vh] min-h-[420px] max-h-[640px] overflow-hidden rounded-[1.35rem] border border-white/10 bg-white select-none ${dragging ? 'cursor-grabbing' : hasVisibleMap ? 'cursor-grab' : 'cursor-default'}`}>
+                {(isLoading || isRecoloring) && <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/55 backdrop-blur-[2px]"><div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-slate-900 shadow-xl">{isLoading ? 'Cargando mapa...' : 'Cambiando colores...'}</div></div>}
 
-              {hasVisibleMap ? (
-                <div className="absolute left-1/2 top-1/2 max-h-[92%] max-w-[92%]" style={{ height: '92%', aspectRatio: raster ? `${raster.width} / ${raster.height}` : '1 / 1', transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px)) scale(${zoom})`, transformOrigin: 'center center' }}>
-                  <img ref={imageRef} src={mapaUrl} alt={titulo} draggable={false} className="h-full w-full object-contain" />
-                  {showSchools && schoolPoints.map((point) => <button key={point.id} type="button" onPointerEnter={() => setActivePoint(point)} onPointerLeave={() => setActivePoint(null)} onClick={(event) => { event.stopPropagation(); setActivePoint(point); }} className="absolute z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_18px_rgba(239,68,68,0.75)] transition-transform hover:scale-150" style={{ left: `${(point.xRatio || 0) * 100}%`, top: `${(point.yRatio || 0) * 100}%`, backgroundColor: getThreatColor(point.threatValue) }} title={point.name} />)}
-                </div>
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center p-8 text-center">
-                  <div className="max-w-md rounded-[2rem] border border-slate-200 bg-slate-50 p-6 text-slate-900 shadow-xl">
-                    <MapPin className="mx-auto mb-4 text-cyan-600" size={42} />
-                    <h3 className="text-2xl font-black">Mapa pendiente</h3>
-                    <p className="mt-3 text-sm font-bold text-slate-600">{selectedResource.shortTitle} todavía no tiene raster publicado. Sube la carpeta completa desde el panel de gestión y usa “Publicar todos los detectados”.</p>
-                    <button onClick={() => navigate('/admin/mapas')} className="mt-5 rounded-2xl bg-cyan-500 px-5 py-3 text-xs font-black uppercase tracking-[0.16em] text-slate-950 hover:bg-cyan-400">Ir a gestión</button>
+                {hasVisibleMap ? (
+                  <div className="absolute left-1/2 top-1/2 max-h-[92%] max-w-[92%]" style={{ height: '92%', aspectRatio: raster ? `${raster.width} / ${raster.height}` : '1 / 1', transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px)) scale(${zoom})`, transformOrigin: 'center center' }}>
+                    <img ref={imageRef} src={mapaUrl} alt={titulo} draggable={false} className="h-full w-full object-contain" />
+                    {showSchools && schoolPoints.map((point) => <button key={point.id} type="button" onPointerEnter={() => setActivePoint(point)} onPointerLeave={() => setActivePoint(null)} onClick={(event) => { event.stopPropagation(); setActivePoint(point); }} className="absolute z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_18px_rgba(239,68,68,0.75)] transition-transform hover:scale-150" style={{ left: `${(point.xRatio || 0) * 100}%`, top: `${(point.yRatio || 0) * 100}%`, backgroundColor: getThreatColor(point.threatValue) }} title={point.name} />)}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center p-8 text-center">
+                    <div className="max-w-md rounded-[2rem] border border-slate-200 bg-slate-50 p-6 text-slate-900 shadow-xl">
+                      <MapPin className="mx-auto mb-4 text-cyan-600" size={42} />
+                      <h3 className="text-2xl font-black">Mapa pendiente</h3>
+                      <p className="mt-3 text-sm font-bold text-slate-600">{selectedResource.shortTitle} todavía no tiene raster publicado. Sube la carpeta completa desde el panel de gestión y usa “Publicar todos los detectados”.</p>
+                      <button onClick={() => navigate('/admin/mapas')} className="mt-5 rounded-2xl bg-cyan-500 px-5 py-3 text-xs font-black uppercase tracking-[0.16em] text-slate-950 hover:bg-cyan-400">Ir a gestión</button>
+                    </div>
+                  </div>
+                )}
 
-              {hasVisibleMap && <div className="absolute left-4 top-4 rounded-2xl bg-white/90 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-900 shadow border border-slate-200">Zoom: {Math.round(zoom * 100)}%</div>}
-              {hasVisibleMap && <div className="absolute bottom-4 left-4 rounded-2xl bg-white/90 px-4 py-3 text-xs font-bold text-slate-800 shadow border border-slate-200 flex items-center gap-2"><Move size={16} className="text-cyan-600" /> Mover con el mouse o touch</div>}
-              {hasVisibleMap && <div className="absolute bottom-4 right-4 rounded-2xl bg-white/90 px-4 py-3 text-xs font-bold text-slate-800 shadow border border-slate-200">Modo: {renderMode === 'raster' ? 'Raster interactivo' : renderMode === 'tif' ? 'GeoTIFF editable' : renderMode === 'preview' ? 'PNG publicado' : 'Base'}</div>}
+                {hasVisibleMap && <div className="absolute left-4 top-4 rounded-2xl bg-white/90 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-900 shadow border border-slate-200">Zoom: {Math.round(zoom * 100)}%</div>}
+                {hasVisibleMap && <div className="absolute bottom-4 left-4 rounded-2xl bg-white/90 px-4 py-3 text-xs font-bold text-slate-800 shadow border border-slate-200 flex items-center gap-2"><Move size={16} className="text-cyan-600" /> Mover con el mouse o touch</div>}
+                {hasVisibleMap && <div className="absolute bottom-4 right-4 rounded-2xl bg-white/90 px-4 py-3 text-xs font-bold text-slate-800 shadow border border-slate-200">Modo: {renderMode === 'raster' ? 'Raster interactivo' : renderMode === 'tif' ? 'GeoTIFF editable' : renderMode === 'preview' ? 'PNG publicado' : 'Base'}</div>}
 
-              {hoverInfo && !activePoint && <div className="pointer-events-none absolute z-30 rounded-2xl bg-slate-950 px-4 py-3 text-white shadow-2xl border border-white/10" style={{ left: Math.min(hoverInfo.x + 16, (viewerRef.current?.clientWidth || 0) - 190), top: Math.max(12, hoverInfo.y - 62) }}><p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">Nivel de amenaza</p><div className="mt-1 flex items-center gap-2"><span className="h-4 w-4 rounded-full border border-white/20" style={{ backgroundColor: hoverInfo.color }} /><span className="text-lg font-black">{hoverInfo.label}</span></div><p className="text-[10px] font-bold text-slate-400">Valor raster: {hoverInfo.value}</p></div>}
-              {activePoint && <div className="absolute right-4 top-4 z-30 max-w-sm rounded-2xl bg-slate-950 px-4 py-3 text-white shadow-2xl border border-white/10"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-200">Institución educativa</p><h3 className="mt-1 text-lg font-black leading-tight">{activePoint.name}</h3><div className="mt-2 flex items-center gap-2"><span className="h-4 w-4 rounded-full border border-white/20" style={{ backgroundColor: getThreatColor(activePoint.threatValue) }} /><span className="text-sm font-bold text-slate-300">Amenaza: {activePoint.threatLabel || 'Sin dato'}</span></div></div>}
+                {hoverInfo && !activePoint && <div className="pointer-events-none absolute z-30 rounded-2xl bg-slate-950 px-4 py-3 text-white shadow-2xl border border-white/10" style={{ left: Math.min(hoverInfo.x + 16, (viewerRef.current?.clientWidth || 0) - 190), top: Math.max(12, hoverInfo.y - 62) }}><p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">Nivel de amenaza</p><div className="mt-1 flex items-center gap-2"><span className="h-4 w-4 rounded-full border border-white/20" style={{ backgroundColor: hoverInfo.color }} /><span className="text-lg font-black">{hoverInfo.label}</span></div><p className="text-[10px] font-bold text-slate-400">Valor raster: {hoverInfo.value}</p></div>}
+                {activePoint && <div className="absolute right-4 top-4 z-30 max-w-sm rounded-2xl bg-slate-950 px-4 py-3 text-white shadow-2xl border border-white/10"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-200">Institución educativa</p><h3 className="mt-1 text-lg font-black leading-tight">{activePoint.name}</h3><div className="mt-2 flex items-center gap-2"><span className="h-4 w-4 rounded-full border border-white/20" style={{ backgroundColor: getThreatColor(activePoint.threatValue) }} /><span className="text-sm font-bold text-slate-300">Amenaza: {activePoint.threatLabel || 'Sin dato'}</span></div></div>}
+              </div>
             </div>
+
+            <aside className="rounded-[1.6rem] border border-white/10 bg-slate-950/70 p-4 xl:h-[calc(58vh+6.9rem)] xl:min-h-[520px] xl:max-h-[740px] xl:overflow-y-auto space-y-4">
+              <PanelCard>
+                <div className="flex items-center gap-3 mb-4"><Layers3 className="text-cyan-300" size={22} /><div><p className="text-cyan-300 text-[10px] font-black uppercase tracking-[0.3em]">Simbología</p><h2 className="text-2xl font-black">Cambiar colores</h2></div></div>
+                <div className="grid grid-cols-2 gap-2">{(Object.keys(susceptibilityPalettes) as PaletteName[]).map((palette) => <button key={palette} onClick={() => setActivePalette(palette)} disabled={!raster} className={`rounded-2xl border px-3 py-2 text-xs font-black uppercase tracking-[0.12em] transition-all ${activePalette === palette ? 'border-cyan-300 bg-cyan-400 text-slate-950' : 'border-white/10 bg-slate-950/55 text-slate-300 hover:border-cyan-300/50'} disabled:opacity-50 disabled:cursor-not-allowed`}>{paletteLabels[palette]}</button>)}</div>
+              </PanelCard>
+
+              <PanelCard>
+                <div className="mb-4 flex items-center justify-between gap-3"><div className="flex items-center gap-3"><MapPin className="text-orange-300" size={22} /><div><p className="text-orange-300 text-[10px] font-black uppercase tracking-[0.3em]">Instituciones</p><h2 className="text-2xl font-black">Escuelas</h2></div></div><button onClick={() => setShowSchools((prev) => !prev)} disabled={!schoolPoints.length} className="rounded-2xl border border-white/10 bg-slate-950/60 p-3 text-cyan-200 hover:bg-cyan-400 hover:text-slate-950 disabled:opacity-40">{showSchools ? <Eye size={18} /> : <EyeOff size={18} />}</button></div>
+                <p className="text-sm font-semibold text-slate-400">Puntos cargados: {schoolPoints.length}</p>
+                <div className="mt-3 max-h-44 space-y-2 overflow-auto pr-1">{schoolPoints.length ? schoolPoints.map((point) => <button key={point.id} onClick={() => setActivePoint(point)} className="w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2 text-left hover:border-orange-300/50"><p className="text-xs font-black text-white">{point.name}</p><p className="text-[10px] font-bold text-slate-500">Amenaza: {point.threatLabel || 'Sin dato'}</p></button>) : <p className="text-sm font-bold text-slate-500">Aún no hay puntos KML publicados para este mapa.</p>}</div>
+              </PanelCard>
+
+              <PanelCard>
+                <p className="text-orange-300 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Leyenda</p><h2 className="text-2xl font-black mb-4">Susceptibilidad</h2>
+                <div className="space-y-3">{selectedLegend.map((item) => <div key={item.label} className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/55 p-3"><div className="flex items-center gap-3"><span className="h-6 w-10 rounded-lg border border-white/20" style={{ backgroundColor: item.color }} /><span className="font-black text-sm">{item.label}</span></div>{counts && <span className="text-[10px] font-bold text-slate-500">{counts[item.value]?.toLocaleString('es-EC')}</span>}</div>)}</div>
+              </PanelCard>
+
+              <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="rounded-[1.5rem] border border-emerald-300/20 bg-emerald-400/10 p-4">
+                <p className="text-emerald-300 text-[10px] font-black uppercase tracking-[0.28em] mb-2">Uso educativo</p><h3 className="text-xl font-black">¿Para qué sirve?</h3><p className="mt-3 text-slate-300 text-sm font-semibold leading-relaxed">Relaciona amenazas naturales con instituciones educativas para conversar sobre rutas seguras, puntos de encuentro y prevención comunitaria.</p>{updatedAt && <p className="mt-4 text-xs font-bold text-slate-500">Última actualización: {new Date(updatedAt).toLocaleString('es-EC')}</p>}
+              </motion.div>
+            </aside>
           </div>
-
-          <aside className="space-y-4">
-            <div className="rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur-2xl"><div className="flex items-center gap-3 mb-4"><Layers3 className="text-cyan-300" size={22} /><div><p className="text-cyan-300 text-[10px] font-black uppercase tracking-[0.3em]">Simbología</p><h2 className="text-2xl font-black">Cambiar colores</h2></div></div><div className="grid grid-cols-2 gap-2">{(Object.keys(susceptibilityPalettes) as PaletteName[]).map((palette) => <button key={palette} onClick={() => setActivePalette(palette)} disabled={!raster} className={`rounded-2xl border px-3 py-2 text-xs font-black uppercase tracking-[0.12em] transition-all ${activePalette === palette ? 'border-cyan-300 bg-cyan-400 text-slate-950' : 'border-white/10 bg-slate-950/55 text-slate-300 hover:border-cyan-300/50'} disabled:opacity-50 disabled:cursor-not-allowed`}>{paletteLabels[palette]}</button>)}</div></div>
-
-            <div className="rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur-2xl"><div className="mb-4 flex items-center justify-between gap-3"><div className="flex items-center gap-3"><MapPin className="text-orange-300" size={22} /><div><p className="text-orange-300 text-[10px] font-black uppercase tracking-[0.3em]">Instituciones</p><h2 className="text-2xl font-black">Escuelas</h2></div></div><button onClick={() => setShowSchools((prev) => !prev)} disabled={!schoolPoints.length} className="rounded-2xl border border-white/10 bg-slate-950/60 p-3 text-cyan-200 hover:bg-cyan-400 hover:text-slate-950 disabled:opacity-40">{showSchools ? <Eye size={18} /> : <EyeOff size={18} />}</button></div><p className="text-sm font-semibold text-slate-400">Puntos cargados: {schoolPoints.length}</p><div className="mt-3 max-h-40 space-y-2 overflow-auto pr-1">{schoolPoints.length ? schoolPoints.map((point) => <button key={point.id} onClick={() => setActivePoint(point)} className="w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2 text-left hover:border-orange-300/50"><p className="text-xs font-black text-white">{point.name}</p><p className="text-[10px] font-bold text-slate-500">Amenaza: {point.threatLabel || 'Sin dato'}</p></button>) : <p className="text-sm font-bold text-slate-500">Aún no hay puntos KML publicados para este mapa.</p>}</div></div>
-
-            <div className="rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur-2xl"><p className="text-orange-300 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Leyenda</p><h2 className="text-2xl font-black mb-4">Susceptibilidad</h2><div className="space-y-3">{selectedLegend.map((item) => <div key={item.label} className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/55 p-3"><div className="flex items-center gap-3"><span className="h-6 w-10 rounded-lg border border-white/20" style={{ backgroundColor: item.color }} /><span className="font-black text-sm">{item.label}</span></div>{counts && <span className="text-[10px] font-bold text-slate-500">{counts[item.value]?.toLocaleString('es-EC')}</span>}</div>)}</div></div>
-
-            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="rounded-[2rem] border border-emerald-300/20 bg-emerald-400/10 p-5"><p className="text-emerald-300 text-[10px] font-black uppercase tracking-[0.28em] mb-2">Uso educativo</p><h3 className="text-xl font-black">¿Para qué sirve?</h3><p className="mt-3 text-slate-300 text-sm font-semibold leading-relaxed">Relaciona amenazas naturales con instituciones educativas para conversar sobre rutas seguras, puntos de encuentro y prevención comunitaria.</p>{updatedAt && <p className="mt-4 text-xs font-bold text-slate-500">Última actualización: {new Date(updatedAt).toLocaleString('es-EC')}</p>}</motion.div>
-          </aside>
         </section>
       </section>
     </main>
   );
 };
+
+const PanelCard = ({ children }: { children: React.ReactNode }) => (
+  <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4 backdrop-blur-2xl">
+    {children}
+  </div>
+);
 
 const ControlButton = ({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) => <button onClick={onClick} title={label} className="rounded-2xl border border-white/10 bg-white/10 p-3 text-white hover:bg-cyan-400 hover:text-slate-950 transition-colors">{children}</button>;
 
