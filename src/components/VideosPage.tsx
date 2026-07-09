@@ -35,7 +35,7 @@ const VideosPage = () => {
               rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-2xl border border-orange-300/20 bg-orange-400/10 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-orange-100 hover:bg-orange-400/20"
             >
-              <ExternalLink size={16} /> Abrir en YouTube
+              <ExternalLink size={16} /> Ver recurso
             </a>
           </div>
 
@@ -51,7 +51,7 @@ const VideosPage = () => {
             <div className="rounded-[1.7rem] border border-orange-300/20 bg-orange-400/10 p-4 flex items-start gap-3">
               <ShieldCheck className="text-orange-300 shrink-0" size={22} />
               <p className="text-sm text-orange-50/80 font-semibold leading-relaxed">
-                El video conserva su formato original, con título y controles para pausar, adelantar, retroceder y pantalla completa.
+                Observa el contenido, comenta las ideas principales y continúa con las actividades del centro de mando.
               </p>
             </div>
           </div>
@@ -65,11 +65,11 @@ const VideosPage = () => {
                   <p className="text-[10px] font-black uppercase tracking-[0.24em] text-orange-300">Reproductor principal</p>
                   <h2 className="mt-1 text-2xl md:text-3xl font-black">{VIDEO_TITLE}</h2>
                   <p className="mt-2 text-sm font-semibold text-slate-400">
-                    Mira el video completo y usa la barra inferior para avanzar o regresar cuando necesites repasar una parte.
+                    Revisa la cápsula y repasa las partes importantes antes de continuar.
                   </p>
                 </div>
                 <div className="inline-flex w-fit items-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200">
-                  <PlayCircle size={15} /> Controles activos
+                  <PlayCircle size={15} /> Recurso activo
                 </div>
               </div>
 
@@ -92,9 +92,9 @@ const VideosPage = () => {
                     >
                       <PlayCircle size={52} />
                     </motion.div>
-                    <h3 className="text-2xl md:text-4xl font-black">Video pendiente</h3>
+                    <h3 className="text-2xl md:text-4xl font-black">Recurso pendiente</h3>
                     <p className="mt-3 max-w-xl text-slate-300 font-semibold leading-relaxed">
-                      Esta sección está lista. Solo falta pegar el enlace del video principal.
+                      Esta sección está lista para mostrar el material audiovisual del proyecto.
                     </p>
                   </div>
                 )}
@@ -102,9 +102,9 @@ const VideosPage = () => {
             </div>
 
             <aside className="rounded-[1.6rem] border border-white/10 bg-slate-950/70 p-4 space-y-4">
-              <InfoCard icon={<Video />} title="Formato original" text="El video ya no está recortado. Se muestra completo en proporción 16:9 para que se vea natural." />
-              <InfoCard icon={<Clock />} title="Barra de avance" text="Los controles están activos para pausar, adelantar, retroceder, cambiar volumen y usar pantalla completa." />
-              <InfoCard icon={<BookOpenCheck />} title="Uso educativo" text="Sirve para revisar conceptos clave antes de responder actividades o continuar con las misiones." />
+              <InfoCard icon={<Video />} title="Contenido principal" text="Presenta la cápsula educativa para introducir el tema antes de las actividades." />
+              <InfoCard icon={<Clock />} title="Antes del quiz" text="Permite repasar ideas clave antes de responder la evaluación." />
+              <InfoCard icon={<BookOpenCheck />} title="Uso en clase" text="Puede verse en grupo para conversar y reforzar la prevención comunitaria." />
             </aside>
           </div>
         </section>
