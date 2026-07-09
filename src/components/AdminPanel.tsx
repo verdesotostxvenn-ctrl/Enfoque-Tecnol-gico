@@ -1,13 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Activity,
   BarChart3,
   CalendarDays,
   CheckCircle2,
   Download,
-  Eye,
-  EyeOff,
   Filter,
   LockKeyhole,
   LogOut,
@@ -15,12 +13,12 @@ import {
   School,
   Search,
   ShieldAlert,
-  Timer,
+  Trash2,
   Trophy,
   Users,
   XCircle
 } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 type Agente = {
   id: string;
@@ -36,78 +34,21 @@ type Agente = {
   ultima_conexion: string | null;
 };
 
-type Escenario = 'todos' | 'volcan' | 'inundacion' | 'evacuacion';
+type EstadoFiltro = 'todos' | 'completos' | 'pendientes';
 
 const ADMIN_PIN = '1328';
 
-const avatarImages = {
-  chica:
-    'https://blogger.googleusercontent.com/img/a/AVvXsEh_PnIcFYcgmsvgfKqk4Mr0s40x0a5f1_pIFmBRlR0oVInL1-uaLQIez5BrYNp-ua4-mBmHqb2A8Ox4tElSIJx3LtHnBaO-cGTxzHomjYO1f2X6KQzCYn8I0LmpqNe6o1UiXhc814JjCv0hWJ3kME5gcDJ1czrxl7xYge9BE214gnYyrIHHqxwuTMyoxPjd',
-  chico:
-    'https://blogger.googleusercontent.com/img/a/AVvXsEhGuah8gRxjKHRH2XeN_K7ew3dlo-4QNWudy46AsoT91CiPXkrU9JDEA1wQ1iyIcYj23qQGhITb2EJpIMP1bww_g24vx1-yYp6dYz1agR_nWX6pazjghCNOXXKGvdI0nzDG173acHzltH-fCPlxYYkVQhA47V7aFNiZmVH4HAZf8OTIqtiu0DiI7SIOd5Qe'
-};
-
-const instituciones18D03 = [
-  'Colegio De Bachillerato Pcei Agoyán',
-  'Escuela Augusto N Martinez',
-  'Escuela Gonzalo Pizarro',
-  'Escuela Gran Ducado De Luxemburgo',
-  'Escuela Jose Ignacio Vela',
-  'Escuela Leonidas Garcia',
-  'Escuela Manuel Andrade',
-  'Escuela Nicolas Vasconez',
-  'Escuela Pablo Arturo Suarez',
-  'Escuela Pedro Vicente Maldonado',
-  'Extensión Unidad Educativa San Pio X',
-  'Gonzalo Abad Grijalva',
-  'Unidad Educativa Baños',
-  'Unidad Educativa Doctor Misael Acosta Solis',
-  'Unidad Educativa Fray Sebastian Acosta',
-  'Unidad Educativa Oscar Efren Reyes',
-  'Unidad Educativa Palomino Flores',
-  'Unidad Educativa Puerta Del Dorado',
-  'Unidad Educativa Rio Negro'
-];
-
-const edadesDisponibles = [6, 7, 8, 9, 10, 11];
-
-const escenarios = [
-  { value: 'todos', label: 'Todos los escenarios' },
-  { value: 'volcan', label: 'Actividad volcánica' },
-  { value: 'inundacion', label: 'Inundación' },
-  { value: 'evacuacion', label: 'Evacuación' }
-] as const;
-
 const AdminPanel = () => {
   const [pin, setPin] = useState('');
-  const [showPin, setShowPin] = useState(false);
-  const [authorized, setAuthorized] = useState(
-    sessionStorage.getItem('adminAutorizado') === 'true'
-  );
-
+  const [authorized, setAuthorized] = useState(sessionStorage.getItem('adminAutorizado') === 'true');
   const [agentes, setAgentes] = useState<Agente[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-
   const [busqueda, setBusqueda] = useState('');
-  const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
-  const [filtroEscuela, setFiltroEscuela] = useState('todas');
-  const [edadDesde, setEdadDesde] = useState('todas');
-  const [edadHasta, setEdadHasta] = useState('todas');
-  const [fechaInicio, setFechaInicio] = useState('');
-  const [fechaFin, setFechaFin] = useState('');
-  const [filtroEscenario, setFiltroEscenario] = useState<Escenario>('todos');
-  const [anonimizar, setAnonimizar] = useState(false);
-
-  useEffect(() => {
-    document.body.style.cursor = 'auto';
-    document.documentElement.style.cursor = 'auto';
-
-    return () => {
-      document.body.style.cursor = '';
-      document.documentElement.style.cursor = '';
-    };
-  }, []);
+  const [escuelaFiltro, setEscuelaFiltro] = useState('todas');
+  const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>('todos');
+  const [registroSeleccionado, setRegistroSeleccionado] = useState<Agente | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const cargarDatos = async () => {
     setLoading(true);
@@ -116,198 +57,55 @@ const AdminPanel = () => {
     try {
       const { data, error } = await supabase
         .from('agentes')
-        .select(
-          'id, created_at, nombre, institucion, edad, avatar, nivel, mision_volcan, mision_inundacion, mision_evacuacion, ultima_conexion'
-        )
+        .select('id, created_at, nombre, institucion, edad, avatar, nivel, mision_volcan, mision_inundacion, mision_evacuacion, ultima_conexion')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-
       setAgentes((data || []) as Agente[]);
     } catch (error) {
       console.error(error);
-      setErrorMsg('No se pudieron cargar los registros desde Supabase.');
+      setErrorMsg('No se pudieron cargar los registros. Revisa las variables de Supabase y las políticas RLS.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (authorized) {
-      cargarDatos();
-    }
+    if (authorized) cargarDatos();
   }, [authorized]);
 
+  const escuelas = useMemo(() => {
+    return Array.from(new Set(agentes.map((a) => a.institucion || 'Sin institución'))).sort();
+  }, [agentes]);
+
   const agentesFiltrados = useMemo(() => {
+    const q = normalizar(busqueda);
+
     return agentes.filter((agente) => {
-      const nombre = agente.nombre || '';
+      const nombre = normalizar(agente.nombre || '');
       const escuela = agente.institucion || 'Sin institución';
-      const edad = agente.edad;
-      const fecha = dateInputValue(agente.created_at);
+      const progreso = obtenerProgreso(agente);
 
-      const busquedaNormalizada = normalizeText(busqueda);
-      const nombreNormalizado = normalizeText(nombre);
+      const coincideBusqueda = !q || nombre.includes(q) || normalizar(escuela).includes(q);
+      const coincideEscuela = escuelaFiltro === 'todas' || escuela === escuelaFiltro;
+      const coincideEstado =
+        estadoFiltro === 'todos' ||
+        (estadoFiltro === 'completos' && progreso === 100) ||
+        (estadoFiltro === 'pendientes' && progreso < 100);
 
-      const coincideBusqueda =
-        !busquedaNormalizada || nombreNormalizado.includes(busquedaNormalizada);
-
-      const coincideEscuela =
-        filtroEscuela === 'todas' || escuela === filtroEscuela;
-
-      const coincideEdadDesde =
-        edadDesde === 'todas' ||
-        (typeof edad === 'number' && edad >= Number(edadDesde));
-
-      const coincideEdadHasta =
-        edadHasta === 'todas' ||
-        (typeof edad === 'number' && edad <= Number(edadHasta));
-
-      const coincideFechaInicio =
-        !fechaInicio || (fecha && fecha >= fechaInicio);
-
-      const coincideFechaFin = !fechaFin || (fecha && fecha <= fechaFin);
-
-      const coincideEscenario =
-        filtroEscenario === 'todos' ||
-        getMissionStatus(agente, filtroEscenario) === true ||
-        getMissionStatus(agente, filtroEscenario) === false;
-
-      return (
-        coincideBusqueda &&
-        coincideEscuela &&
-        coincideEdadDesde &&
-        coincideEdadHasta &&
-        coincideFechaInicio &&
-        coincideFechaFin &&
-        coincideEscenario
-      );
+      return coincideBusqueda && coincideEscuela && coincideEstado;
     });
-  }, [
-    agentes,
-    busqueda,
-    filtroEscuela,
-    edadDesde,
-    edadHasta,
-    fechaInicio,
-    fechaFin,
-    filtroEscenario
-  ]);
+  }, [agentes, busqueda, escuelaFiltro, estadoFiltro]);
 
-  const sugerenciasNombres = useMemo(() => {
-    const busquedaNormalizada = normalizeText(busqueda);
+  const stats = useMemo(() => {
+    const total = agentesFiltrados.length;
+    const completados = agentesFiltrados.filter((a) => obtenerProgreso(a) === 100).length;
+    const progresoPromedio = total
+      ? Math.round(agentesFiltrados.reduce((acc, a) => acc + obtenerProgreso(a), 0) / total)
+      : 0;
+    const escuelasActivas = new Set(agentesFiltrados.map((a) => a.institucion || 'Sin institución')).size;
 
-    if (!busquedaNormalizada) return [];
-
-    const nombresUnicos = new Map<string, string>();
-
-    agentes.forEach((agente) => {
-      const nombre = (agente.nombre || '').trim();
-      const nombreNormalizado = normalizeText(nombre);
-
-      if (!nombre || !nombreNormalizado.includes(busquedaNormalizada)) return;
-
-      nombresUnicos.set(nombreNormalizado, nombre);
-    });
-
-    return Array.from(nombresUnicos.values())
-      .sort((a, b) => a.localeCompare(b))
-      .slice(0, 6);
-  }, [agentes, busqueda]);
-
-  const totalParticipantes = agentesFiltrados.length;
-
-  const totalEscuelas = useMemo(() => {
-    return new Set(
-      agentesFiltrados.map((agente) => agente.institucion || 'Sin institución')
-    ).size;
-  }, [agentesFiltrados]);
-
-  const progresoPromedio = useMemo(() => {
-    if (agentesFiltrados.length === 0) return 0;
-
-    const total = agentesFiltrados.reduce((sum, agente) => {
-      return sum + getProgressPercent(agente);
-    }, 0);
-
-    return Math.round(total / agentesFiltrados.length);
-  }, [agentesFiltrados]);
-
-  const registrosHoy = useMemo(() => {
-    const hoy = new Date().toISOString().slice(0, 10);
-
-    return agentesFiltrados.filter((agente) => {
-      return dateInputValue(agente.created_at) === hoy;
-    }).length;
-  }, [agentesFiltrados]);
-
-  const resumenEscuelas = useMemo(() => {
-    const resumen: Record<
-      string,
-      {
-        escuela: string;
-        total: number;
-        progresoTotal: number;
-        volcan: number;
-        inundacion: number;
-        evacuacion: number;
-      }
-    > = {};
-
-    agentesFiltrados.forEach((agente) => {
-      const escuela = agente.institucion || 'Sin institución';
-
-      if (!resumen[escuela]) {
-        resumen[escuela] = {
-          escuela,
-          total: 0,
-          progresoTotal: 0,
-          volcan: 0,
-          inundacion: 0,
-          evacuacion: 0
-        };
-      }
-
-      resumen[escuela].total += 1;
-      resumen[escuela].progresoTotal += getProgressPercent(agente);
-      resumen[escuela].volcan += Number(Boolean(agente.mision_volcan));
-      resumen[escuela].inundacion += Number(Boolean(agente.mision_inundacion));
-      resumen[escuela].evacuacion += Number(Boolean(agente.mision_evacuacion));
-    });
-
-    return Object.values(resumen)
-      .map((item) => ({
-        ...item,
-        progreso: item.total > 0 ? Math.round(item.progresoTotal / item.total) : 0
-      }))
-      .sort((a, b) => b.progreso - a.progreso || b.total - a.total);
-  }, [agentesFiltrados]);
-
-  const mejorEscuela = resumenEscuelas[0];
-
-  const registrosPorFecha = useMemo(() => {
-    const conteo: Record<string, number> = {};
-
-    agentesFiltrados.forEach((agente) => {
-      const fecha = dateInputValue(agente.created_at) || 'Sin fecha';
-      conteo[fecha] = (conteo[fecha] || 0) + 1;
-    });
-
-    return Object.entries(conteo).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [agentesFiltrados]);
-
-  const resumenSemaforo = useMemo(() => {
-    const resumen = {
-      optimo: 0,
-      desarrollo: 0,
-      vulnerable: 0
-    };
-
-    agentesFiltrados.forEach((agente) => {
-      const estado = getAlertStatus(agente).key;
-      resumen[estado] += 1;
-    });
-
-    return resumen;
+    return { total, completados, progresoPromedio, escuelasActivas };
   }, [agentesFiltrados]);
 
   const iniciarSesion = (event: React.FormEvent<HTMLFormElement>) => {
@@ -329,225 +127,110 @@ const AdminPanel = () => {
     setPin('');
   };
 
-  const limpiarFiltros = () => {
-    setBusqueda('');
-    setMostrarSugerencias(false);
-    setFiltroEscuela('todas');
-    setEdadDesde('todas');
-    setEdadHasta('todas');
-    setFechaInicio('');
-    setFechaFin('');
-    setFiltroEscenario('todos');
+  const eliminarRegistro = async () => {
+    if (!registroSeleccionado) return;
+
+    if (!isSupabaseConfigured) {
+      setErrorMsg('Supabase no está configurado. No se puede eliminar desde el panel.');
+      setRegistroSeleccionado(null);
+      return;
+    }
+
+    setDeletingId(registroSeleccionado.id);
+    setErrorMsg('');
+
+    try {
+      const { error } = await supabase.from('agentes').delete().eq('id', registroSeleccionado.id);
+
+      if (error) throw error;
+
+      setAgentes((prev) => prev.filter((item) => item.id !== registroSeleccionado.id));
+      setRegistroSeleccionado(null);
+    } catch (error) {
+      console.error(error);
+      setErrorMsg('No se pudo eliminar el registro. Verifica que exista una política DELETE en Supabase.');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
-  const exportarExcel = () => {
-    const filas = agentesFiltrados.map((agente, index) => {
-      const nombreVisible = anonimizar
-        ? `Estudiante_${String(index + 1).padStart(3, '0')}`
-        : agente.nombre || 'Sin nombre';
-
-      const progreso = getProgressPercent(agente);
-      const alerta = getAlertStatus(agente);
-
-      return [
-        nombreVisible,
-        agente.edad ?? 'N/A',
-        agente.institucion || 'Sin institución',
-        getScenarioExportText(agente, filtroEscenario),
-        `${progreso}%`,
-        'N/D',
-        `${progreso}/100`,
-        alerta.label,
-        getAvatarLabel(agente.avatar),
-        agente.nivel ?? 1,
-        agente.mision_volcan ? 'Completada' : 'Pendiente',
-        agente.mision_inundacion ? 'Completada' : 'Pendiente',
-        agente.mision_evacuacion ? 'Completada' : 'Pendiente',
-        formatDate(agente.created_at),
-        formatDate(agente.ultima_conexion)
-      ];
-    });
-
-    const encabezados = [
-      'ID / Nombre del Estudiante',
+  const exportarCSV = () => {
+    const encabezado = [
+      'Nombre',
       'Edad',
-      'Unidad Educativa',
-      'Escenario Evaluado',
-      'Respuestas Correctas (%)',
-      'Tiempo de Resolución',
-      'Puntaje Final',
-      'Estado de Alerta',
-      'Avatar',
+      'Institución',
       'Nivel',
-      'Misión Volcán',
-      'Misión Inundación',
-      'Misión Evacuación',
-      'Fecha de Registro',
-      'Última Conexión'
+      'Progreso',
+      'Volcán',
+      'Inundación',
+      'Evacuación',
+      'Registro',
+      'Última conexión'
     ];
 
-    const html = `
-      <!doctype html>
-      <html>
-        <head>
-          <meta charset="UTF-8" />
-          <style>
-            table { border-collapse: collapse; font-family: Arial, sans-serif; width: 100%; }
-            th { background: #0f172a; color: #ffffff; font-weight: 700; }
-            th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
-            tr:nth-child(even) { background: #f8fafc; }
-          </style>
-        </head>
-        <body>
-          <table>
-            <thead>
-              <tr>${encabezados.map((item) => `<th>${escapeHtml(item)}</th>`).join('')}</tr>
-            </thead>
-            <tbody>
-              ${filas
-                .map(
-                  (fila) =>
-                    `<tr>${fila
-                      .map((celda) => `<td>${escapeHtml(String(celda))}</td>`)
-                      .join('')}</tr>`
-                )
-                .join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
+    const filas = agentesFiltrados.map((a) => [
+      a.nombre || 'Sin nombre',
+      a.edad ?? 'N/A',
+      a.institucion || 'Sin institución',
+      a.nivel ?? 1,
+      `${obtenerProgreso(a)}%`,
+      a.mision_volcan ? 'Completada' : 'Pendiente',
+      a.mision_inundacion ? 'Completada' : 'Pendiente',
+      a.mision_evacuacion ? 'Completada' : 'Pendiente',
+      formatearFecha(a.created_at),
+      formatearFecha(a.ultima_conexion)
+    ]);
 
-    const blob = new Blob(['\ufeff', html], {
-      type: 'application/vnd.ms-excel;charset=utf-8;'
-    });
+    const csv = [encabezado, ...filas]
+      .map((fila) => fila.map((celda) => `"${String(celda).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
 
+    const blob = new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-
     link.href = url;
-    link.download = `mision-prevencion-resultados-${new Date()
-      .toISOString()
-      .slice(0, 10)}.xls`;
-
+    link.download = `mision-prevencion-registros-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
-  const dashboardStyle = (
-    <style>
-      {`
-        .admin-dashboard-pro,
-        .admin-dashboard-pro * {
-          cursor: auto !important;
-        }
-
-        .admin-dashboard-pro button,
-        .admin-dashboard-pro select,
-        .admin-dashboard-pro input[type="date"],
-        .admin-dashboard-pro .admin-clickable {
-          cursor: pointer !important;
-        }
-
-        .admin-dashboard-pro input[type="text"],
-        .admin-dashboard-pro input[type="password"] {
-          cursor: text !important;
-        }
-
-        .admin-dashboard-pro select option {
-          background: #ffffff;
-          color: #0f172a;
-        }
-      `}
-    </style>
-  );
-
   if (!authorized) {
     return (
-      <main className="admin-dashboard-pro min-h-screen bg-slate-100 text-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-        {dashboardStyle}
-
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-40 -left-32 h-96 w-96 rounded-full bg-cyan-300/30 blur-3xl" />
-          <div className="absolute -bottom-40 -right-32 h-[32rem] w-[32rem] rounded-full bg-orange-300/30 blur-3xl" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(15,23,42,0.06)_1px,transparent_1px)] [background-size:28px_28px]" />
-        </div>
-
+      <main className="min-h-screen bg-slate-100 text-slate-950 flex items-center justify-center p-4">
         <motion.section
-          initial={{ opacity: 0, y: 18, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.35 }}
-          className="relative z-10 w-full max-w-md rounded-[2rem] border border-white bg-white/90 p-7 shadow-2xl backdrop-blur-xl"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md bg-white border border-slate-200 rounded-[2rem] p-7 shadow-2xl"
         >
-          <div className="mb-6 flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="h-14 w-14 bg-slate-950 text-white rounded-2xl flex items-center justify-center">
               <LockKeyhole size={26} />
             </div>
-
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-700">
-                Acceso administrativo
-              </p>
-              <h1 className="text-2xl font-black tracking-tight text-slate-950">
-                Misión Prevención
-              </h1>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-700">Acceso administrativo</p>
+              <h1 className="text-2xl font-black">Misión Prevención</h1>
             </div>
-          </div>
-
-          <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-semibold leading-relaxed text-slate-600">
-              Ingresa el PIN para visualizar los registros, filtrar resultados y
-              exportar datos para el análisis del plan piloto.
-            </p>
           </div>
 
           <form onSubmit={iniciarSesion} className="space-y-4">
             <label className="block">
-              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
-                PIN de acceso
-              </span>
-
-              <div className="mt-2 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm focus-within:border-cyan-500 focus-within:ring-4 focus-within:ring-cyan-100">
-                <input
-                  type={showPin ? 'text' : 'password'}
-                  value={pin}
-                  onChange={(event) => setPin(event.target.value)}
-                  placeholder="1328"
-                  maxLength={4}
-                  className="w-full bg-transparent text-lg font-black tracking-[0.35em] text-slate-950 outline-none"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => setShowPin((prev) => !prev)}
-                  className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-                  aria-label={showPin ? 'Ocultar PIN' : 'Mostrar PIN'}
-                >
-                  {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">PIN de acceso</span>
+              <input
+                type="password"
+                value={pin}
+                onChange={(event) => setPin(event.target.value)}
+                placeholder="1328"
+                maxLength={4}
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-lg font-black tracking-[0.35em] outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+              />
             </label>
 
-            <AnimatePresence>
-              {errorMsg && (
-                <motion.p
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                  className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700"
-                >
-                  {errorMsg}
-                </motion.p>
-              )}
-            </AnimatePresence>
+            {errorMsg && <p className="text-sm font-bold text-red-600">{errorMsg}</p>}
 
-            <button
-              type="submit"
-              className="w-full rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black uppercase tracking-[0.18em] text-white shadow-xl transition hover:-translate-y-0.5 hover:bg-cyan-700"
-            >
-              Entrar al panel
+            <button className="w-full rounded-2xl bg-slate-950 px-5 py-3 font-black uppercase tracking-[0.18em] text-white hover:bg-cyan-700 transition-colors">
+              Entrar al dashboard
             </button>
           </form>
         </motion.section>
@@ -556,821 +239,240 @@ const AdminPanel = () => {
   }
 
   return (
-    <main className="admin-dashboard-pro min-h-screen bg-slate-100 text-slate-900">
-      {dashboardStyle}
+    <main className="min-h-screen bg-slate-100 text-slate-950 p-4 md:p-6">
+      <section className="mx-auto max-w-7xl space-y-6">
+        <header className="rounded-[2rem] bg-slate-950 text-white p-6 md:p-8 shadow-2xl overflow-hidden relative">
+          <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
+          <div className="absolute -left-24 -bottom-24 h-72 w-72 rounded-full bg-orange-400/20 blur-3xl" />
 
-      <header className="border-b border-slate-200 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 md:px-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-lg">
-              <BarChart3 size={26} />
-            </div>
-
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
             <div>
-              <div className="mb-1 flex items-center gap-2">
-                <Activity size={14} className="text-emerald-600" />
-                <span className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700">
-                  Dashboard activo
-                </span>
-              </div>
-
-              <h1 className="text-2xl font-black tracking-tight text-slate-950 md:text-4xl">
-                Panel de Resultados
-              </h1>
-
-              <p className="mt-1 text-sm font-medium text-slate-500">
-                Evaluación del plan piloto de Gestión de Riesgos de Desastres.
+              <p className="text-cyan-300 text-xs font-black uppercase tracking-[0.28em] mb-2">Dashboard administrativo</p>
+              <h1 className="text-3xl md:text-5xl font-black tracking-tight">Registros de Misión Prevención</h1>
+              <p className="text-slate-300 mt-3 max-w-2xl font-semibold">
+                Controla estudiantes, progreso de misiones, instituciones participantes y exporta datos del plan piloto.
               </p>
             </div>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={cargarDatos}
-              disabled={loading}
-              className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300 hover:text-cyan-700 disabled:opacity-50"
-            >
-              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-              Actualizar
-            </button>
-
-            <button
-              type="button"
-              onClick={exportarExcel}
-              className="flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-emerald-500"
-            >
-              <Download size={16} />
-              Exportar Excel
-            </button>
-
-            <button
-              type="button"
-              onClick={cerrarSesion}
-              className="flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-700 transition hover:-translate-y-0.5 hover:bg-red-100"
-            >
-              <LogOut size={16} />
-              Salir
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <section className="mx-auto max-w-7xl px-4 py-5 md:px-6">
-        {errorMsg && (
-          <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
-            {errorMsg}
-          </div>
-        )}
-
-        <section className="mb-5 rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <Filter size={17} className="text-cyan-700" />
-            <h2 className="text-sm font-black uppercase tracking-[0.18em] text-slate-700">
-              Filtros de búsqueda
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
-            <label className="relative xl:col-span-2">
-              <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
-                Buscar por nombre del estudiante
-              </span>
-
-              <div className="mt-2 flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 focus-within:border-cyan-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-cyan-100">
-                <Search size={16} className="text-cyan-700" />
-                <input
-                  type="text"
-                  value={busqueda}
-                  onChange={(event) => {
-                    setBusqueda(event.target.value);
-                    setMostrarSugerencias(true);
-                  }}
-                  onFocus={() => setMostrarSugerencias(true)}
-                  onBlur={() => {
-                    window.setTimeout(() => setMostrarSugerencias(false), 150);
-                  }}
-                  placeholder="Ej. María, Juan, José..."
-                  className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none"
-                  autoComplete="off"
-                />
-
-                {busqueda && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBusqueda('');
-                      setMostrarSugerencias(false);
-                    }}
-                    className="rounded-xl p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                    aria-label="Limpiar búsqueda"
-                  >
-                    <XCircle size={16} />
-                  </button>
-                )}
-              </div>
-
-              <AnimatePresence>
-                {mostrarSugerencias && busqueda.trim() && sugerenciasNombres.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.16 }}
-                    className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
-                  >
-                    <div className="border-b border-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                      Coincidencias por nombre
-                    </div>
-
-                    {sugerenciasNombres.map((nombre) => (
-                      <button
-                        key={nombre}
-                        type="button"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          setBusqueda(nombre);
-                          setMostrarSugerencias(false);
-                        }}
-                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-800"
-                      >
-                        <Users size={15} className="text-cyan-700" />
-                        {nombre}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </label>
-
-            <label>
-              <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
-                Desde
-              </span>
-              <input
-                type="date"
-                value={fechaInicio}
-                onChange={(event) => setFechaInicio(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold text-slate-800 outline-none transition focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100"
-              />
-            </label>
-
-            <label>
-              <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
-                Hasta
-              </span>
-              <input
-                type="date"
-                value={fechaFin}
-                onChange={(event) => setFechaFin(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold text-slate-800 outline-none transition focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100"
-              />
-            </label>
-
-            <label>
-              <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
-                Edad desde
-              </span>
-              <select
-                value={edadDesde}
-                onChange={(event) => setEdadDesde(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold text-slate-800 outline-none transition focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100"
-              >
-                <option value="todas">Todas</option>
-                {edadesDisponibles.map((edad) => (
-                  <option key={edad} value={edad}>
-                    {edad} años
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
-                Edad hasta
-              </span>
-              <select
-                value={edadHasta}
-                onChange={(event) => setEdadHasta(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold text-slate-800 outline-none transition focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100"
-              >
-                <option value="todas">Todas</option>
-                {edadesDisponibles.map((edad) => (
-                  <option key={edad} value={edad}>
-                    {edad} años
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="xl:col-span-3">
-              <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
-                Unidad educativa
-              </span>
-              <select
-                value={filtroEscuela}
-                onChange={(event) => setFiltroEscuela(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold text-slate-800 outline-none transition focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100"
-              >
-                <option value="todas">Seleccionar todas</option>
-                {instituciones18D03.map((escuela) => (
-                  <option key={escuela} value={escuela}>
-                    {escuela}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="xl:col-span-2">
-              <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
-                Escenario de riesgo
-              </span>
-              <select
-                value={filtroEscenario}
-                onChange={(event) =>
-                  setFiltroEscenario(event.target.value as Escenario)
-                }
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold text-slate-800 outline-none transition focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100"
-              >
-                {escenarios.map((escenario) => (
-                  <option key={escenario.value} value={escenario.value}>
-                    {escenario.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="flex items-end gap-2">
+            <div className="flex flex-wrap gap-3">
               <button
-                type="button"
-                onClick={limpiarFiltros}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50"
+                onClick={cargarDatos}
+                className="rounded-2xl bg-white/10 border border-white/10 px-4 py-3 font-black uppercase text-xs tracking-widest hover:bg-white/15 flex items-center gap-2"
               >
-                Limpiar
+                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Actualizar
+              </button>
+              <button
+                onClick={exportarCSV}
+                className="rounded-2xl bg-cyan-400 text-slate-950 px-4 py-3 font-black uppercase text-xs tracking-widest hover:bg-cyan-300 flex items-center gap-2"
+              >
+                <Download size={16} /> Exportar
+              </button>
+              <button
+                onClick={cerrarSesion}
+                className="rounded-2xl bg-red-500/15 border border-red-400/30 text-red-100 px-4 py-3 font-black uppercase text-xs tracking-widest hover:bg-red-500/25 flex items-center gap-2"
+              >
+                <LogOut size={16} /> Salir
               </button>
             </div>
           </div>
-        </section>
+        </header>
 
-        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
-          <KpiCard
-            title="Participantes"
-            value={totalParticipantes}
-            subtitle="según filtros"
-            icon={<Users size={22} />}
-            tone="cyan"
-          />
-          <KpiCard
-            title="Registros hoy"
-            value={registrosHoy}
-            subtitle="actividad del día"
-            icon={<CalendarDays size={22} />}
-            tone="emerald"
-          />
-          <KpiCard
-            title="Instituciones"
-            value={totalEscuelas}
-            subtitle="unidades educativas"
-            icon={<School size={22} />}
-            tone="indigo"
-          />
-          <KpiCard
-            title="Progreso promedio"
-            value={`${progresoPromedio}%`}
-            subtitle="por misiones"
-            icon={<CheckCircle2 size={22} />}
-            tone="orange"
-          />
-          <KpiCard
-            title="Tiempo medio"
-            value="N/D"
-            subtitle="requiere guardar segundos"
-            icon={<Timer size={22} />}
-            tone="slate"
-          />
-          <KpiCard
-            title="Mejor desempeño"
-            value={mejorEscuela ? `${mejorEscuela.progreso}%` : 'N/D'}
-            subtitle={mejorEscuela ? mejorEscuela.escuela : 'sin datos'}
-            icon={<Trophy size={22} />}
-            tone="yellow"
-          />
-        </div>
-
-        <section className="mb-5 rounded-[1.75rem] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
-          <div className="flex items-start gap-3">
-            <ShieldAlert size={20} className="mt-0.5 shrink-0" />
-            <p>
-              Las métricas de <strong>tiempo medio</strong>,{' '}
-              <strong>precisión real</strong> y <strong>puntaje técnico</strong>{' '}
-              aparecerán cuando el juego guarde segundos, respuestas correctas y
-              puntajes por escenario. Mientras tanto, este panel calcula el avance
-              con las misiones completadas que ya existen en Supabase.
-            </p>
+        {errorMsg && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 font-bold flex items-center gap-3">
+            <ShieldAlert size={20} /> {errorMsg}
           </div>
+        )}
+
+        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <MetricCard icon={<Users />} label="Participantes" value={stats.total} tone="cyan" />
+          <MetricCard icon={<School />} label="Instituciones" value={stats.escuelasActivas} tone="orange" />
+          <MetricCard icon={<BarChart3 />} label="Progreso promedio" value={`${stats.progresoPromedio}%`} tone="emerald" />
+          <MetricCard icon={<Trophy />} label="Completaron todo" value={stats.completados} tone="purple" />
         </section>
 
-        <div className="mb-5 grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
-          <section className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-black uppercase tracking-[0.18em] text-slate-700">
-                  Desempeño por institución
-                </h2>
-                <p className="mt-1 text-sm font-medium text-slate-500">
-                  Promedio de avance según misiones completadas.
-                </p>
-              </div>
-              <School size={22} className="text-cyan-700" />
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-4 md:p-5 shadow-xl">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-center">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                value={busqueda}
+                onChange={(event) => setBusqueda(event.target.value)}
+                placeholder="Buscar por nombre o institución..."
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 font-semibold outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+              />
             </div>
 
-            <div className="space-y-4">
-              {resumenEscuelas.slice(0, 8).map((item, index) => (
-                <div key={item.escuela}>
-                  <div className="mb-1.5 flex items-center justify-between gap-3">
-                    <p className="truncate text-sm font-black text-slate-800">
-                      {index + 1}. {item.escuela}
-                    </p>
-                    <p className="text-sm font-black text-cyan-700">
-                      {item.progreso}%
-                    </p>
-                  </div>
-
-                  <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className="h-full rounded-full bg-cyan-600 transition-all"
-                      style={{ width: `${item.progreso}%` }}
-                    />
-                  </div>
-
-                  <p className="mt-1 text-xs font-semibold text-slate-500">
-                    {item.total} participante{item.total === 1 ? '' : 's'}
-                  </p>
-                </div>
+            <select
+              value={escuelaFiltro}
+              onChange={(event) => setEscuelaFiltro(event.target.value)}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-bold outline-none focus:border-cyan-500"
+            >
+              <option value="todas">Todas las instituciones</option>
+              {escuelas.map((escuela) => (
+                <option key={escuela} value={escuela}>{escuela}</option>
               ))}
+            </select>
 
-              {resumenEscuelas.length === 0 && (
-                <p className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">
-                  No hay datos con los filtros actuales.
-                </p>
-              )}
-            </div>
-          </section>
+            <select
+              value={estadoFiltro}
+              onChange={(event) => setEstadoFiltro(event.target.value as EstadoFiltro)}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-bold outline-none focus:border-cyan-500"
+            >
+              <option value="todos">Todos los estados</option>
+              <option value="completos">Completaron</option>
+              <option value="pendientes">Pendientes</option>
+            </select>
+          </div>
+        </section>
 
-          <section className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-black uppercase tracking-[0.18em] text-slate-700">
-                  Semáforo de alerta
-                </h2>
-                <p className="mt-1 text-sm font-medium text-slate-500">
-                  Clasificación automática por avance.
-                </p>
-              </div>
-              <ShieldAlert size={22} className="text-orange-600" />
-            </div>
-
-            <div className="space-y-3">
-              <AlertRow
-                label="Óptimo"
-                description="Conoce el protocolo y avanza rápido."
-                value={resumenSemaforo.optimo}
-                colorClass="bg-emerald-500"
-                textClass="text-emerald-700"
-                total={totalParticipantes}
-              />
-              <AlertRow
-                label="En desarrollo"
-                description="Tiene avance parcial y requiere refuerzo."
-                value={resumenSemaforo.desarrollo}
-                colorClass="bg-amber-500"
-                textClass="text-amber-700"
-                total={totalParticipantes}
-              />
-              <AlertRow
-                label="Vulnerable"
-                description="No registra misiones completadas."
-                value={resumenSemaforo.vulnerable}
-                colorClass="bg-red-500"
-                textClass="text-red-700"
-                total={totalParticipantes}
-              />
-            </div>
-
-            <div className="mt-5 rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-                Registros por fecha
-              </p>
-
-              <div className="mt-3 grid max-h-56 grid-cols-1 gap-2 overflow-auto pr-1">
-                {registrosPorFecha.map(([fecha, cantidad]) => (
-                  <div
-                    key={fecha}
-                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2"
-                  >
-                    <span className="text-sm font-bold text-slate-700">
-                      {fecha}
-                    </span>
-                    <span className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-black text-white">
-                      {cantidad}
-                    </span>
-                  </div>
-                ))}
-
-                {registrosPorFecha.length === 0 && (
-                  <p className="text-sm font-semibold text-slate-500">
-                    No hay fechas para mostrar.
-                  </p>
-                )}
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <section className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-slate-200 p-5 md:flex-row md:items-center md:justify-between">
+        <section className="rounded-[2rem] border border-slate-200 bg-white shadow-xl overflow-hidden">
+          <div className="flex items-center justify-between gap-4 border-b border-slate-200 p-4 md:p-5">
             <div>
-              <h2 className="text-sm font-black uppercase tracking-[0.18em] text-slate-700">
-                Tabla detallada de desempeño estudiantil
-              </h2>
-              <p className="mt-1 text-sm font-medium text-slate-500">
-                Ordenada del registro más reciente al más antiguo.
-              </p>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-500">Base de datos</p>
+              <h2 className="text-xl font-black">Registros encontrados: {agentesFiltrados.length}</h2>
             </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={anonimizar}
-                  onChange={(event) => setAnonimizar(event.target.checked)}
-                  className="h-4 w-4 accent-cyan-700"
-                />
-                Anonimizar nombres
-              </label>
-
-              <span className="rounded-full bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700">
-                {agentesFiltrados.length} resultados
-              </span>
-            </div>
+            <Filter className="text-slate-400" />
           </div>
 
-          <div className="overflow-auto">
-            <table className="w-full min-w-[1180px] text-left text-sm">
-              <thead className="bg-slate-950 text-white">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] text-left">
+              <thead className="bg-slate-50 text-xs uppercase tracking-widest text-slate-500">
                 <tr>
-                  <TableHead>Estudiante</TableHead>
-                  <TableHead>Edad</TableHead>
-                  <TableHead>Unidad Educativa</TableHead>
-                  <TableHead>Escenario Evaluado</TableHead>
-                  <TableHead>Progreso</TableHead>
-                  <TableHead>Puntaje</TableHead>
-                  <TableHead>Estado de Alerta</TableHead>
-                  <TableHead>Registro</TableHead>
-                  <TableHead>Última Conexión</TableHead>
+                  <th className="px-5 py-4">Estudiante</th>
+                  <th className="px-5 py-4">Institución</th>
+                  <th className="px-5 py-4">Edad</th>
+                  <th className="px-5 py-4">Nivel</th>
+                  <th className="px-5 py-4">Progreso</th>
+                  <th className="px-5 py-4">Misiones</th>
+                  <th className="px-5 py-4">Registro</th>
+                  <th className="px-5 py-4 text-right">Acciones</th>
                 </tr>
               </thead>
-
-              <tbody>
-                {loading && (
+              <tbody className="divide-y divide-slate-100">
+                {loading ? (
                   <tr>
-                    <td colSpan={9} className="p-8 text-center font-bold text-slate-500">
-                      Cargando registros...
-                    </td>
+                    <td colSpan={8} className="px-5 py-12 text-center font-black text-slate-500">Cargando registros...</td>
                   </tr>
-                )}
-
-                {!loading && agentesFiltrados.length === 0 && (
+                ) : agentesFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="p-8 text-center font-bold text-slate-500">
-                      No hay registros con los filtros actuales.
-                    </td>
+                    <td colSpan={8} className="px-5 py-12 text-center font-black text-slate-500">No hay registros para mostrar.</td>
                   </tr>
-                )}
-
-                {!loading &&
-                  agentesFiltrados.map((agente, index) => {
-                    const progreso = getProgressPercent(agente);
-                    const alerta = getAlertStatus(agente);
-                    const nombreVisible = anonimizar
-                      ? `Estudiante_${String(index + 1).padStart(3, '0')}`
-                      : agente.nombre || 'Sin nombre';
+                ) : (
+                  agentesFiltrados.map((agente) => {
+                    const progreso = obtenerProgreso(agente);
 
                     return (
-                      <tr
-                        key={agente.id}
-                        className="border-t border-slate-100 transition hover:bg-cyan-50/40"
-                      >
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={getAvatarSrc(agente.avatar)}
-                              alt={getAvatarLabel(agente.avatar)}
-                              className="h-12 w-12 rounded-2xl border border-slate-200 bg-slate-50 object-cover p-1"
-                            />
-                            <div>
-                              <p className="font-black text-slate-950">
-                                {nombreVisible}
-                              </p>
-                              <p className="text-xs font-bold text-slate-500">
-                                {getAvatarLabel(agente.avatar)}
-                              </p>
-                            </div>
+                      <tr key={agente.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="px-5 py-4">
+                          <div className="font-black text-slate-950">{agente.nombre || 'Sin nombre'}</div>
+                          <div className="text-xs font-bold text-slate-500">Avatar: {agente.avatar || 'N/A'}</div>
+                        </td>
+                        <td className="px-5 py-4 font-semibold text-slate-600">{agente.institucion || 'Sin institución'}</td>
+                        <td className="px-5 py-4 font-bold">{agente.edad ?? 'N/A'}</td>
+                        <td className="px-5 py-4">
+                          <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-black text-white">Nivel {agente.nivel ?? 1}</span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="w-36 rounded-full bg-slate-100 h-3 overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-cyan-500 to-emerald-500" style={{ width: `${progreso}%` }} />
+                          </div>
+                          <div className="text-xs font-black text-slate-500 mt-1">{progreso}%</div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex gap-1.5">
+                            <MissionDot active={Boolean(agente.mision_volcan)} label="V" />
+                            <MissionDot active={Boolean(agente.mision_inundacion)} label="I" />
+                            <MissionDot active={Boolean(agente.mision_evacuacion)} label="E" />
                           </div>
                         </td>
-
-                        <td className="p-4">
-                          <span className="rounded-full bg-purple-50 px-3 py-1.5 text-xs font-black text-purple-700">
-                            {agente.edad ?? 'N/A'}
-                          </span>
-                        </td>
-
-                        <td className="max-w-[260px] p-4">
-                          <p className="font-bold text-slate-700">
-                            {agente.institucion || 'Sin institución'}
-                          </p>
-                        </td>
-
-                        <td className="p-4">
-                          <ScenarioBadges agente={agente} escenario={filtroEscenario} />
-                        </td>
-
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-2 w-28 overflow-hidden rounded-full bg-slate-100">
-                              <div
-                                className="h-full rounded-full bg-cyan-600"
-                                style={{ width: `${progreso}%` }}
-                              />
-                            </div>
-                            <span className="text-xs font-black text-slate-700">
-                              {progreso}%
-                            </span>
-                          </div>
-                        </td>
-
-                        <td className="p-4">
-                          <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-700">
-                            {progreso}/100
-                          </span>
-                        </td>
-
-                        <td className="p-4">
-                          <span
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-black ${alerta.className}`}
+                        <td className="px-5 py-4 text-sm font-semibold text-slate-500">{formatearFecha(agente.created_at)}</td>
+                        <td className="px-5 py-4 text-right">
+                          <button
+                            onClick={() => setRegistroSeleccionado(agente)}
+                            className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-wider text-red-700 hover:bg-red-100"
                           >
-                            {alerta.icon}
-                            {alerta.label}
-                          </span>
-                        </td>
-
-                        <td className="p-4 font-semibold text-slate-600">
-                          {formatDate(agente.created_at)}
-                        </td>
-
-                        <td className="p-4 font-semibold text-slate-600">
-                          {formatDate(agente.ultima_conexion)}
+                            <Trash2 size={14} /> Eliminar
+                          </button>
                         </td>
                       </tr>
                     );
-                  })}
+                  })
+                )}
               </tbody>
             </table>
           </div>
         </section>
       </section>
+
+      {registroSeleccionado && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl"
+          >
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-red-600">
+              <Trash2 size={26} />
+            </div>
+            <h3 className="text-2xl font-black">Eliminar registro</h3>
+            <p className="mt-2 text-slate-600 font-semibold">
+              ¿Seguro que deseas eliminar a <strong>{registroSeleccionado.nombre || 'este estudiante'}</strong>? Esta acción no se puede deshacer.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setRegistroSeleccionado(null)}
+                className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={eliminarRegistro}
+                disabled={deletingId === registroSeleccionado.id}
+                className="flex-1 rounded-2xl bg-red-600 px-4 py-3 font-black uppercase tracking-wider text-white hover:bg-red-500 disabled:opacity-50"
+              >
+                {deletingId === registroSeleccionado.id ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </main>
   );
 };
 
-const KpiCard = ({
-  title,
-  value,
-  subtitle,
-  icon,
-  tone
-}: {
-  title: string;
-  value: string | number;
-  subtitle: string;
-  icon: React.ReactNode;
-  tone: 'cyan' | 'emerald' | 'indigo' | 'orange' | 'slate' | 'yellow';
-}) => {
-  const toneClass = {
+const MetricCard = ({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string | number; tone: string }) => {
+  const tones: Record<string, string> = {
     cyan: 'bg-cyan-50 text-cyan-700 border-cyan-100',
-    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-100',
     orange: 'bg-orange-50 text-orange-700 border-orange-100',
-    slate: 'bg-slate-50 text-slate-700 border-slate-100',
-    yellow: 'bg-yellow-50 text-yellow-700 border-yellow-100'
-  }[tone];
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    purple: 'bg-purple-50 text-purple-700 border-purple-100'
+  };
 
   return (
-    <motion.article
-      whileHover={{ y: -3 }}
-      transition={{ duration: 0.18 }}
-      className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm"
-    >
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
-          {title}
-        </p>
-
-        <div className={`rounded-2xl border p-2.5 ${toneClass}`}>{icon}</div>
+    <div className="rounded-[1.7rem] border border-slate-200 bg-white p-5 shadow-lg">
+      <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border ${tones[tone] || tones.cyan}`}>
+        {icon}
       </div>
-
-      <p className="text-3xl font-black tracking-tight text-slate-950">
-        {value}
-      </p>
-
-      <p className="mt-1 line-clamp-2 text-xs font-bold text-slate-500">
-        {subtitle}
-      </p>
-    </motion.article>
-  );
-};
-
-const AlertRow = ({
-  label,
-  description,
-  value,
-  total,
-  colorClass,
-  textClass
-}: {
-  label: string;
-  description: string;
-  value: number;
-  total: number;
-  colorClass: string;
-  textClass: string;
-}) => {
-  const percent = total > 0 ? Math.round((value / total) * 100) : 0;
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div>
-          <p className={`font-black ${textClass}`}>{label}</p>
-          <p className="text-xs font-semibold text-slate-500">{description}</p>
-        </div>
-        <span className="text-xl font-black text-slate-950">{value}</span>
-      </div>
-
-      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-        <div
-          className={`h-full rounded-full ${colorClass}`}
-          style={{ width: `${percent}%` }}
-        />
-      </div>
+      <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-500">{label}</p>
+      <p className="mt-2 text-3xl font-black text-slate-950">{value}</p>
     </div>
   );
 };
 
-const ScenarioBadges = ({
-  agente,
-  escenario
-}: {
-  agente: Agente;
-  escenario: Escenario;
-}) => {
-  if (escenario !== 'todos') {
-    const ok = getMissionStatus(agente, escenario);
-    return <MissionBadge label={scenarioLabel(escenario)} ok={ok} />;
-  }
+const MissionDot = ({ active, label }: { active: boolean; label: string }) => (
+  <span className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-black ${active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
+    {active ? <CheckCircle2 size={15} /> : label}
+  </span>
+);
 
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      <MissionBadge label="Volcán" ok={agente.mision_volcan} />
-      <MissionBadge label="Inundación" ok={agente.mision_inundacion} />
-      <MissionBadge label="Evacuación" ok={agente.mision_evacuacion} />
-    </div>
-  );
-};
-
-const MissionBadge = ({
-  label,
-  ok
-}: {
-  label: string;
-  ok: boolean | null;
-}) => {
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.1em] ${
-        ok
-          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-          : 'border-slate-200 bg-slate-50 text-slate-500'
-      }`}
-    >
-      {ok ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-      {label}
-    </span>
-  );
-};
-
-const TableHead = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <th className="p-4 text-[11px] font-black uppercase tracking-[0.16em]">
-      {children}
-    </th>
-  );
-};
-
-const normalizeText = (value: string) => {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, ' ');
-};
-
-const getProgressPercent = (agente: Agente) => {
-  const completadas =
-    Number(Boolean(agente.mision_volcan)) +
-    Number(Boolean(agente.mision_inundacion)) +
-    Number(Boolean(agente.mision_evacuacion));
-
+const obtenerProgreso = (agente: Agente) => {
+  const completadas = [agente.mision_volcan, agente.mision_inundacion, agente.mision_evacuacion].filter(Boolean).length;
   return Math.round((completadas / 3) * 100);
 };
 
-const getAlertStatus = (agente: Agente) => {
-  const progreso = getProgressPercent(agente);
-
-  if (progreso >= 100) {
-    return {
-      key: 'optimo' as const,
-      label: 'Óptimo',
-      className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-      icon: <CheckCircle2 size={13} />
-    };
-  }
-
-  if (progreso > 0) {
-    return {
-      key: 'desarrollo' as const,
-      label: 'En desarrollo',
-      className: 'border-amber-200 bg-amber-50 text-amber-700',
-      icon: <ShieldAlert size={13} />
-    };
-  }
-
-  return {
-    key: 'vulnerable' as const,
-    label: 'Vulnerable',
-    className: 'border-red-200 bg-red-50 text-red-700',
-    icon: <XCircle size={13} />
-  };
-};
-
-const getMissionStatus = (agente: Agente, escenario: Escenario) => {
-  if (escenario === 'volcan') return Boolean(agente.mision_volcan);
-  if (escenario === 'inundacion') return Boolean(agente.mision_inundacion);
-  if (escenario === 'evacuacion') return Boolean(agente.mision_evacuacion);
-  return true;
-};
-
-const scenarioLabel = (escenario: Escenario) => {
-  if (escenario === 'volcan') return 'Volcán';
-  if (escenario === 'inundacion') return 'Inundación';
-  if (escenario === 'evacuacion') return 'Evacuación';
-  return 'Resumen general';
-};
-
-const getScenarioExportText = (agente: Agente, escenario: Escenario) => {
-  if (escenario !== 'todos') {
-    return `${scenarioLabel(escenario)} - ${
-      getMissionStatus(agente, escenario) ? 'Completada' : 'Pendiente'
-    }`;
-  }
-
-  return `Volcán: ${
-    agente.mision_volcan ? 'Completada' : 'Pendiente'
-  } | Inundación: ${
-    agente.mision_inundacion ? 'Completada' : 'Pendiente'
-  } | Evacuación: ${agente.mision_evacuacion ? 'Completada' : 'Pendiente'}`;
-};
-
-const getAvatarLabel = (avatar: string | null) => {
-  if (avatar === 'chica') return 'Niña';
-  if (avatar === 'chico') return 'Niño';
-  return 'No definido';
-};
-
-const getAvatarSrc = (avatar: string | null) => {
-  if (avatar === 'chica') return avatarImages.chica;
-  if (avatar === 'chico') return avatarImages.chico;
-  return avatarImages.chico;
-};
-
-const formatDate = (value: string | null) => {
+const formatearFecha = (value: string | null) => {
   if (!value) return 'Sin fecha';
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Fecha inválida';
-
-  return date.toLocaleString('es-EC', {
+  return new Date(value).toLocaleDateString('es-EC', {
     year: 'numeric',
     month: 'short',
     day: '2-digit',
@@ -1379,27 +481,12 @@ const formatDate = (value: string | null) => {
   });
 };
 
-const dateInputValue = (value: string | null) => {
-  if (!value) return '';
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-
-  return date.toISOString().slice(0, 10);
-};
-
-const escapeHtml = (value: string) => {
+const normalizar = (value: string) => {
   return value
-    .split('&')
-    .join('&amp;')
-    .split('<')
-    .join('&lt;')
-    .split('>')
-    .join('&gt;')
-    .split('"')
-    .join('&quot;')
-    .split("'")
-    .join('&#039;');
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
 };
 
 export default AdminPanel;
