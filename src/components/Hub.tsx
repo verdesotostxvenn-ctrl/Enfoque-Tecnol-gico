@@ -4,7 +4,7 @@ import {
   Award,
   CalendarDays,
   ChevronRight,
-  ClipboardList,
+  CheckCircle2,
   Download,
   Image as ImageIcon,
   Lock,
@@ -14,11 +14,8 @@ import {
   Navigation,
   PartyPopper,
   PlayCircle,
-  Route,
   ShieldCheck,
-  Sparkles,
   Trophy,
-  UserRound,
   Video,
   Waves
 } from 'lucide-react';
@@ -35,6 +32,7 @@ type Mision = {
   etiqueta: string;
   icono: React.ReactNode;
   colorCard: string;
+  imageUrl: string;
   imagenHint: string;
   enfoque: string;
 };
@@ -45,6 +43,7 @@ type Herramienta = {
   estado: string;
   icono: React.ReactNode;
   color: string;
+  imageUrl: string;
 };
 
 const AVATARES: Record<AvatarTipo, Record<number, string>> = {
@@ -72,7 +71,8 @@ const misiones: Mision[] = [
     etiqueta: 'Módulo 01',
     icono: <Mountain className="h-7 w-7" />,
     colorCard: 'from-orange-600 via-red-600 to-rose-800',
-    imagenHint: 'Imagen sugerida: volcán Tungurahua en erupción, ceniza y señal de alerta.',
+    imageUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1000&q=80',
+    imagenHint: 'Imagen provisional. Luego reemplazar por: volcán Tungurahua en erupción, ceniza y señal de alerta.',
     enfoque: 'Volcán + ceniza'
   },
   {
@@ -84,7 +84,8 @@ const misiones: Mision[] = [
     etiqueta: 'Módulo 02',
     icono: <Waves className="h-7 w-7" />,
     colorCard: 'from-blue-600 via-cyan-600 to-sky-800',
-    imagenHint: 'Imagen sugerida: río crecido, lluvia intensa, zona segura elevada.',
+    imageUrl: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1000&q=80',
+    imagenHint: 'Imagen provisional. Luego reemplazar por: río crecido, lluvia intensa y zona segura elevada.',
     enfoque: 'Agua + rutas altas'
   },
   {
@@ -96,7 +97,8 @@ const misiones: Mision[] = [
     etiqueta: 'Módulo 03',
     icono: <Navigation className="h-7 w-7" />,
     colorCard: 'from-emerald-600 via-teal-600 to-green-800',
-    imagenHint: 'Imagen sugerida: estudiantes caminando hacia punto seguro con señalética.',
+    imageUrl: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1000&q=80',
+    imagenHint: 'Imagen provisional. Luego reemplazar por: estudiantes caminando hacia punto seguro con señalética.',
     enfoque: 'Ruta + punto seguro'
   }
 ];
@@ -107,28 +109,32 @@ const herramientas: Herramienta[] = [
     desc: 'Cápsulas educativas por módulo para reforzar lo aprendido antes de cada evaluación.',
     estado: 'Listo para enlazar',
     icono: <Video size={22} />,
-    color: 'from-red-500 to-orange-500'
+    color: 'from-red-500 to-orange-500',
+    imageUrl: 'https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?auto=format&fit=crop&w=900&q=80'
   },
   {
     titulo: 'Mapas',
     desc: 'Espacio para rutas de evacuación, zonas seguras y puntos de encuentro del Distrito 18D03.',
     estado: 'Pendiente de mapas',
     icono: <Map size={22} />,
-    color: 'from-cyan-500 to-blue-500'
+    color: 'from-cyan-500 to-blue-500',
+    imageUrl: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=900&q=80'
   },
   {
     titulo: 'Línea de tiempo',
     desc: 'Eventos históricos y antecedentes de emergencias para entender el riesgo local.',
     estado: 'Base preparada',
     icono: <CalendarDays size={22} />,
-    color: 'from-purple-500 to-fuchsia-500'
+    color: 'from-purple-500 to-fuchsia-500',
+    imageUrl: 'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=900&q=80'
   },
   {
     titulo: 'Material descargable',
     desc: 'Guías, fichas, protocolos y recursos para docentes, estudiantes y familias.',
     estado: 'Próximamente',
     icono: <Download size={22} />,
-    color: 'from-emerald-500 to-teal-500'
+    color: 'from-emerald-500 to-teal-500',
+    imageUrl: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=900&q=80'
   }
 ];
 
@@ -295,7 +301,7 @@ const Hub = () => {
               <h2 className="text-3xl md:text-4xl font-black mt-1">Módulos principales</h2>
             </div>
             <p className="text-slate-400 max-w-xl text-sm font-semibold">
-              Dejé el espacio visual listo para que luego agreguemos imágenes de Canva o links reales por módulo.
+              Ya quedan con imágenes provisionales. Luego las reemplazo por las imágenes finales que me pases.
             </p>
           </div>
 
@@ -310,13 +316,14 @@ const Hub = () => {
                   whileHover={{ y: -4 }}
                   className="rounded-[2rem] border border-white/10 bg-white/5 overflow-hidden backdrop-blur-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
                 >
-                  <div className={`relative h-44 bg-gradient-to-br ${mision.colorCard} p-5 overflow-hidden`}>
-                    <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/15 blur-2xl" />
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.16)_1px,transparent_1px)] [background-size:22px_22px] opacity-40" />
-                    <div className="relative z-10 flex h-full flex-col justify-between">
+                  <div className="relative h-52 overflow-hidden">
+                    <img src={mision.imageUrl} alt={mision.titulo} className="absolute inset-0 h-full w-full object-cover" />
+                    <div className={`absolute inset-0 bg-gradient-to-br ${mision.colorCard} mix-blend-multiply opacity-70`} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/25 to-transparent" />
+                    <div className="relative z-10 flex h-full flex-col justify-between p-5">
                       <div className="flex items-center justify-between">
-                        <span className="rounded-full bg-black/25 px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em]">{mision.etiqueta}</span>
-                        <div className="rounded-2xl bg-white/15 p-3 text-white">{mision.icono}</div>
+                        <span className="rounded-full bg-black/35 px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em]">{mision.etiqueta}</span>
+                        <div className="rounded-2xl bg-white/15 p-3 text-white backdrop-blur-md">{mision.icono}</div>
                       </div>
                       <div>
                         <p className="text-white/70 text-[10px] font-black uppercase tracking-[0.22em] mb-1">{mision.enfoque}</p>
@@ -368,18 +375,22 @@ const Hub = () => {
               <h2 className="text-3xl md:text-4xl font-black mt-1">Recursos del proyecto</h2>
             </div>
             <p className="text-slate-400 max-w-xl text-sm font-semibold">
-              Sección base para conectar videos, mapas, línea de tiempo y material descargable cuando me pases los links.
+              Cada tarjeta tiene imagen provisional y queda lista para enlazar videos, mapas, eventos y archivos.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {herramientas.map((item) => (
-              <article key={item.titulo} className="rounded-[1.7rem] bg-slate-950/65 border border-white/10 p-5 overflow-hidden relative">
-                <div className={`absolute -right-14 -top-14 h-32 w-32 rounded-full bg-gradient-to-br ${item.color} opacity-30 blur-2xl`} />
-                <div className="relative z-10">
-                  <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${item.color} text-white shadow-lg`}>
+              <article key={item.titulo} className="rounded-[1.7rem] bg-slate-950/65 border border-white/10 overflow-hidden relative">
+                <div className="relative h-32 overflow-hidden">
+                  <img src={item.imageUrl} alt={item.titulo} className="absolute inset-0 h-full w-full object-cover" />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-70 mix-blend-multiply`} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
+                  <div className="absolute bottom-4 left-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white backdrop-blur-md shadow-lg">
                     {item.icono}
                   </div>
+                </div>
+                <div className="p-5">
                   <h3 className="text-xl font-black">{item.titulo}</h3>
                   <p className="text-slate-400 text-sm font-semibold leading-relaxed mt-2">{item.desc}</p>
                   <div className="mt-4 rounded-full bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200 w-fit">
