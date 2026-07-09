@@ -71,8 +71,8 @@ const misiones: Mision[] = [
     etiqueta: 'Módulo 01',
     icono: <Mountain className="h-7 w-7" />,
     colorCard: 'from-orange-600 via-red-600 to-rose-800',
-    imageUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1000&q=80',
-    imagenHint: 'Imagen provisional. Luego reemplazar por: volcán Tungurahua en erupción, ceniza y señal de alerta.',
+    imageUrl: 'https://blogger.googleusercontent.com/img/a/AVvXsEgvMzQ-lC5eybzQ_NIvrrlKgr_qStTio-EaDyhIPkpC_gQGKCVAHVAQgKgOynQRn1s9K7t2nwED7tdPkRGWDEWCns3npzBMQBPhLolb51L2Tjtc9Aisdi7sikyL7nMz5u22HM6Ftyf-El1WY4JGHwWhDJXZjLiZyxUZAHUWP3LUGUbs9rrdAsTXG4Hm3W8',
+    imagenHint: 'Imagen final cargada. Tema: volcán, erupción y alerta natural.',
     enfoque: 'Volcán + ceniza'
   },
   {
@@ -84,8 +84,8 @@ const misiones: Mision[] = [
     etiqueta: 'Módulo 02',
     icono: <Waves className="h-7 w-7" />,
     colorCard: 'from-blue-600 via-cyan-600 to-sky-800',
-    imageUrl: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1000&q=80',
-    imagenHint: 'Imagen provisional. Luego reemplazar por: río crecido, lluvia intensa y zona segura elevada.',
+    imageUrl: 'https://blogger.googleusercontent.com/img/a/AVvXsEgb0NIo6RWIE6iO6Y6QswUrGRGw2eUdk3a3o0dAw8YPDt5p1BjCzPsabCKcAtcRQSEBS7b9Kb64Lj6nhxKLKj1Tthakok9AD1PXXuS9SmSm3LlYgf1C46KpP83Z-RBEJPEAWh9QRDdTF8ssGqNFJF4Hp75C1eQRyattLnDpSEe-anrEdL87dd1LSc0nh9A',
+    imagenHint: 'Imagen final cargada. Tema: inundación, lluvia intensa y zonas de riesgo.',
     enfoque: 'Agua + rutas altas'
   },
   {
@@ -97,8 +97,8 @@ const misiones: Mision[] = [
     etiqueta: 'Módulo 03',
     icono: <Navigation className="h-7 w-7" />,
     colorCard: 'from-emerald-600 via-teal-600 to-green-800',
-    imageUrl: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1000&q=80',
-    imagenHint: 'Imagen provisional. Luego reemplazar por: estudiantes caminando hacia punto seguro con señalética.',
+    imageUrl: 'https://blogger.googleusercontent.com/img/a/AVvXsEi18cK27LRuYIEiv421v6Gi1mC1lLUPp_RkADUtsLBf-P92rx9MQUz3k4BJZzzuVcAxSF-wQQQIj7LbC14NaCe4GvZA0Th91kn4LtIuaBLYIw9t9-iWruyvMJiMWvB2_FaNGMSZhp05VudB3wXSHHERKFLnt65jAU62uiXyE84qHV7DyhPX53f7xgEH2wE',
+    imagenHint: 'Imagen final cargada. Tema: evacuación, ruta segura y punto de encuentro.',
     enfoque: 'Ruta + punto seguro'
   }
 ];
@@ -110,7 +110,7 @@ const herramientas: Herramienta[] = [
     estado: 'Listo para enlazar',
     icono: <Video size={22} />,
     color: 'from-red-500 to-orange-500',
-    imageUrl: 'https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?auto=format&fit=crop&w=900&q=80'
+    imageUrl: 'https://blogger.googleusercontent.com/img/a/AVvXsEg3Z97xOcrRyfstwiOmmNt36hBNLqBkVHl3vDUKeSXCG0f6sYvn2UQC4J32qLK--bjnOQgE-v8vMaFnMxAahM-oH4RBVnGv585nENefIXUMRzgVZ4ZMp4YcdwWvT9g6P6Nlg8fmg30wLQbzOaUzFut7vfyIwl_g8FfSdQHDWbFFr1VAVFjgR8dwMMYdi9s'
   },
   {
     titulo: 'Mapas',
@@ -118,7 +118,7 @@ const herramientas: Herramienta[] = [
     estado: 'Pendiente de mapas',
     icono: <Map size={22} />,
     color: 'from-cyan-500 to-blue-500',
-    imageUrl: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=900&q=80'
+    imageUrl: 'https://blogger.googleusercontent.com/img/a/AVvXsEhi5QIyoWjSYO8DWR8X_cuioQ_mN43bQCKUc5g1R3NCcjWHrW8Ji4hfTAxxAh1qdtpTe_s0DAnJLtzngolcArlKccUmMYCrBegn-ftGx0DjN0hlg0GvPv3Fyzhpl1EJAGfWoHrPwtSed-wRGmfaWrZqUybJhxvisoHBdzx4EIH6dMtZjf7FhxvoSRzQ22w'
   },
   {
     titulo: 'Línea de tiempo',
@@ -126,7 +126,7 @@ const herramientas: Herramienta[] = [
     estado: 'Base preparada',
     icono: <CalendarDays size={22} />,
     color: 'from-purple-500 to-fuchsia-500',
-    imageUrl: 'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=900&q=80'
+    imageUrl: 'https://blogger.googleusercontent.com/img/a/AVvXsEgOwbrDz0vT51EhZUUyBL88cvDU0ydxYmm38eh-yCYQSCt2hjRA0_PsSETmzuktwuhAU0jm-tLpBcBFd5iqSGL8nZoVw7MAPPONKeIwbULHsy8cWgBZ-34ePuktlko9pZtTSHeXbxqfK_TsutCUJo5wPwI4PiHa6OFtYzmaL80tTYwvWIzJam3SV94h1Mc'
   },
   {
     titulo: 'Material descargable',
@@ -134,7 +134,7 @@ const herramientas: Herramienta[] = [
     estado: 'Próximamente',
     icono: <Download size={22} />,
     color: 'from-emerald-500 to-teal-500',
-    imageUrl: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=900&q=80'
+    imageUrl: 'https://blogger.googleusercontent.com/img/a/AVvXsEg-ZbKppsU1rnvAscXLJemXhnYClhWMBaWkXZisk7klKtfsurLZDT5yv31ILPz9EZjIvKNPMjXoMv0eJiO3_f9d6o7ZJ9z5EVydY9-oMv31eg8ykjvNyqBLPG9ga7LAUW1WDmUzAEeSUH0tXFtaoy5uCLdD-agApYiMRl2WopSVsRrgMKiLq6ToXPxLtnM'
   }
 ];
 
@@ -301,7 +301,7 @@ const Hub = () => {
               <h2 className="text-3xl md:text-4xl font-black mt-1">Módulos principales</h2>
             </div>
             <p className="text-slate-400 max-w-xl text-sm font-semibold">
-              Ya quedan con imágenes provisionales. Luego las reemplazo por las imágenes finales que me pases.
+              Imágenes finales cargadas para presentar cada módulo con un contexto visual claro.
             </p>
           </div>
 
@@ -375,7 +375,7 @@ const Hub = () => {
               <h2 className="text-3xl md:text-4xl font-black mt-1">Recursos del proyecto</h2>
             </div>
             <p className="text-slate-400 max-w-xl text-sm font-semibold">
-              Cada tarjeta tiene imagen provisional y queda lista para enlazar videos, mapas, eventos y archivos.
+              Recursos visuales para complementar la plataforma: videos, mapas, eventos y material descargable.
             </p>
           </div>
 
