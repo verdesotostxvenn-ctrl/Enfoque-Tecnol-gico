@@ -14,8 +14,6 @@ import {
   susceptibilityPalettes
 } from '../utils/geotiffRenderer';
 
-const FALLBACK_MAPA_URL = 'https://blogger.googleusercontent.com/img/a/AVvXsEgoBR_tyDWvpHNWIIr4exwvwEhWkAJKojndFPjuAEU9rITfY1DmsDPkKDo6TN7q6DwlfiCUrkWt4XIa-Vmp88WdgghLYYVPJRJyt_UEIHDtrkpQ_6guba1jv5pCpwD5hs50Fyzmnk76qagF_CAXoQTzm9EfVRMIwCRBqXhp7L4_-Ez2wLhczbzcB37WWqo';
-
 const paletteLabels: Record<PaletteName, string> = {
   institucional: 'Original',
   semaforo: 'Semáforo',
@@ -51,10 +49,11 @@ const MapasPage = () => {
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const [selectedMapId, setSelectedMapId] = useState<MapResourceId>('inundaciones');
   const selectedResource = getMapResource(selectedMapId);
+  const [publishedIds, setPublishedIds] = useState<Set<string>>(new Set());
   const [zoom, setZoom] = useState(0.9);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
-  const [mapaUrl, setMapaUrl] = useState(FALLBACK_MAPA_URL);
+  const [mapaUrl, setMapaUrl] = useState('');
   const [raster, setRaster] = useState<GeoTiffRaster | null>(null);
   const [titulo, setTitulo] = useState(selectedResource.title);
   const [descripcion, setDescripcion] = useState(selectedResource.description);
@@ -71,11 +70,28 @@ const MapasPage = () => {
 
   const selectedLegend = useMemo(() => susceptibilityPalettes[activePalette], [activePalette]);
   const schoolPoints = useMemo(() => (raster?.points || []).filter((point) => point.insideMap && point.xRatio !== undefined && point.yRatio !== undefined), [raster]);
+  const hasVisibleMap = Boolean(mapaUrl);
 
   const resetView = () => {
     setZoom(0.9);
     setPan({ x: 0, y: 0 });
   };
+
+  const refreshPublishedList = async () => {
+    if (!isSupabaseConfigured) return;
+
+    try {
+      const { data, error } = await supabase.from('mapas_recursos').select('id');
+      if (error) throw error;
+      setPublishedIds(new Set((data || []).map((item: { id: string }) => item.id)));
+    } catch (error) {
+      console.warn('No se pudo leer listado de mapas publicados:', error);
+    }
+  };
+
+  useEffect(() => {
+    refreshPublishedList();
+  }, []);
 
   useEffect(() => {
     const cargarMapaPublicado = async () => {
@@ -84,15 +100,16 @@ const MapasPage = () => {
       setCounts(null);
       setHoverInfo(null);
       setActivePoint(null);
-      setMapaUrl(FALLBACK_MAPA_URL);
+      setMapaUrl('');
       setTitulo(selectedResource.title);
       setDescripcion(selectedResource.description);
+      setUpdatedAt(null);
       setEstado(`Buscando ${selectedResource.shortTitle} publicado...`);
       resetView();
 
       try {
         if (!isSupabaseConfigured) {
-          setEstado('Mostrando mapa base. Supabase todavía no está configurado para mapas publicados.');
+          setEstado('Supabase todavía no está configurado para mapas publicados.');
           setRenderMode('fallback');
           return;
         }
@@ -112,6 +129,7 @@ const MapasPage = () => {
           return;
         }
 
+        setPublishedIds((prev) => new Set(prev).add(selectedResource.id));
         setTitulo(mapa.titulo || selectedResource.title);
         setDescripcion(mapa.descripcion || selectedResource.description);
         setUpdatedAt(mapa.updated_at);
@@ -160,7 +178,7 @@ const MapasPage = () => {
         setEstado('Registro encontrado, pero no tiene archivos publicados.');
       } catch (error) {
         console.error(error);
-        setEstado('No se pudo cargar el mapa publicado. Mostrando mapa base.');
+        setEstado('No se pudo cargar este mapa. Revisa si está publicado en /admin/mapas.');
         setRenderMode('fallback');
       } finally {
         setIsLoading(false);
@@ -229,6 +247,7 @@ const MapasPage = () => {
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!hasVisibleMap) return;
     setDragging(true);
     dragStart.current = { x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y };
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -242,7 +261,7 @@ const MapasPage = () => {
 
   const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     setDragging(false);
-    event.currentTarget.releasePointerCapture(event.pointerId);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
   const toggleFullscreen = async () => {
@@ -281,14 +300,20 @@ const MapasPage = () => {
         </header>
 
         <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {MAP_RESOURCES.map((resource) => (
-            <button key={resource.id} onClick={() => setSelectedMapId(resource.id)} className={`rounded-[1.6rem] border p-4 text-left transition-all ${selectedMapId === resource.id ? 'border-cyan-300 bg-cyan-400/15 shadow-[0_0_30px_rgba(34,211,238,0.18)]' : 'border-white/10 bg-white/5 hover:border-cyan-300/40'}`}>
-              <div className={`mb-4 h-2 rounded-full bg-gradient-to-r ${resource.accent}`} />
-              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Mapa de amenaza</p>
-              <h2 className="mt-1 text-2xl font-black">{resource.shortTitle}</h2>
-              <p className="mt-2 text-sm font-semibold text-slate-400">{resource.subtitle}</p>
-            </button>
-          ))}
+          {MAP_RESOURCES.map((resource) => {
+            const isPublished = publishedIds.has(resource.id);
+            return (
+              <button key={resource.id} onClick={() => setSelectedMapId(resource.id)} className={`rounded-[1.6rem] border p-4 text-left transition-all ${selectedMapId === resource.id ? 'border-cyan-300 bg-cyan-400/15 shadow-[0_0_30px_rgba(34,211,238,0.18)]' : 'border-white/10 bg-white/5 hover:border-cyan-300/40'}`}>
+                <div className={`mb-4 h-2 rounded-full bg-gradient-to-r ${resource.accent}`} />
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Mapa de amenaza</p>
+                  <span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] ${isPublished ? 'bg-emerald-400/15 text-emerald-200 border border-emerald-300/20' : 'bg-orange-400/10 text-orange-200 border border-orange-300/20'}`}>{isPublished ? 'Publicado' : 'Pendiente'}</span>
+                </div>
+                <h2 className="mt-1 text-2xl font-black">{resource.shortTitle}</h2>
+                <p className="mt-2 text-sm font-semibold text-slate-400">{resource.subtitle}</p>
+              </button>
+            );
+          })}
         </section>
 
         <section className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-5 items-start">
@@ -298,17 +323,28 @@ const MapasPage = () => {
               <div className="flex gap-2"><ControlButton label="Alejar" onClick={zoomOut}><Minus size={17} /></ControlButton><ControlButton label="Acercar" onClick={zoomIn}><Plus size={17} /></ControlButton><ControlButton label="Reiniciar" onClick={resetView}><RotateCcw size={17} /></ControlButton><ControlButton label="Pantalla completa" onClick={toggleFullscreen}><Maximize2 size={17} /></ControlButton></div>
             </div>
 
-            <div ref={viewerRef} data-cursor="interactive" onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={() => { setDragging(false); setHoverInfo(null); setActivePoint(null); }} onPointerCancel={() => { setDragging(false); setHoverInfo(null); setActivePoint(null); }} className={`relative h-[62vh] min-h-[420px] overflow-hidden rounded-[1.6rem] border border-white/10 bg-white select-none ${dragging ? 'cursor-grabbing' : 'cursor-grab'}`}>
+            <div ref={viewerRef} data-cursor="interactive" onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={() => { setDragging(false); setHoverInfo(null); setActivePoint(null); }} onPointerCancel={() => { setDragging(false); setHoverInfo(null); setActivePoint(null); }} className={`relative h-[62vh] min-h-[420px] overflow-hidden rounded-[1.6rem] border border-white/10 bg-white select-none ${dragging ? 'cursor-grabbing' : hasVisibleMap ? 'cursor-grab' : 'cursor-default'}`}>
               {(isLoading || isRecoloring) && <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/55 backdrop-blur-[2px]"><div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-slate-900 shadow-xl">{isLoading ? 'Cargando mapa...' : 'Cambiando colores...'}</div></div>}
 
-              <div className="absolute left-1/2 top-1/2 max-h-[92%] max-w-[92%]" style={{ height: '92%', aspectRatio: raster ? `${raster.width} / ${raster.height}` : '1 / 1', transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px)) scale(${zoom})`, transformOrigin: 'center center' }}>
-                <img ref={imageRef} src={mapaUrl} alt={titulo} draggable={false} className="h-full w-full object-contain" />
-                {showSchools && schoolPoints.map((point) => <button key={point.id} type="button" onPointerEnter={() => setActivePoint(point)} onPointerLeave={() => setActivePoint(null)} onClick={(event) => { event.stopPropagation(); setActivePoint(point); }} className="absolute z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_18px_rgba(239,68,68,0.75)] transition-transform hover:scale-150" style={{ left: `${(point.xRatio || 0) * 100}%`, top: `${(point.yRatio || 0) * 100}%`, backgroundColor: getThreatColor(point.threatValue) }} title={point.name} />)}
-              </div>
+              {hasVisibleMap ? (
+                <div className="absolute left-1/2 top-1/2 max-h-[92%] max-w-[92%]" style={{ height: '92%', aspectRatio: raster ? `${raster.width} / ${raster.height}` : '1 / 1', transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px)) scale(${zoom})`, transformOrigin: 'center center' }}>
+                  <img ref={imageRef} src={mapaUrl} alt={titulo} draggable={false} className="h-full w-full object-contain" />
+                  {showSchools && schoolPoints.map((point) => <button key={point.id} type="button" onPointerEnter={() => setActivePoint(point)} onPointerLeave={() => setActivePoint(null)} onClick={(event) => { event.stopPropagation(); setActivePoint(point); }} className="absolute z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_18px_rgba(239,68,68,0.75)] transition-transform hover:scale-150" style={{ left: `${(point.xRatio || 0) * 100}%`, top: `${(point.yRatio || 0) * 100}%`, backgroundColor: getThreatColor(point.threatValue) }} title={point.name} />)}
+                </div>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center p-8 text-center">
+                  <div className="max-w-md rounded-[2rem] border border-slate-200 bg-slate-50 p-6 text-slate-900 shadow-xl">
+                    <MapPin className="mx-auto mb-4 text-cyan-600" size={42} />
+                    <h3 className="text-2xl font-black">Mapa pendiente</h3>
+                    <p className="mt-3 text-sm font-bold text-slate-600">{selectedResource.shortTitle} todavía no tiene raster publicado. Sube la carpeta completa desde el panel de gestión y usa “Publicar todos los detectados”.</p>
+                    <button onClick={() => navigate('/admin/mapas')} className="mt-5 rounded-2xl bg-cyan-500 px-5 py-3 text-xs font-black uppercase tracking-[0.16em] text-slate-950 hover:bg-cyan-400">Ir a gestión</button>
+                  </div>
+                </div>
+              )}
 
-              <div className="absolute left-4 top-4 rounded-2xl bg-white/90 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-900 shadow border border-slate-200">Zoom: {Math.round(zoom * 100)}%</div>
-              <div className="absolute bottom-4 left-4 rounded-2xl bg-white/90 px-4 py-3 text-xs font-bold text-slate-800 shadow border border-slate-200 flex items-center gap-2"><Move size={16} className="text-cyan-600" /> Mover con el mouse o touch</div>
-              <div className="absolute bottom-4 right-4 rounded-2xl bg-white/90 px-4 py-3 text-xs font-bold text-slate-800 shadow border border-slate-200">Modo: {renderMode === 'raster' ? 'Raster interactivo' : renderMode === 'tif' ? 'GeoTIFF editable' : renderMode === 'preview' ? 'PNG publicado' : 'Base'}</div>
+              {hasVisibleMap && <div className="absolute left-4 top-4 rounded-2xl bg-white/90 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-900 shadow border border-slate-200">Zoom: {Math.round(zoom * 100)}%</div>}
+              {hasVisibleMap && <div className="absolute bottom-4 left-4 rounded-2xl bg-white/90 px-4 py-3 text-xs font-bold text-slate-800 shadow border border-slate-200 flex items-center gap-2"><Move size={16} className="text-cyan-600" /> Mover con el mouse o touch</div>}
+              {hasVisibleMap && <div className="absolute bottom-4 right-4 rounded-2xl bg-white/90 px-4 py-3 text-xs font-bold text-slate-800 shadow border border-slate-200">Modo: {renderMode === 'raster' ? 'Raster interactivo' : renderMode === 'tif' ? 'GeoTIFF editable' : renderMode === 'preview' ? 'PNG publicado' : 'Base'}</div>}
 
               {hoverInfo && !activePoint && <div className="pointer-events-none absolute z-30 rounded-2xl bg-slate-950 px-4 py-3 text-white shadow-2xl border border-white/10" style={{ left: Math.min(hoverInfo.x + 16, (viewerRef.current?.clientWidth || 0) - 190), top: Math.max(12, hoverInfo.y - 62) }}><p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">Nivel de amenaza</p><div className="mt-1 flex items-center gap-2"><span className="h-4 w-4 rounded-full border border-white/20" style={{ backgroundColor: hoverInfo.color }} /><span className="text-lg font-black">{hoverInfo.label}</span></div><p className="text-[10px] font-bold text-slate-400">Valor raster: {hoverInfo.value}</p></div>}
               {activePoint && <div className="absolute right-4 top-4 z-30 max-w-sm rounded-2xl bg-slate-950 px-4 py-3 text-white shadow-2xl border border-white/10"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-200">Institución educativa</p><h3 className="mt-1 text-lg font-black leading-tight">{activePoint.name}</h3><div className="mt-2 flex items-center gap-2"><span className="h-4 w-4 rounded-full border border-white/20" style={{ backgroundColor: getThreatColor(activePoint.threatValue) }} /><span className="text-sm font-bold text-slate-300">Amenaza: {activePoint.threatLabel || 'Sin dato'}</span></div></div>}
