@@ -6,7 +6,6 @@ import {
   ChevronRight,
   CheckCircle2,
   Download,
-  Image as ImageIcon,
   Lock,
   LogOut,
   Map,
@@ -33,7 +32,6 @@ type Mision = {
   icono: React.ReactNode;
   colorCard: string;
   imageUrl: string;
-  imagenHint: string;
   enfoque: string;
 };
 
@@ -72,7 +70,6 @@ const misiones: Mision[] = [
     icono: <Mountain className="h-7 w-7" />,
     colorCard: 'from-orange-600 via-red-600 to-rose-800',
     imageUrl: 'https://blogger.googleusercontent.com/img/a/AVvXsEgvMzQ-lC5eybzQ_NIvrrlKgr_qStTio-EaDyhIPkpC_gQGKCVAHVAQgKgOynQRn1s9K7t2nwED7tdPkRGWDEWCns3npzBMQBPhLolb51L2Tjtc9Aisdi7sikyL7nMz5u22HM6Ftyf-El1WY4JGHwWhDJXZjLiZyxUZAHUWP3LUGUbs9rrdAsTXG4Hm3W8',
-    imagenHint: 'Imagen final cargada. Tema: volcán, erupción y alerta natural.',
     enfoque: 'Volcán + ceniza'
   },
   {
@@ -85,7 +82,6 @@ const misiones: Mision[] = [
     icono: <Waves className="h-7 w-7" />,
     colorCard: 'from-blue-600 via-cyan-600 to-sky-800',
     imageUrl: 'https://blogger.googleusercontent.com/img/a/AVvXsEgb0NIo6RWIE6iO6Y6QswUrGRGw2eUdk3a3o0dAw8YPDt5p1BjCzPsabCKcAtcRQSEBS7b9Kb64Lj6nhxKLKj1Tthakok9AD1PXXuS9SmSm3LlYgf1C46KpP83Z-RBEJPEAWh9QRDdTF8ssGqNFJF4Hp75C1eQRyattLnDpSEe-anrEdL87dd1LSc0nh9A',
-    imagenHint: 'Imagen final cargada. Tema: inundación, lluvia intensa y zonas de riesgo.',
     enfoque: 'Agua + rutas altas'
   },
   {
@@ -98,7 +94,6 @@ const misiones: Mision[] = [
     icono: <Navigation className="h-7 w-7" />,
     colorCard: 'from-emerald-600 via-teal-600 to-green-800',
     imageUrl: 'https://blogger.googleusercontent.com/img/a/AVvXsEi18cK27LRuYIEiv421v6Gi1mC1lLUPp_RkADUtsLBf-P92rx9MQUz3k4BJZzzuVcAxSF-wQQQIj7LbC14NaCe4GvZA0Th91kn4LtIuaBLYIw9t9-iWruyvMJiMWvB2_FaNGMSZhp05VudB3wXSHHERKFLnt65jAU62uiXyE84qHV7DyhPX53f7xgEH2wE',
-    imagenHint: 'Imagen final cargada. Tema: evacuación, ruta segura y punto de encuentro.',
     enfoque: 'Ruta + punto seguro'
   }
 ];
@@ -301,7 +296,7 @@ const Hub = () => {
               <h2 className="text-3xl md:text-4xl font-black mt-1">Módulos principales</h2>
             </div>
             <p className="text-slate-400 max-w-xl text-sm font-semibold">
-              Imágenes finales cargadas para presentar cada módulo con un contexto visual claro.
+              Tarjetas actualizadas con imágenes finales, diseño limpio y enfoque directo para cada riesgo.
             </p>
           </div>
 
@@ -316,10 +311,10 @@ const Hub = () => {
                   whileHover={{ y: -4 }}
                   className="rounded-[2rem] border border-white/10 bg-white/5 overflow-hidden backdrop-blur-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
                 >
-                  <div className="relative h-52 overflow-hidden">
+                  <div className="relative h-60 overflow-hidden">
                     <img src={mision.imageUrl} alt={mision.titulo} className="absolute inset-0 h-full w-full object-cover" />
-                    <div className={`absolute inset-0 bg-gradient-to-br ${mision.colorCard} mix-blend-multiply opacity-70`} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/25 to-transparent" />
+                    <div className={`absolute inset-0 bg-gradient-to-br ${mision.colorCard} mix-blend-multiply opacity-55`} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
                     <div className="relative z-10 flex h-full flex-col justify-between p-5">
                       <div className="flex items-center justify-between">
                         <span className="rounded-full bg-black/35 px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em]">{mision.etiqueta}</span>
@@ -333,11 +328,6 @@ const Hub = () => {
                   </div>
 
                   <div className="p-5 space-y-4">
-                    <div className="rounded-2xl border border-dashed border-white/15 bg-slate-950/50 p-4 flex items-start gap-3">
-                      <ImageIcon className="text-cyan-300 shrink-0" size={20} />
-                      <p className="text-xs text-slate-400 font-semibold leading-relaxed">{mision.imagenHint}</p>
-                    </div>
-
                     <p className="text-sm text-slate-300 font-semibold leading-relaxed">{mision.desc}</p>
 
                     <button
@@ -382,10 +372,10 @@ const Hub = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {herramientas.map((item) => (
               <article key={item.titulo} className="rounded-[1.7rem] bg-slate-950/65 border border-white/10 overflow-hidden relative">
-                <div className="relative h-32 overflow-hidden">
+                <div className="relative h-36 overflow-hidden">
                   <img src={item.imageUrl} alt={item.titulo} className="absolute inset-0 h-full w-full object-cover" />
-                  <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-70 mix-blend-multiply`} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-55 mix-blend-multiply`} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/15 to-transparent" />
                   <div className="absolute bottom-4 left-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white backdrop-blur-md shadow-lg">
                     {item.icono}
                   </div>
@@ -464,7 +454,7 @@ const Hub = () => {
   );
 };
 
-const MiniStat = ({ label, value }: { label: string; value: string | number }) => (
+const MiniStat = ({ label, value }: { label: string | number; value: string | number }) => (
   <div className="rounded-2xl bg-white/10 border border-white/10 p-3">
     <p className="text-[9px] font-black uppercase tracking-[0.22em] text-slate-400">{label}</p>
     <p className="text-xl font-black mt-1 break-all">{value}</p>
