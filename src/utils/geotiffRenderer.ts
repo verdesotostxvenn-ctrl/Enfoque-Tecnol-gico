@@ -18,6 +18,17 @@ export type GeoTiffRaster = {
   counts: Record<number, number>;
 };
 
+export type PortableGeoTiffRaster = {
+  format: 'susceptibility-raster-v1';
+  valuesBase64: string;
+  width: number;
+  height: number;
+  originalWidth: number;
+  originalHeight: number;
+  counts: Record<number, number>;
+  generatedAt: string;
+};
+
 export type RenderedGeoTiff = {
   dataUrl: string;
   width: number;
@@ -72,6 +83,65 @@ const getBand = (rasters: unknown): ArrayLike<number> => {
   if (Array.isArray(value)) return value[0] as ArrayLike<number>;
   if (value?.[0]) return value[0] as ArrayLike<number>;
   return value as ArrayLike<number>;
+};
+
+const uint8ToBase64 = (values: Uint8Array) => {
+  const chunkSize = 0x8000;
+  let binary = '';
+
+  for (let i = 0; i < values.length; i += chunkSize) {
+    const chunk = values.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return btoa(binary);
+};
+
+const base64ToUint8 = (base64: string) => {
+  const binary = atob(base64);
+  const values = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i += 1) {
+    values[i] = binary.charCodeAt(i);
+  }
+
+  return values;
+};
+
+export const rasterToPortablePayload = (raster: GeoTiffRaster): PortableGeoTiffRaster => ({
+  format: 'susceptibility-raster-v1',
+  valuesBase64: uint8ToBase64(raster.values),
+  width: raster.width,
+  height: raster.height,
+  originalWidth: raster.originalWidth,
+  originalHeight: raster.originalHeight,
+  counts: raster.counts,
+  generatedAt: new Date().toISOString()
+});
+
+export const portablePayloadToRaster = (payload: PortableGeoTiffRaster): GeoTiffRaster => ({
+  values: base64ToUint8(payload.valuesBase64),
+  width: payload.width,
+  height: payload.height,
+  originalWidth: payload.originalWidth,
+  originalHeight: payload.originalHeight,
+  counts: payload.counts
+});
+
+export const fetchPortableRaster = async (url: string): Promise<GeoTiffRaster> => {
+  const response = await fetch(url, { cache: 'no-store' });
+
+  if (!response.ok) {
+    throw new Error('No se pudo cargar el raster procesado.');
+  }
+
+  const payload = await response.json() as PortableGeoTiffRaster;
+
+  if (payload.format !== 'susceptibility-raster-v1' || !payload.valuesBase64) {
+    throw new Error('El raster procesado no tiene el formato correcto.');
+  }
+
+  return portablePayloadToRaster(payload);
 };
 
 export const loadGeoTiffRaster = async (
