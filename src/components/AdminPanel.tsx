@@ -1,22 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Activity,
   BarChart3,
   CalendarDays,
   CheckCircle2,
   Download,
   Filter,
-  LockKeyhole,
-  LogOut,
   RefreshCw,
   School,
   Search,
   ShieldAlert,
   Trash2,
   Trophy,
-  Users,
-  XCircle
+  Users
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
@@ -36,11 +32,7 @@ type Agente = {
 
 type EstadoFiltro = 'todos' | 'completos' | 'pendientes';
 
-const ADMIN_PIN = '1328';
-
 const AdminPanel = () => {
-  const [pin, setPin] = useState('');
-  const [authorized, setAuthorized] = useState(sessionStorage.getItem('adminAutorizado') === 'true');
   const [agentes, setAgentes] = useState<Agente[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -71,8 +63,8 @@ const AdminPanel = () => {
   };
 
   useEffect(() => {
-    if (authorized) cargarDatos();
-  }, [authorized]);
+    cargarDatos();
+  }, []);
 
   const escuelas = useMemo(() => {
     return Array.from(new Set(agentes.map((a) => a.institucion || 'Sin institución'))).sort();
@@ -107,25 +99,6 @@ const AdminPanel = () => {
 
     return { total, completados, progresoPromedio, escuelasActivas };
   }, [agentesFiltrados]);
-
-  const iniciarSesion = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (pin.trim() === ADMIN_PIN) {
-      sessionStorage.setItem('adminAutorizado', 'true');
-      setAuthorized(true);
-      setPin('');
-      setErrorMsg('');
-    } else {
-      setErrorMsg('PIN incorrecto. Intenta nuevamente.');
-    }
-  };
-
-  const cerrarSesion = () => {
-    sessionStorage.removeItem('adminAutorizado');
-    setAuthorized(false);
-    setPin('');
-  };
 
   const eliminarRegistro = async () => {
     if (!registroSeleccionado) return;
@@ -196,50 +169,27 @@ const AdminPanel = () => {
     URL.revokeObjectURL(url);
   };
 
-  if (!authorized) {
-    return (
-      <main className="min-h-screen bg-slate-100 text-slate-950 flex items-center justify-center p-4">
-        <motion.section
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-white border border-slate-200 rounded-[2rem] p-7 shadow-2xl"
-        >
-          <div className="flex items-center gap-4 mb-6">
-            <div className="h-14 w-14 bg-slate-950 text-white rounded-2xl flex items-center justify-center">
-              <LockKeyhole size={26} />
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-700">Acceso administrativo</p>
-              <h1 className="text-2xl font-black">Misión Prevención</h1>
-            </div>
-          </div>
-
-          <form onSubmit={iniciarSesion} className="space-y-4">
-            <label className="block">
-              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">PIN de acceso</span>
-              <input
-                type="password"
-                value={pin}
-                onChange={(event) => setPin(event.target.value)}
-                placeholder="1328"
-                maxLength={4}
-                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-lg font-black tracking-[0.35em] outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
-              />
-            </label>
-
-            {errorMsg && <p className="text-sm font-bold text-red-600">{errorMsg}</p>}
-
-            <button className="w-full rounded-2xl bg-slate-950 px-5 py-3 font-black uppercase tracking-[0.18em] text-white hover:bg-cyan-700 transition-colors">
-              Entrar al dashboard
-            </button>
-          </form>
-        </motion.section>
-      </main>
-    );
-  }
-
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-950 p-4 md:p-6">
+    <main className="admin-dashboard-pro min-h-screen bg-slate-100 text-slate-950 p-4 md:p-6">
+      <style>
+        {`
+          .admin-dashboard-pro,
+          .admin-dashboard-pro * {
+            cursor: auto !important;
+          }
+
+          .admin-dashboard-pro button,
+          .admin-dashboard-pro select,
+          .admin-dashboard-pro .admin-clickable {
+            cursor: pointer !important;
+          }
+
+          .admin-dashboard-pro input {
+            cursor: text !important;
+          }
+        `}
+      </style>
+
       <section className="mx-auto max-w-7xl space-y-6">
         <header className="rounded-[2rem] bg-slate-950 text-white p-6 md:p-8 shadow-2xl overflow-hidden relative">
           <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
@@ -250,7 +200,7 @@ const AdminPanel = () => {
               <p className="text-cyan-300 text-xs font-black uppercase tracking-[0.28em] mb-2">Dashboard administrativo</p>
               <h1 className="text-3xl md:text-5xl font-black tracking-tight">Registros de Misión Prevención</h1>
               <p className="text-slate-300 mt-3 max-w-2xl font-semibold">
-                Controla estudiantes, progreso de misiones, instituciones participantes y exporta datos del plan piloto.
+                Entrada directa sin PIN para revisar estudiantes, progreso, instituciones y datos del plan piloto.
               </p>
             </div>
 
@@ -266,12 +216,6 @@ const AdminPanel = () => {
                 className="rounded-2xl bg-cyan-400 text-slate-950 px-4 py-3 font-black uppercase text-xs tracking-widest hover:bg-cyan-300 flex items-center gap-2"
               >
                 <Download size={16} /> Exportar
-              </button>
-              <button
-                onClick={cerrarSesion}
-                className="rounded-2xl bg-red-500/15 border border-red-400/30 text-red-100 px-4 py-3 font-black uppercase text-xs tracking-widest hover:bg-red-500/25 flex items-center gap-2"
-              >
-                <LogOut size={16} /> Salir
               </button>
             </div>
           </div>
