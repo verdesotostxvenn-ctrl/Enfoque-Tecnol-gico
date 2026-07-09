@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, BookOpenCheck, Clock, PlayCircle, ShieldCheck, Video } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const VIDEO_EMBED_URL = '';
+const VIDEO_EMBED_URL = 'https://www.youtube.com/embed/opNwG7zrIVQ';
 
 const VideosPage = () => {
   const navigate = useNavigate();
@@ -31,14 +31,14 @@ const VideosPage = () => {
               <p className="text-orange-300 text-[10px] font-black uppercase tracking-[0.32em] mb-2">Caja de herramientas / Videos</p>
               <h1 className="text-3xl md:text-6xl font-black tracking-tight leading-none">Videos educativos</h1>
               <p className="mt-4 max-w-3xl text-slate-300 font-semibold leading-relaxed">
-                Espacio preparado para colocar un video principal sobre prevención, gestión de riesgos o el módulo que el docente indique.
+                Recurso audiovisual integrado para reforzar el aprendizaje antes de iniciar o revisar las misiones de prevención.
               </p>
             </div>
 
             <div className="rounded-[1.7rem] border border-orange-300/20 bg-orange-400/10 p-4 flex items-start gap-3">
               <ShieldCheck className="text-orange-300 shrink-0" size={22} />
               <p className="text-sm text-orange-50/80 font-semibold leading-relaxed">
-                Cuando me pases el link de YouTube, Drive o video público, lo conecto aquí para que se vea integrado y profesional.
+                Mira el video, conversa sobre las ideas principales y luego continúa con las misiones del centro de mando.
               </p>
             </div>
           </div>
@@ -80,9 +80,9 @@ const VideosPage = () => {
           </div>
 
           <aside className="space-y-4">
-            <InfoCard icon={<Video />} title="Formato recomendado" text="Mejor usar un link de YouTube en modo público o no listado. También puede ser Drive si el archivo tiene permisos públicos." />
-            <InfoCard icon={<Clock />} title="Duración ideal" text="Para niños, lo ideal es un video corto de 2 a 5 minutos con instrucciones claras y visuales." />
-            <InfoCard icon={<BookOpenCheck />} title="Uso en clase" text="El video puede ir antes del quiz para explicar el tema y preparar al estudiante antes de iniciar la misión." />
+            <InfoCard icon={<Video />} title="Video integrado" text="El recurso ya se reproduce dentro de la plataforma sin salir de la página." />
+            <InfoCard icon={<Clock />} title="Antes del quiz" text="Sirve para revisar conceptos clave antes de responder las actividades de cada módulo." />
+            <InfoCard icon={<BookOpenCheck />} title="Uso en clase" text="Pueden verlo en grupo, comentar ideas importantes y luego continuar con las misiones." />
           </aside>
         </section>
       </section>
