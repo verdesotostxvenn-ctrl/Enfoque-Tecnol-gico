@@ -1,17 +1,20 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Info, Maximize2, Minus, Move, Plus, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Database, Info, Maximize2, Minus, Move, Plus, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { isSupabaseConfigured, supabase } from '../supabaseClient';
+import { renderGeoTiffSource, susceptibilityLegend } from '../utils/geotiffRenderer';
 
-const MAPA_INUNDACIONES_URL = 'https://blogger.googleusercontent.com/img/a/AVvXsEgoBR_tyDWvpHNWIIr4exwvwEhWkAJKojndFPjuAEU9rITfY1DmsDPkKDo6TN7q6DwlfiCUrkWt4XIa-Vmp88WdgghLYYVPJRJyt_UEIHDtrkpQ_6guba1jv5pCpwD5hs50Fyzmnk76qagF_CAXoQTzm9EfVRMIwCRBqXhp7L4_-Ez2wLhczbzcB37WWqo';
+const FALLBACK_MAPA_URL = 'https://blogger.googleusercontent.com/img/a/AVvXsEgoBR_tyDWvpHNWIIr4exwvwEhWkAJKojndFPjuAEU9rITfY1DmsDPkKDo6TN7q6DwlfiCUrkWt4XIa-Vmp88WdgghLYYVPJRJyt_UEIHDtrkpQ_6guba1jv5pCpwD5hs50Fyzmnk76qagF_CAXoQTzm9EfVRMIwCRBqXhp7L4_-Ez2wLhczbzcB37WWqo';
 
-const leyenda = [
-  { label: 'Muy baja', color: '#1f3d2b' },
-  { label: 'Baja', color: '#6c8f3a' },
-  { label: 'Media', color: '#e3c53b' },
-  { label: 'Alta', color: '#e88a3a' },
-  { label: 'Muy alta', color: '#d94b4b' }
-];
+type MapaRecord = {
+  id: string;
+  titulo: string | null;
+  descripcion: string | null;
+  tif_url: string | null;
+  preview_url: string | null;
+  updated_at: string | null;
+};
 
 const MapasPage = () => {
   const navigate = useNavigate();
@@ -20,9 +23,75 @@ const MapasPage = () => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
+  const [mapaUrl, setMapaUrl] = useState(FALLBACK_MAPA_URL);
+  const [titulo, setTitulo] = useState('Mapa de amenaza por inundaciones');
+  const [descripcion, setDescripcion] = useState('Visualiza el mapa temático de susceptibilidad. Puedes acercar, alejar y mover el mapa para revisar las zonas de riesgo.');
+  const [estado, setEstado] = useState('Cargando mapa publicado...');
+  const [isLoading, setIsLoading] = useState(true);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
-  const zoomIn = () => setZoom((prev) => Math.min(prev + 0.2, 3));
-  const zoomOut = () => setZoom((prev) => Math.max(prev - 0.2, 0.75));
+  useEffect(() => {
+    const cargarMapaPublicado = async () => {
+      setIsLoading(true);
+      setEstado('Buscando mapa publicado...');
+
+      try {
+        if (!isSupabaseConfigured) {
+          setEstado('Mostrando mapa base. Supabase todavía no está configurado para mapas publicados.');
+          setMapaUrl(FALLBACK_MAPA_URL);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('mapas_recursos')
+          .select('id, titulo, descripcion, tif_url, preview_url, updated_at')
+          .eq('id', 'inundaciones')
+          .maybeSingle();
+
+        if (error) throw error;
+
+        const mapa = data as MapaRecord | null;
+
+        if (!mapa) {
+          setEstado('Mostrando mapa base. Aún no hay un GeoTIFF publicado desde /admin/mapas.');
+          setMapaUrl(FALLBACK_MAPA_URL);
+          return;
+        }
+
+        setTitulo(mapa.titulo || 'Mapa de amenaza por inundaciones');
+        setDescripcion(mapa.descripcion || 'Mapa temático de susceptibilidad por inundaciones.');
+        setUpdatedAt(mapa.updated_at);
+
+        if (mapa.preview_url) {
+          setMapaUrl(mapa.preview_url);
+          setEstado('Mapa publicado cargado desde Supabase Storage.');
+          return;
+        }
+
+        if (mapa.tif_url) {
+          setEstado('Renderizando GeoTIFF publicado...');
+          const rendered = await renderGeoTiffSource(mapa.tif_url, 1600);
+          setMapaUrl(rendered.dataUrl);
+          setEstado('GeoTIFF publicado renderizado correctamente.');
+          return;
+        }
+
+        setEstado('Registro encontrado, pero no tiene archivo de mapa.');
+        setMapaUrl(FALLBACK_MAPA_URL);
+      } catch (error) {
+        console.error(error);
+        setEstado('No se pudo cargar el mapa publicado. Mostrando mapa base.');
+        setMapaUrl(FALLBACK_MAPA_URL);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    cargarMapaPublicado();
+  }, []);
+
+  const zoomIn = () => setZoom((prev) => Math.min(prev + 0.2, 4));
+  const zoomOut = () => setZoom((prev) => Math.max(prev - 0.2, 0.65));
   const resetView = () => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
@@ -76,26 +145,32 @@ const MapasPage = () => {
 
       <section className="relative z-10 mx-auto max-w-7xl space-y-5">
         <header className="rounded-[2rem] border border-white/10 bg-white/5 p-5 md:p-7 backdrop-blur-2xl shadow-[0_30px_100px_rgba(0,0,0,0.35)]">
-          <button
-            onClick={() => navigate('/hub')}
-            className="mb-5 inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 hover:bg-white/15"
-          >
-            <ArrowLeft size={16} /> Volver al centro de mando
-          </button>
+          <div className="flex flex-wrap gap-3 mb-5">
+            <button
+              onClick={() => navigate('/hub')}
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 hover:bg-white/15"
+            >
+              <ArrowLeft size={16} /> Volver al centro de mando
+            </button>
+            <button
+              onClick={() => navigate('/admin/mapas')}
+              className="inline-flex items-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 hover:bg-cyan-400/20"
+            >
+              <Database size={16} /> Gestión de mapas
+            </button>
+          </div>
 
           <div className="grid gap-5 lg:grid-cols-[1fr_0.85fr] lg:items-end">
             <div>
               <p className="text-cyan-300 text-[10px] font-black uppercase tracking-[0.32em] mb-2">Caja de herramientas / Mapas</p>
-              <h1 className="text-3xl md:text-6xl font-black tracking-tight leading-none">Mapa de amenaza por inundaciones</h1>
-              <p className="mt-4 max-w-3xl text-slate-300 font-semibold leading-relaxed">
-                Visualiza el mapa temático convertido desde el archivo GIS. Puedes acercar, alejar y mover el mapa para revisar zonas de susceptibilidad.
-              </p>
+              <h1 className="text-3xl md:text-6xl font-black tracking-tight leading-none">{titulo}</h1>
+              <p className="mt-4 max-w-3xl text-slate-300 font-semibold leading-relaxed">{descripcion}</p>
             </div>
 
             <div className="rounded-[1.7rem] border border-cyan-300/20 bg-cyan-400/10 p-4 flex items-start gap-3">
               <Info className="text-cyan-300 shrink-0" size={22} />
               <p className="text-sm text-cyan-50/80 font-semibold leading-relaxed">
-                Este visor usa una versión web del mapa. Es rápido para estudiantes y sirve como recurso interactivo dentro de la plataforma.
+                Los estudiantes solo ven el mapa publicado. La carga de archivos se hace aparte en el panel de gestión.
               </p>
             </div>
           </div>
@@ -106,7 +181,7 @@ const MapasPage = () => {
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-300">Visor interactivo</p>
-                <p className="text-sm text-slate-400 font-semibold mt-1">Arrastra el mapa para moverlo. Usa los controles para acercar o reiniciar.</p>
+                <p className="text-sm text-slate-400 font-semibold mt-1">{estado}</p>
               </div>
 
               <div className="flex gap-2">
@@ -126,8 +201,16 @@ const MapasPage = () => {
               onPointerCancel={() => setDragging(false)}
               className={`relative h-[62vh] min-h-[420px] overflow-hidden rounded-[1.6rem] border border-white/10 bg-black select-none ${dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
             >
+              {isLoading && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/90 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-cyan-100">
+                    Cargando mapa...
+                  </div>
+                </div>
+              )}
+
               <img
-                src={MAPA_INUNDACIONES_URL}
+                src={mapaUrl}
                 alt="Mapa de amenaza por inundaciones"
                 draggable={false}
                 className="absolute left-1/2 top-1/2 max-w-none rounded-xl shadow-2xl"
@@ -153,7 +236,7 @@ const MapasPage = () => {
               <p className="text-orange-300 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Leyenda</p>
               <h2 className="text-2xl font-black mb-4">Susceptibilidad</h2>
               <div className="space-y-3">
-                {leyenda.map((item) => (
+                {susceptibilityLegend.map((item) => (
                   <div key={item.label} className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/55 p-3">
                     <div className="flex items-center gap-3">
                       <span className="h-6 w-10 rounded-lg border border-white/20" style={{ backgroundColor: item.color }} />
@@ -174,6 +257,9 @@ const MapasPage = () => {
               <p className="mt-3 text-slate-300 text-sm font-semibold leading-relaxed">
                 Ayuda a identificar zonas con mayor amenaza de inundación y a conversar sobre rutas seguras, puntos de encuentro y prevención comunitaria.
               </p>
+              {updatedAt && (
+                <p className="mt-4 text-xs font-bold text-slate-500">Última actualización: {new Date(updatedAt).toLocaleString('es-EC')}</p>
+              )}
             </motion.div>
           </aside>
         </section>
