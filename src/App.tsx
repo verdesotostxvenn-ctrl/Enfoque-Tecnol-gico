@@ -7,6 +7,8 @@ import MisionInundacion from './components/MisionInundacion';
 import MisionEvacuacion from './components/MisionEvacuacion';
 import AdminPanel from './components/AdminPanel';
 import CustomCursor from './components/CustomCursor';
+import MapasPage from './components/MapasPage';
+import VideosPage from './components/VideosPage';
 
 function App() {
   return (
@@ -23,6 +25,10 @@ function App() {
         <Route path="/volcan" element={<MisionVolcan />} />
         <Route path="/inundacion" element={<MisionInundacion />} />
         <Route path="/evacuacion" element={<MisionEvacuacion />} />
+
+        {/* Caja de herramientas */}
+        <Route path="/mapas" element={<MapasPage />} />
+        <Route path="/videos" element={<VideosPage />} />
 
         {/* Panel administrativo */}
         <Route path="/admin" element={<AdminPanel />} />
