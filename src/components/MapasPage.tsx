@@ -3,7 +3,14 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Database, Info, Layers3, Maximize2, Minus, Move, Plus, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { isSupabaseConfigured, supabase } from '../supabaseClient';
-import { GeoTiffRaster, PaletteName, loadGeoTiffRaster, renderRasterToDataUrl, susceptibilityPalettes } from '../utils/geotiffRenderer';
+import {
+  GeoTiffRaster,
+  PaletteName,
+  fetchPortableRaster,
+  loadGeoTiffRaster,
+  renderRasterToDataUrl,
+  susceptibilityPalettes
+} from '../utils/geotiffRenderer';
 
 const FALLBACK_MAPA_URL = 'https://blogger.googleusercontent.com/img/a/AVvXsEgoBR_tyDWvpHNWIIr4exwvwEhWkAJKojndFPjuAEU9rITfY1DmsDPkKDo6TN7q6DwlfiCUrkWt4XIa-Vmp88WdgghLYYVPJRJyt_UEIHDtrkpQ_6guba1jv5pCpwD5hs50Fyzmnk76qagF_CAXoQTzm9EfVRMIwCRBqXhp7L4_-Ez2wLhczbzcB37WWqo';
 
@@ -21,6 +28,7 @@ type MapaRecord = {
   descripcion: string | null;
   tif_url: string | null;
   preview_url: string | null;
+  storage_folder: string | null;
   updated_at: string | null;
 };
 
@@ -42,7 +50,6 @@ const MapasPage = () => {
   const [dragging, setDragging] = useState(false);
   const [mapaUrl, setMapaUrl] = useState(FALLBACK_MAPA_URL);
   const [previewUrl, setPreviewUrl] = useState(FALLBACK_MAPA_URL);
-  const [tifUrl, setTifUrl] = useState('');
   const [raster, setRaster] = useState<GeoTiffRaster | null>(null);
   const [titulo, setTitulo] = useState('Mapa de amenaza por inundaciones');
   const [descripcion, setDescripcion] = useState('Visualiza el mapa temático de susceptibilidad. Puedes acercar, alejar y mover el mapa para revisar las zonas de riesgo.');
@@ -52,7 +59,7 @@ const MapasPage = () => {
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [activePalette, setActivePalette] = useState<PaletteName>('institucional');
   const [counts, setCounts] = useState<Record<number, number> | null>(null);
-  const [renderMode, setRenderMode] = useState<'tif' | 'preview' | 'fallback'>('fallback');
+  const [renderMode, setRenderMode] = useState<'raster' | 'tif' | 'preview' | 'fallback'>('fallback');
   const [hoverInfo, setHoverInfo] = useState<HoverInfo>(null);
 
   const selectedLegend = useMemo(() => susceptibilityPalettes[activePalette], [activePalette]);
@@ -73,7 +80,7 @@ const MapasPage = () => {
 
         const { data, error } = await supabase
           .from('mapas_recursos')
-          .select('id, titulo, descripcion, tif_url, preview_url, updated_at')
+          .select('id, titulo, descripcion, tif_url, preview_url, storage_folder, updated_at')
           .eq('id', 'inundaciones')
           .maybeSingle();
 
@@ -82,7 +89,7 @@ const MapasPage = () => {
         const mapa = data as MapaRecord | null;
 
         if (!mapa) {
-          setEstado('Mostrando mapa base. Aún no hay un GeoTIFF publicado desde /admin/mapas.');
+          setEstado('Mostrando mapa base. Aún no hay un mapa publicado desde /admin/mapas.');
           setMapaUrl(FALLBACK_MAPA_URL);
           setPreviewUrl(FALLBACK_MAPA_URL);
           setRenderMode('fallback');
@@ -94,16 +101,47 @@ const MapasPage = () => {
         setUpdatedAt(mapa.updated_at);
         setPreviewUrl(mapa.preview_url || FALLBACK_MAPA_URL);
 
+        if (mapa.storage_folder) {
+          const rasterPath = `${mapa.storage_folder}/raster.json`;
+          const { data: rasterPublic } = supabase.storage.from('mapas').getPublicUrl(rasterPath);
+
+          try {
+            setEstado('Cargando raster procesado para interacción rápida...');
+            const loadedRaster = await fetchPortableRaster(rasterPublic.publicUrl);
+            const dataUrl = renderRasterToDataUrl(loadedRaster, selectedLegend);
+            setRaster(loadedRaster);
+            setMapaUrl(dataUrl);
+            setCounts(loadedRaster.counts);
+            setRenderMode('raster');
+            setZoom(0.9);
+            setPan({ x: 0, y: 0 });
+            setEstado('Mapa listo. Pasa el mouse para ver el nivel de amenaza y cambia colores sin esperar.');
+            return;
+          } catch (jsonError) {
+            console.warn('No se pudo cargar raster.json:', jsonError);
+          }
+        }
+
         if (mapa.tif_url) {
-          setTifUrl(mapa.tif_url);
-          setEstado('GeoTIFF publicado encontrado. Cargando raster una sola vez...');
-          return;
+          try {
+            setEstado('Intentando leer GeoTIFF publicado...');
+            const loadedRaster = await loadGeoTiffRaster(mapa.tif_url, 1200);
+            const dataUrl = renderRasterToDataUrl(loadedRaster, selectedLegend);
+            setRaster(loadedRaster);
+            setMapaUrl(dataUrl);
+            setCounts(loadedRaster.counts);
+            setRenderMode('tif');
+            setEstado('GeoTIFF cargado. Para mejor rendimiento, vuelve a publicar desde /admin/mapas.');
+            return;
+          } catch (tifError) {
+            console.warn('No se pudo leer GeoTIFF publicado:', tifError);
+          }
         }
 
         if (mapa.preview_url) {
           setMapaUrl(mapa.preview_url);
           setRenderMode('preview');
-          setEstado('Mapa publicado como imagen. Para identificar colores en vivo, publica también el .tif.');
+          setEstado('Mapa publicado como PNG. Vuelve a publicar desde /admin/mapas para activar tooltip y cambio de colores.');
           return;
         }
 
@@ -124,46 +162,6 @@ const MapasPage = () => {
   }, []);
 
   useEffect(() => {
-    if (!tifUrl) return;
-
-    let cancelled = false;
-
-    const cargarRaster = async () => {
-      setIsLoading(true);
-      setEstado('Leyendo GeoTIFF. Esto solo pasa una vez al abrir el mapa...');
-
-      try {
-        const loadedRaster = await loadGeoTiffRaster(tifUrl, 1200);
-        if (cancelled) return;
-
-        const dataUrl = renderRasterToDataUrl(loadedRaster, selectedLegend);
-        setRaster(loadedRaster);
-        setMapaUrl(dataUrl);
-        setCounts(loadedRaster.counts);
-        setRenderMode('tif');
-        setZoom(0.9);
-        setPan({ x: 0, y: 0 });
-        setEstado('Mapa listo. Puedes cambiar colores rápido y pasar el mouse para ver el nivel de amenaza.');
-      } catch (error) {
-        console.error(error);
-        if (cancelled) return;
-
-        setMapaUrl(previewUrl || FALLBACK_MAPA_URL);
-        setRenderMode(previewUrl ? 'preview' : 'fallback');
-        setEstado('No se pudo leer el .tif en el navegador. Mostrando vista previa PNG.');
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
-
-    cargarRaster();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [tifUrl, previewUrl]);
-
-  useEffect(() => {
     if (!raster) return;
 
     setIsRecoloring(true);
@@ -173,7 +171,7 @@ const MapasPage = () => {
       try {
         const dataUrl = renderRasterToDataUrl(raster, selectedLegend);
         setMapaUrl(dataUrl);
-        setEstado('Mapa listo. Puedes cambiar colores rápido y pasar el mouse para ver el nivel de amenaza.');
+        setEstado('Mapa listo. Pasa el mouse para ver el nivel de amenaza y cambia colores sin esperar.');
       } catch (error) {
         console.error(error);
         setEstado('No se pudo aplicar la paleta seleccionada.');
@@ -368,7 +366,7 @@ const MapasPage = () => {
               </div>
 
               <div className="absolute bottom-4 right-4 rounded-2xl bg-white/90 px-4 py-3 text-xs font-bold text-slate-800 shadow border border-slate-200">
-                Modo: {renderMode === 'tif' ? 'GeoTIFF editable' : renderMode === 'preview' ? 'PNG publicado' : 'Base'}
+                Modo: {renderMode === 'raster' ? 'Raster interactivo' : renderMode === 'tif' ? 'GeoTIFF editable' : renderMode === 'preview' ? 'PNG publicado' : 'Base'}
               </div>
 
               {hoverInfo && (
@@ -416,7 +414,7 @@ const MapasPage = () => {
                 ))}
               </div>
               <p className="mt-3 text-xs font-bold text-slate-400">
-                El GeoTIFF se carga una sola vez. Después los colores cambian sobre el raster guardado en memoria.
+                Para activar esta interacción, vuelve a publicar el mapa desde /admin/mapas con la versión nueva.
               </p>
             </div>
 
