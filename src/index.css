@@ -3,11 +3,6 @@
 @tailwind utilities;
 
 @layer base {
-  /* Forzamos la desaparición del cursor en todo, sin excepciones */
-  * {
-    cursor: none !important;
-  }
-
   html, body, #root {
     margin: 0;
     padding: 0;
@@ -16,10 +11,29 @@
     background-color: #020617;
     color: white;
     overflow-x: hidden;
+    cursor: auto;
+  }
+
+  button,
+  a,
+  select,
+  summary,
+  [role='button'] {
+    cursor: pointer;
+  }
+
+  input,
+  textarea {
+    cursor: text;
+  }
+
+  button:disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
   }
 }
 
-/* Scrollbar personalizada: Color Cyan para que combine con el Lobby */
+/* Scrollbar personalizada: Color Cyan para que combine con el proyecto */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -37,12 +51,6 @@
   background: rgba(6, 182, 212, 0.5);
 }
 
-/* Desactiva el cursor personalizado en móviles para evitar conflictos */
-@media (pointer: coarse) {
-  * {
-    cursor: auto !important;
-  }
-  .custom-cursor {
-    display: none;
-  }
+.custom-cursor {
+  display: none !important;
 }
