@@ -55,7 +55,7 @@ const VideosPage = () => {
                 <iframe
                   src={VIDEO_EMBED_URL}
                   title="Video educativo"
-                  className="absolute inset-0 h-full w-full"
+                  className="absolute left-1/2 top-1/2 h-[132%] w-[132%] -translate-x-1/2 -translate-y-1/2"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                 />
@@ -79,9 +79,9 @@ const VideosPage = () => {
           </div>
 
           <aside className="min-h-0 grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-1 xl:overflow-hidden">
-            <InfoCard icon={<Video />} title="Video limpio" text="El reproductor queda integrado con menos elementos visuales de YouTube." />
+            <InfoCard icon={<Video />} title="Modo recortado" text="Se agrandó el video para ocultar el título de YouTube y reducir bordes negros." />
             <InfoCard icon={<Clock />} title="Antes del quiz" text="Sirve para revisar conceptos clave antes de responder las actividades." />
-            <InfoCard icon={<BookOpenCheck />} title="Uso en clase" text="Pueden verlo en grupo y luego continuar con las misiones." />
+            <InfoCard icon={<BookOpenCheck />} title="Solución limpia" text="Para quitar todo al 100%, usa el MP4 original subido a Supabase Storage." />
           </aside>
         </section>
       </section>
