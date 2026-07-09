@@ -9,6 +9,15 @@ export type SusceptibilityClass = {
 
 export type PaletteName = 'institucional' | 'semaforo' | 'contraste' | 'azul' | 'gris';
 
+export type GeoTiffRaster = {
+  values: Uint8Array;
+  width: number;
+  height: number;
+  originalWidth: number;
+  originalHeight: number;
+  counts: Record<number, number>;
+};
+
 export type RenderedGeoTiff = {
   dataUrl: string;
   width: number;
@@ -65,12 +74,10 @@ const getBand = (rasters: unknown): ArrayLike<number> => {
   return value as ArrayLike<number>;
 };
 
-export const renderGeoTiffSource = async (
+export const loadGeoTiffRaster = async (
   source: File | string,
-  maxDimension = 1600,
-  palette: SusceptibilityClass[] = susceptibilityLegend
-): Promise<RenderedGeoTiff> => {
-  const colorByValue = new Map(palette.map((item) => [item.value, item.rgb]));
+  maxDimension = 1200
+): Promise<GeoTiffRaster> => {
   const tiff = typeof source === 'string'
     ? await fromUrl(source)
     : await fromArrayBuffer(await source.arrayBuffer());
@@ -90,21 +97,45 @@ export const renderGeoTiffSource = async (
   } as any);
 
   const band = getBand(rasters);
+  const values = new Uint8Array(width * height);
+  const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+  for (let i = 0; i < width * height; i += 1) {
+    const value = Math.round(Number(band[i]));
+    if (value >= 1 && value <= 5) {
+      values[i] = value;
+      counts[value] += 1;
+    }
+  }
+
+  return {
+    values,
+    width,
+    height,
+    originalWidth,
+    originalHeight,
+    counts
+  };
+};
+
+export const renderRasterToDataUrl = (
+  raster: GeoTiffRaster,
+  palette: SusceptibilityClass[] = susceptibilityLegend
+): string => {
+  const colorByValue = new Map(palette.map((item) => [item.value, item.rgb]));
   const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = raster.width;
+  canvas.height = raster.height;
   const ctx = canvas.getContext('2d');
 
   if (!ctx) {
     throw new Error('No se pudo crear el canvas para renderizar el mapa.');
   }
 
-  const imageData = ctx.createImageData(width, height);
-  const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const imageData = ctx.createImageData(raster.width, raster.height);
 
-  for (let i = 0; i < width * height; i += 1) {
-    const rawValue = Number(band[i]);
-    const value = Math.round(rawValue);
+  for (let i = 0; i < raster.width * raster.height; i += 1) {
+    const value = raster.values[i];
     const color = colorByValue.get(value);
     const offset = i * 4;
 
@@ -113,24 +144,32 @@ export const renderGeoTiffSource = async (
       imageData.data[offset + 1] = color[1];
       imageData.data[offset + 2] = color[2];
       imageData.data[offset + 3] = 255;
-      counts[value] += 1;
     } else {
-      imageData.data[offset] = 0;
-      imageData.data[offset + 1] = 0;
-      imageData.data[offset + 2] = 0;
+      imageData.data[offset] = 255;
+      imageData.data[offset + 1] = 255;
+      imageData.data[offset + 2] = 255;
       imageData.data[offset + 3] = 0;
     }
   }
 
   ctx.putImageData(imageData, 0, 0);
+  return canvas.toDataURL('image/png');
+};
+
+export const renderGeoTiffSource = async (
+  source: File | string,
+  maxDimension = 1200,
+  palette: SusceptibilityClass[] = susceptibilityLegend
+): Promise<RenderedGeoTiff> => {
+  const raster = await loadGeoTiffRaster(source, maxDimension);
 
   return {
-    dataUrl: canvas.toDataURL('image/png'),
-    width,
-    height,
-    originalWidth,
-    originalHeight,
-    counts
+    dataUrl: renderRasterToDataUrl(raster, palette),
+    width: raster.width,
+    height: raster.height,
+    originalWidth: raster.originalWidth,
+    originalHeight: raster.originalHeight,
+    counts: raster.counts
   };
 };
 
