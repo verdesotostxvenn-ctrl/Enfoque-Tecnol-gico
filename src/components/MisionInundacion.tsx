@@ -15,7 +15,10 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import MissionVisualPanel from './MissionVisualPanel';
 import Quiz from './Quiz';
+
+const MISSION_IMAGE_URL = '';
 
 const MisionInundacion = () => {
   const navigate = useNavigate();
@@ -80,10 +83,7 @@ const MisionInundacion = () => {
         .eq('nombre', nombre);
 
       if (error) {
-        console.warn(
-          'Supabase no sincronizó Inundación, pero el progreso local fue guardado:',
-          error.message
-        );
+        console.warn('Supabase no sincronizó Inundación, pero el progreso local fue guardado:', error.message);
       }
     } catch (error) {
       console.warn('Fallo de conexión con Supabase. Progreso local guardado:', error);
@@ -118,12 +118,7 @@ const MisionInundacion = () => {
   return (
     <main className="h-screen max-h-screen bg-[#010413] text-white relative overflow-hidden cursor-none p-3 md:p-5">
       <motion.div
-        style={{
-          x: mouseX,
-          y: mouseY,
-          translateX: '-50%',
-          translateY: '-50%'
-        }}
+        style={{ x: mouseX, y: mouseY, translateX: '-50%', translateY: '-50%' }}
         animate={{ opacity: cursorVisible ? 1 : 0 }}
         className="fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
       >
@@ -131,9 +126,7 @@ const MisionInundacion = () => {
           animate={{
             scale: isHovering ? 1.08 : 1,
             borderColor: isHovering ? '#38bdf8' : '#22d3ee',
-            backgroundColor: isHovering
-              ? 'rgba(56,189,248,0.08)'
-              : 'rgba(34,211,238,0.08)'
+            backgroundColor: isHovering ? 'rgba(56,189,248,0.08)' : 'rgba(34,211,238,0.08)'
           }}
           transition={{ duration: 0.1 }}
           className="w-4 h-4 border rounded-full flex items-center justify-center shadow-[0_0_16px_rgba(34,211,238,0.6)] backdrop-blur-sm"
@@ -154,11 +147,7 @@ const MisionInundacion = () => {
         </motion.div>
 
         <motion.div
-          animate={{
-            x: [-90, 100, -90],
-            y: [35, -65, 35],
-            opacity: [0.24, 0.5, 0.24]
-          }}
+          animate={{ x: [-90, 100, -90], y: [35, -65, 35], opacity: [0.24, 0.5, 0.24] }}
           transition={{ duration: 6.4, repeat: Infinity, ease: 'easeInOut' }}
           className="absolute -bottom-28 -left-24 w-[500px] h-[500px] bg-cyan-500/25 rounded-full blur-[130px]"
         />
@@ -171,9 +160,7 @@ const MisionInundacion = () => {
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-cyan-300 mb-1">
               <Waves size={15} className="animate-pulse" />
-              <span className="text-[9px] font-black uppercase tracking-[0.35em]">
-                Protocolo hídrico activado
-              </span>
+              <span className="text-[9px] font-black uppercase tracking-[0.35em]">Protocolo hídrico activado</span>
             </div>
 
             <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter leading-none">
@@ -194,28 +181,15 @@ const MisionInundacion = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_0.8fr] gap-4 min-h-0">
           <section className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-[2rem] overflow-hidden min-h-0 grid grid-rows-[1fr_auto]">
-            <div
-              onMouseEnter={() => setCursorVisible(false)}
-              onMouseLeave={() => setCursorVisible(true)}
-              className="relative bg-black/60 min-h-0"
-            >
-              <iframe
-                className="absolute inset-0 w-full h-full"
-                src="https://www.youtube.com/embed/jfK_I5yQi8E?autoplay=0&rel=0"
-                title="Prevención Inundaciones"
-                frameBorder="0"
-                allowFullScreen
-              />
-
-              <div className="absolute left-4 top-4 bg-black/45 border border-white/10 backdrop-blur-xl rounded-2xl px-4 py-3">
-                <div className="flex items-center gap-2 text-cyan-300">
-                  <Droplets size={16} />
-                  <span className="text-[9px] font-black uppercase tracking-[0.24em]">
-                    Misión 02
-                  </span>
-                </div>
-              </div>
-            </div>
+            <MissionVisualPanel
+              imageUrl={MISSION_IMAGE_URL}
+              missionLabel="Misión 02"
+              title="Zonas altas y rutas seguras"
+              description="Identifica lugares elevados, evita corrientes de agua y actúa con calma durante una inundación."
+              accentTextClass="text-cyan-300"
+              accentBgClass="from-cyan-950 via-blue-950 to-slate-950"
+              icon={<Droplets size={16} />}
+            />
 
             <div className="p-4 md:p-5 bg-slate-950/60 border-t border-white/10">
               <div className="flex items-start gap-3">
@@ -224,12 +198,9 @@ const MisionInundacion = () => {
                 </div>
 
                 <div>
-                  <h3 className="text-cyan-300 font-black text-[10px] uppercase tracking-[0.25em] mb-1">
-                    Análisis de misión
-                  </h3>
+                  <h3 className="text-cyan-300 font-black text-[10px] uppercase tracking-[0.25em] mb-1">Análisis de misión</h3>
                   <p className="text-white/70 text-xs md:text-sm leading-relaxed font-semibold">
-                    Las inundaciones pueden avanzar rápido. La clave es reconocer zonas altas,
-                    cortar la energía y nunca cruzar corrientes de agua en movimiento.
+                    Las inundaciones pueden avanzar rápido. La clave es reconocer zonas altas, cortar la energía y nunca cruzar corrientes de agua en movimiento.
                   </p>
                 </div>
               </div>
@@ -240,34 +211,21 @@ const MisionInundacion = () => {
             <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-[2rem] p-5">
               <div className="flex items-center gap-2 text-cyan-300 mb-2">
                 <Sparkles size={16} />
-                <span className="text-[9px] font-black uppercase tracking-[0.28em]">
-                  Objetivo
-                </span>
+                <span className="text-[9px] font-black uppercase tracking-[0.28em]">Objetivo</span>
               </div>
               <p className="text-sm text-white/75 font-semibold leading-relaxed">
-                Mira la cápsula, domina las reglas de seguridad y completa la evaluación para subir al Nivel 3.
+                Observa el escenario, domina las reglas de seguridad y completa la evaluación para subir al Nivel 3.
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-3 min-h-0">
               {consejos.map((item) => (
-                <motion.div
-                  key={item.titulo}
-                  whileHover={{ y: -3, scale: 1.01 }}
-                  className="bg-white/5 border border-white/10 rounded-[1.5rem] p-4 backdrop-blur-xl"
-                >
+                <motion.div key={item.titulo} whileHover={{ y: -3, scale: 1.01 }} className="bg-white/5 border border-white/10 rounded-[1.5rem] p-4 backdrop-blur-xl">
                   <div className="flex items-start gap-3">
-                    <div className="bg-cyan-500/15 border border-cyan-400/20 p-2.5 rounded-2xl text-cyan-300">
-                      {item.icono}
-                    </div>
-
+                    <div className="bg-cyan-500/15 border border-cyan-400/20 p-2.5 rounded-2xl text-cyan-300">{item.icono}</div>
                     <div>
-                      <h4 className="font-black text-[10px] uppercase tracking-widest mb-1 text-white">
-                        {item.titulo}
-                      </h4>
-                      <p className="text-slate-400 text-[11px] leading-relaxed font-semibold uppercase">
-                        {item.texto}
-                      </p>
+                      <h4 className="font-black text-[10px] uppercase tracking-widest mb-1 text-white">{item.titulo}</h4>
+                      <p className="text-slate-400 text-[11px] leading-relaxed font-semibold uppercase">{item.texto}</p>
                     </div>
                   </div>
                 </motion.div>
@@ -283,36 +241,16 @@ const MisionInundacion = () => {
               whileHover={!loading && !isCompleted ? { scale: 1.02, y: -2 } : {}}
               whileTap={!loading && !isCompleted ? { scale: 0.97 } : {}}
               className={`w-full p-4 rounded-[1.5rem] font-black uppercase tracking-[0.22em] transition-all flex items-center justify-center gap-3 text-xs md:text-sm ${
-                isCompleted
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_15px_35px_rgba(34,211,238,0.28)]'
+                isCompleted ? 'bg-emerald-500 text-white' : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_15px_35px_rgba(34,211,238,0.28)]'
               } disabled:opacity-70`}
             >
-              {loading ? (
-                'Actualizando nivel...'
-              ) : isCompleted ? (
-                <>
-                  <CheckCircle2 size={18} />
-                  Nivel 3 desbloqueado
-                </>
-              ) : (
-                <>
-                  <PlayCircle size={18} />
-                  Iniciar evaluación
-                </>
-              )}
+              {loading ? 'Actualizando nivel...' : isCompleted ? <><CheckCircle2 size={18} />Nivel 3 desbloqueado</> : <><PlayCircle size={18} />Iniciar evaluación</>}
             </motion.button>
           </aside>
         </div>
       </section>
 
-      {showQuiz && (
-        <Quiz
-          tipo="inundacion"
-          onClose={() => setShowQuiz(false)}
-          onWin={handleWinQuiz}
-        />
-      )}
+      {showQuiz && <Quiz tipo="inundacion" onClose={() => setShowQuiz(false)} onWin={handleWinQuiz} />}
     </main>
   );
 };
