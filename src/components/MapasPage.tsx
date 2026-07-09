@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Database, Info, Layers3, Maximize2, Minus, Move, Plus, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { isSupabaseConfigured, supabase } from '../supabaseClient';
-import { PaletteName, renderGeoTiffSource, susceptibilityPalettes } from '../utils/geotiffRenderer';
+import { GeoTiffRaster, PaletteName, loadGeoTiffRaster, renderRasterToDataUrl, susceptibilityPalettes } from '../utils/geotiffRenderer';
 
 const FALLBACK_MAPA_URL = 'https://blogger.googleusercontent.com/img/a/AVvXsEgoBR_tyDWvpHNWIIr4exwvwEhWkAJKojndFPjuAEU9rITfY1DmsDPkKDo6TN7q6DwlfiCUrkWt4XIa-Vmp88WdgghLYYVPJRJyt_UEIHDtrkpQ_6guba1jv5pCpwD5hs50Fyzmnk76qagF_CAXoQTzm9EfVRMIwCRBqXhp7L4_-Ez2wLhczbzcB37WWqo';
 
@@ -24,24 +24,36 @@ type MapaRecord = {
   updated_at: string | null;
 };
 
+type HoverInfo = {
+  x: number;
+  y: number;
+  value: number;
+  label: string;
+  color: string;
+} | null;
+
 const MapasPage = () => {
   const navigate = useNavigate();
   const viewerRef = useRef<HTMLDivElement | null>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.9);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [mapaUrl, setMapaUrl] = useState(FALLBACK_MAPA_URL);
   const [previewUrl, setPreviewUrl] = useState(FALLBACK_MAPA_URL);
   const [tifUrl, setTifUrl] = useState('');
+  const [raster, setRaster] = useState<GeoTiffRaster | null>(null);
   const [titulo, setTitulo] = useState('Mapa de amenaza por inundaciones');
   const [descripcion, setDescripcion] = useState('Visualiza el mapa temático de susceptibilidad. Puedes acercar, alejar y mover el mapa para revisar las zonas de riesgo.');
   const [estado, setEstado] = useState('Cargando mapa publicado...');
   const [isLoading, setIsLoading] = useState(true);
+  const [isRecoloring, setIsRecoloring] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [activePalette, setActivePalette] = useState<PaletteName>('institucional');
   const [counts, setCounts] = useState<Record<number, number> | null>(null);
   const [renderMode, setRenderMode] = useState<'tif' | 'preview' | 'fallback'>('fallback');
+  const [hoverInfo, setHoverInfo] = useState<HoverInfo>(null);
 
   const selectedLegend = useMemo(() => susceptibilityPalettes[activePalette], [activePalette]);
 
@@ -84,14 +96,14 @@ const MapasPage = () => {
 
         if (mapa.tif_url) {
           setTifUrl(mapa.tif_url);
-          setEstado('GeoTIFF publicado encontrado. Preparando simbología editable...');
+          setEstado('GeoTIFF publicado encontrado. Cargando raster una sola vez...');
           return;
         }
 
         if (mapa.preview_url) {
           setMapaUrl(mapa.preview_url);
           setRenderMode('preview');
-          setEstado('Mapa publicado como imagen. Para cambiar colores en vivo, publica también el .tif.');
+          setEstado('Mapa publicado como imagen. Para identificar colores en vivo, publica también el .tif.');
           return;
         }
 
@@ -116,18 +128,22 @@ const MapasPage = () => {
 
     let cancelled = false;
 
-    const renderizar = async () => {
+    const cargarRaster = async () => {
       setIsLoading(true);
-      setEstado(`Renderizando GeoTIFF con paleta ${paletteLabels[activePalette]}...`);
+      setEstado('Leyendo GeoTIFF. Esto solo pasa una vez al abrir el mapa...');
 
       try {
-        const rendered = await renderGeoTiffSource(tifUrl, 1600, selectedLegend);
+        const loadedRaster = await loadGeoTiffRaster(tifUrl, 1200);
         if (cancelled) return;
 
-        setMapaUrl(rendered.dataUrl);
-        setCounts(rendered.counts);
+        const dataUrl = renderRasterToDataUrl(loadedRaster, selectedLegend);
+        setRaster(loadedRaster);
+        setMapaUrl(dataUrl);
+        setCounts(loadedRaster.counts);
         setRenderMode('tif');
-        setEstado('GeoTIFF renderizado. Puedes cambiar colores, mover, acercar y revisar la leyenda.');
+        setZoom(0.9);
+        setPan({ x: 0, y: 0 });
+        setEstado('Mapa listo. Puedes cambiar colores rápido y pasar el mouse para ver el nivel de amenaza.');
       } catch (error) {
         console.error(error);
         if (cancelled) return;
@@ -140,18 +156,74 @@ const MapasPage = () => {
       }
     };
 
-    renderizar();
+    cargarRaster();
 
     return () => {
       cancelled = true;
     };
-  }, [tifUrl, activePalette, previewUrl, selectedLegend]);
+  }, [tifUrl, previewUrl]);
+
+  useEffect(() => {
+    if (!raster) return;
+
+    setIsRecoloring(true);
+    setEstado(`Aplicando paleta ${paletteLabels[activePalette]}...`);
+
+    const frame = window.requestAnimationFrame(() => {
+      try {
+        const dataUrl = renderRasterToDataUrl(raster, selectedLegend);
+        setMapaUrl(dataUrl);
+        setEstado('Mapa listo. Puedes cambiar colores rápido y pasar el mouse para ver el nivel de amenaza.');
+      } catch (error) {
+        console.error(error);
+        setEstado('No se pudo aplicar la paleta seleccionada.');
+      } finally {
+        setIsRecoloring(false);
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [activePalette, raster, selectedLegend]);
 
   const zoomIn = () => setZoom((prev) => Math.min(prev + 0.2, 4));
-  const zoomOut = () => setZoom((prev) => Math.max(prev - 0.2, 0.65));
+  const zoomOut = () => setZoom((prev) => Math.max(prev - 0.2, 0.55));
   const resetView = () => {
-    setZoom(1);
+    setZoom(0.9);
     setPan({ x: 0, y: 0 });
+  };
+
+  const updateHoverInfo = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!raster || !imageRef.current) {
+      setHoverInfo(null);
+      return;
+    }
+
+    const rect = imageRef.current.getBoundingClientRect();
+    const localX = (event.clientX - rect.left) / rect.width;
+    const localY = (event.clientY - rect.top) / rect.height;
+
+    if (localX < 0 || localX > 1 || localY < 0 || localY > 1) {
+      setHoverInfo(null);
+      return;
+    }
+
+    const px = Math.min(raster.width - 1, Math.max(0, Math.floor(localX * raster.width)));
+    const py = Math.min(raster.height - 1, Math.max(0, Math.floor(localY * raster.height)));
+    const value = raster.values[py * raster.width + px];
+    const legend = selectedLegend.find((item) => item.value === value);
+
+    if (!legend) {
+      setHoverInfo(null);
+      return;
+    }
+
+    setHoverInfo({
+      x: event.clientX - (viewerRef.current?.getBoundingClientRect().left || 0),
+      y: event.clientY - (viewerRef.current?.getBoundingClientRect().top || 0),
+      value,
+      label: legend.label,
+      color: legend.color
+    });
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -166,6 +238,8 @@ const MapasPage = () => {
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    updateHoverInfo(event);
+
     if (!dragging) return;
 
     const dx = event.clientX - dragStart.current.x;
@@ -227,7 +301,7 @@ const MapasPage = () => {
             <div className="rounded-[1.7rem] border border-cyan-300/20 bg-cyan-400/10 p-4 flex items-start gap-3">
               <Info className="text-cyan-300 shrink-0" size={22} />
               <p className="text-sm text-cyan-50/80 font-semibold leading-relaxed">
-                Los estudiantes ven el mapa publicado. Si hay GeoTIFF disponible, pueden cambiar la simbología de colores en vivo.
+                Pasa el mouse sobre el mapa para identificar el nivel de amenaza. Usa la simbología para cambiar colores.
               </p>
             </div>
           </div>
@@ -255,40 +329,64 @@ const MapasPage = () => {
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
-              onPointerCancel={() => setDragging(false)}
-              className={`relative h-[62vh] min-h-[420px] overflow-hidden rounded-[1.6rem] border border-white/10 bg-black select-none ${dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+              onPointerLeave={() => {
+                setDragging(false);
+                setHoverInfo(null);
+              }}
+              onPointerCancel={() => {
+                setDragging(false);
+                setHoverInfo(null);
+              }}
+              className={`relative h-[62vh] min-h-[420px] overflow-hidden rounded-[1.6rem] border border-white/10 bg-white select-none ${dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
             >
-              {isLoading && (
-                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/90 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-cyan-100">
-                    Procesando mapa...
+              {(isLoading || isRecoloring) && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/55 backdrop-blur-[2px]">
+                  <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-slate-900 shadow-xl">
+                    {isLoading ? 'Cargando mapa...' : 'Cambiando colores...'}
                   </div>
                 </div>
               )}
 
               <img
+                ref={imageRef}
                 src={mapaUrl}
                 alt="Mapa de amenaza por inundaciones"
                 draggable={false}
-                className="absolute left-1/2 top-1/2 max-w-none rounded-xl shadow-2xl"
+                className="absolute left-1/2 top-1/2 max-h-[92%] max-w-[92%] object-contain"
                 style={{
-                  width: '86%',
                   transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px)) scale(${zoom})`,
                   transformOrigin: 'center center'
                 }}
               />
 
-              <div className="absolute left-4 top-4 rounded-2xl bg-black/55 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 backdrop-blur-md border border-white/10">
+              <div className="absolute left-4 top-4 rounded-2xl bg-white/90 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-900 shadow border border-slate-200">
                 Zoom: {Math.round(zoom * 100)}%
               </div>
 
-              <div className="absolute bottom-4 left-4 rounded-2xl bg-black/55 px-4 py-3 text-xs font-bold text-white/80 backdrop-blur-md border border-white/10 flex items-center gap-2">
-                <Move size={16} className="text-cyan-300" /> Mover con el mouse o touch
+              <div className="absolute bottom-4 left-4 rounded-2xl bg-white/90 px-4 py-3 text-xs font-bold text-slate-800 shadow border border-slate-200 flex items-center gap-2">
+                <Move size={16} className="text-cyan-600" /> Mover con el mouse o touch
               </div>
 
-              <div className="absolute bottom-4 right-4 rounded-2xl bg-black/55 px-4 py-3 text-xs font-bold text-white/80 backdrop-blur-md border border-white/10">
+              <div className="absolute bottom-4 right-4 rounded-2xl bg-white/90 px-4 py-3 text-xs font-bold text-slate-800 shadow border border-slate-200">
                 Modo: {renderMode === 'tif' ? 'GeoTIFF editable' : renderMode === 'preview' ? 'PNG publicado' : 'Base'}
               </div>
+
+              {hoverInfo && (
+                <div
+                  className="pointer-events-none absolute z-30 rounded-2xl bg-slate-950 px-4 py-3 text-white shadow-2xl border border-white/10"
+                  style={{
+                    left: Math.min(hoverInfo.x + 16, (viewerRef.current?.clientWidth || 0) - 190),
+                    top: Math.max(12, hoverInfo.y - 62)
+                  }}
+                >
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">Nivel de amenaza</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="h-4 w-4 rounded-full border border-white/20" style={{ backgroundColor: hoverInfo.color }} />
+                    <span className="text-lg font-black">{hoverInfo.label}</span>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400">Valor raster: {hoverInfo.value}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -306,22 +404,20 @@ const MapasPage = () => {
                   <button
                     key={palette}
                     onClick={() => setActivePalette(palette)}
-                    disabled={renderMode !== 'tif' && !tifUrl}
+                    disabled={!raster}
                     className={`rounded-2xl border px-3 py-2 text-xs font-black uppercase tracking-[0.12em] transition-all ${
                       activePalette === palette
                         ? 'border-cyan-300 bg-cyan-400 text-slate-950'
                         : 'border-white/10 bg-slate-950/55 text-slate-300 hover:border-cyan-300/50'
-                    }`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {paletteLabels[palette]}
                   </button>
                 ))}
               </div>
-              {renderMode !== 'tif' && (
-                <p className="mt-3 text-xs font-bold text-orange-200/80">
-                  Para cambiar colores en vivo, el visor necesita leer el .tif publicado. Si falla, muestra el PNG como respaldo.
-                </p>
-              )}
+              <p className="mt-3 text-xs font-bold text-slate-400">
+                El GeoTIFF se carga una sola vez. Después los colores cambian sobre el raster guardado en memoria.
+              </p>
             </div>
 
             <div className="rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur-2xl">
