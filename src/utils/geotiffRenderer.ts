@@ -9,6 +9,30 @@ export type SusceptibilityClass = {
 
 export type PaletteName = 'institucional' | 'semaforo' | 'contraste' | 'azul' | 'gris';
 
+export type GeoReference = {
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+  e: number;
+  f: number;
+  epsg: 'EPSG:32717';
+  source: 'tfw' | 'geotiff';
+};
+
+export type InstitutionPoint = {
+  id: string;
+  name: string;
+  longitude: number;
+  latitude: number;
+  elevation?: number;
+  xRatio?: number;
+  yRatio?: number;
+  threatValue?: number;
+  threatLabel?: string;
+  insideMap?: boolean;
+};
+
 export type GeoTiffRaster = {
   values: Uint8Array;
   width: number;
@@ -16,6 +40,8 @@ export type GeoTiffRaster = {
   originalWidth: number;
   originalHeight: number;
   counts: Record<number, number>;
+  geoReference?: GeoReference;
+  points?: InstitutionPoint[];
 };
 
 export type PortableGeoTiffRaster = {
@@ -26,6 +52,8 @@ export type PortableGeoTiffRaster = {
   originalWidth: number;
   originalHeight: number;
   counts: Record<number, number>;
+  geoReference?: GeoReference;
+  points?: InstitutionPoint[];
   generatedAt: string;
 };
 
@@ -108,6 +136,157 @@ const base64ToUint8 = (base64: string) => {
   return values;
 };
 
+export const parseWorldFileContent = (content: string): GeoReference | null => {
+  const values = content
+    .split(/\r?\n/)
+    .map((line) => Number(line.trim()))
+    .filter((value) => Number.isFinite(value));
+
+  if (values.length < 6) return null;
+
+  return {
+    a: values[0],
+    d: values[1],
+    b: values[2],
+    e: values[3],
+    c: values[4],
+    f: values[5],
+    epsg: 'EPSG:32717',
+    source: 'tfw'
+  };
+};
+
+const getGeoReferenceFromImage = (image: any): GeoReference | undefined => {
+  try {
+    const directory = image.getFileDirectory?.();
+    const tiePoints = image.getTiePoints?.();
+    const scale = directory?.ModelPixelScale;
+    const tie = tiePoints?.[0];
+
+    if (!scale || !tie) return undefined;
+
+    return {
+      a: Number(scale[0]),
+      b: 0,
+      c: Number(tie.x) - Number(tie.i || 0) * Number(scale[0]),
+      d: 0,
+      e: -Number(scale[1]),
+      f: Number(tie.y) + Number(tie.j || 0) * Number(scale[1]),
+      epsg: 'EPSG:32717',
+      source: 'geotiff'
+    };
+  } catch {
+    return undefined;
+  }
+};
+
+export const parseKmlInstitutions = (content: string): InstitutionPoint[] => {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(content, 'application/xml');
+  const placemarks = Array.from(doc.getElementsByTagNameNS('*', 'Placemark'));
+
+  return placemarks.flatMap((placemark, index) => {
+    const name = placemark.getElementsByTagNameNS('*', 'name')[0]?.textContent?.trim() || `Institución ${index + 1}`;
+    const coordinates = placemark.getElementsByTagNameNS('*', 'coordinates')[0]?.textContent?.trim();
+
+    if (!coordinates) return [];
+
+    const firstCoordinate = coordinates.split(/\s+/)[0];
+    const [lon, lat, elevation] = firstCoordinate.split(',').map(Number);
+
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return [];
+
+    return [{
+      id: `${index + 1}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      name,
+      longitude: lon,
+      latitude: lat,
+      elevation: Number.isFinite(elevation) ? elevation : undefined
+    }];
+  });
+};
+
+const wgs84ToUtm17South = (longitude: number, latitude: number) => {
+  const a = 6378137;
+  const f = 1 / 298.257223563;
+  const e2 = f * (2 - f);
+  const ep2 = e2 / (1 - e2);
+  const k0 = 0.9996;
+  const zone = 17;
+  const lon0 = ((zone - 1) * 6 - 180 + 3) * Math.PI / 180;
+  const lat = latitude * Math.PI / 180;
+  const lon = longitude * Math.PI / 180;
+  const sinLat = Math.sin(lat);
+  const cosLat = Math.cos(lat);
+  const tanLat = Math.tan(lat);
+  const n = a / Math.sqrt(1 - e2 * sinLat * sinLat);
+  const t = tanLat * tanLat;
+  const c = ep2 * cosLat * cosLat;
+  const aa = cosLat * (lon - lon0);
+  const m = a * (
+    (1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256) * lat
+    - (3 * e2 / 8 + 3 * e2 ** 2 / 32 + 45 * e2 ** 3 / 1024) * Math.sin(2 * lat)
+    + (15 * e2 ** 2 / 256 + 45 * e2 ** 3 / 1024) * Math.sin(4 * lat)
+    - (35 * e2 ** 3 / 3072) * Math.sin(6 * lat)
+  );
+
+  const easting = k0 * n * (
+    aa + (1 - t + c) * aa ** 3 / 6 + (5 - 18 * t + t ** 2 + 72 * c - 58 * ep2) * aa ** 5 / 120
+  ) + 500000;
+
+  let northing = k0 * (
+    m + n * tanLat * (aa ** 2 / 2 + (5 - t + 9 * c + 4 * c ** 2) * aa ** 4 / 24 + (61 - 58 * t + t ** 2 + 600 * c - 330 * ep2) * aa ** 6 / 720)
+  );
+
+  if (latitude < 0) northing += 10000000;
+
+  return { easting, northing };
+};
+
+const worldToPixel = (geoReference: GeoReference, x: number, y: number) => {
+  const det = geoReference.a * geoReference.e - geoReference.b * geoReference.d;
+
+  if (Math.abs(det) < 1e-12) return null;
+
+  const dx = x - geoReference.c;
+  const dy = y - geoReference.f;
+  const col = (geoReference.e * dx - geoReference.b * dy) / det;
+  const row = (-geoReference.d * dx + geoReference.a * dy) / det;
+
+  return { col, row };
+};
+
+export const positionInstitutionPoints = (
+  points: InstitutionPoint[],
+  raster: GeoTiffRaster
+): InstitutionPoint[] => {
+  if (!raster.geoReference) return points.map((point) => ({ ...point, insideMap: false }));
+
+  return points.map((point) => {
+    const utm = wgs84ToUtm17South(point.longitude, point.latitude);
+    const pixel = worldToPixel(raster.geoReference!, utm.easting, utm.northing);
+
+    if (!pixel) return { ...point, insideMap: false };
+
+    const xRatio = pixel.col / raster.originalWidth;
+    const yRatio = pixel.row / raster.originalHeight;
+    const insideMap = xRatio >= 0 && xRatio <= 1 && yRatio >= 0 && yRatio <= 1;
+    const px = Math.min(raster.width - 1, Math.max(0, Math.floor(xRatio * raster.width)));
+    const py = Math.min(raster.height - 1, Math.max(0, Math.floor(yRatio * raster.height)));
+    const threatValue = insideMap ? raster.values[py * raster.width + px] : undefined;
+    const threatLabel = susceptibilityLegend.find((item) => item.value === threatValue)?.label;
+
+    return {
+      ...point,
+      xRatio,
+      yRatio,
+      threatValue,
+      threatLabel,
+      insideMap
+    };
+  });
+};
+
 export const rasterToPortablePayload = (raster: GeoTiffRaster): PortableGeoTiffRaster => ({
   format: 'susceptibility-raster-v1',
   valuesBase64: uint8ToBase64(raster.values),
@@ -116,6 +295,8 @@ export const rasterToPortablePayload = (raster: GeoTiffRaster): PortableGeoTiffR
   originalWidth: raster.originalWidth,
   originalHeight: raster.originalHeight,
   counts: raster.counts,
+  geoReference: raster.geoReference,
+  points: raster.points,
   generatedAt: new Date().toISOString()
 });
 
@@ -125,7 +306,9 @@ export const portablePayloadToRaster = (payload: PortableGeoTiffRaster): GeoTiff
   height: payload.height,
   originalWidth: payload.originalWidth,
   originalHeight: payload.originalHeight,
-  counts: payload.counts
+  counts: payload.counts,
+  geoReference: payload.geoReference,
+  points: payload.points || []
 });
 
 export const fetchPortableRaster = async (url: string): Promise<GeoTiffRaster> => {
@@ -146,7 +329,8 @@ export const fetchPortableRaster = async (url: string): Promise<GeoTiffRaster> =
 
 export const loadGeoTiffRaster = async (
   source: File | string,
-  maxDimension = 1200
+  maxDimension = 1200,
+  externalGeoReference?: GeoReference | null
 ): Promise<GeoTiffRaster> => {
   const tiff = typeof source === 'string'
     ? await fromUrl(source)
@@ -158,6 +342,7 @@ export const loadGeoTiffRaster = async (
   const scale = Math.min(1, maxDimension / Math.max(originalWidth, originalHeight));
   const width = Math.max(1, Math.round(originalWidth * scale));
   const height = Math.max(1, Math.round(originalHeight * scale));
+  const geoReference = externalGeoReference || getGeoReferenceFromImage(image);
 
   const rasters = await image.readRasters({
     samples: [0],
@@ -184,7 +369,8 @@ export const loadGeoTiffRaster = async (
     height,
     originalWidth,
     originalHeight,
-    counts
+    counts,
+    geoReference
   };
 };
 
