@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, useMotionValue, useSpring } from 'framer-motion';
 import {
-  Bell,
   Briefcase,
   CheckCircle2,
   ChevronLeft,
@@ -16,7 +15,10 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import MissionVisualPanel from './MissionVisualPanel';
 import Quiz from './Quiz';
+
+const MISSION_IMAGE_URL = '';
 
 const MisionEvacuacion = () => {
   const navigate = useNavigate();
@@ -81,10 +83,7 @@ const MisionEvacuacion = () => {
         .eq('nombre', nombre);
 
       if (error) {
-        console.warn(
-          'Supabase no sincronizó Evacuación, pero el progreso local fue guardado:',
-          error.message
-        );
+        console.warn('Supabase no sincronizó Evacuación, pero el progreso local fue guardado:', error.message);
       }
     } catch (error) {
       console.warn('Fallo de conexión con Supabase. Progreso local guardado:', error);
@@ -119,12 +118,7 @@ const MisionEvacuacion = () => {
   return (
     <main className="h-screen max-h-screen bg-[#010413] text-white relative overflow-hidden cursor-none p-3 md:p-5">
       <motion.div
-        style={{
-          x: mouseX,
-          y: mouseY,
-          translateX: '-50%',
-          translateY: '-50%'
-        }}
+        style={{ x: mouseX, y: mouseY, translateX: '-50%', translateY: '-50%' }}
         animate={{ opacity: cursorVisible ? 1 : 0 }}
         className="fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
       >
@@ -132,9 +126,7 @@ const MisionEvacuacion = () => {
           animate={{
             scale: isHovering ? 1.08 : 1,
             borderColor: isHovering ? '#34d399' : '#10b981',
-            backgroundColor: isHovering
-              ? 'rgba(52,211,153,0.08)'
-              : 'rgba(16,185,129,0.08)'
+            backgroundColor: isHovering ? 'rgba(52,211,153,0.08)' : 'rgba(16,185,129,0.08)'
           }}
           transition={{ duration: 0.1 }}
           className="w-4 h-4 border rounded-full flex items-center justify-center shadow-[0_0_16px_rgba(16,185,129,0.6)] backdrop-blur-sm"
@@ -155,11 +147,7 @@ const MisionEvacuacion = () => {
         </motion.div>
 
         <motion.div
-          animate={{
-            x: [-95, 110, -95],
-            y: [40, -70, 40],
-            opacity: [0.24, 0.5, 0.24]
-          }}
+          animate={{ x: [-95, 110, -95], y: [40, -70, 40], opacity: [0.24, 0.5, 0.24] }}
           transition={{ duration: 6.2, repeat: Infinity, ease: 'easeInOut' }}
           className="absolute -bottom-28 -right-24 w-[510px] h-[510px] bg-emerald-500/25 rounded-full blur-[130px]"
         />
@@ -172,9 +160,7 @@ const MisionEvacuacion = () => {
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-emerald-300 mb-1">
               <Route size={15} className="animate-pulse" />
-              <span className="text-[9px] font-black uppercase tracking-[0.35em]">
-                Logística de emergencia activada
-              </span>
+              <span className="text-[9px] font-black uppercase tracking-[0.35em]">Logística de emergencia activada</span>
             </div>
 
             <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter leading-none">
@@ -194,54 +180,16 @@ const MisionEvacuacion = () => {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-4 min-h-0">
-          <section className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-[2rem] overflow-hidden min-h-0 grid grid-rows-[auto_1fr_auto]">
-            <div className="p-5 border-b border-white/10 bg-slate-950/40">
-              <div className="flex items-start gap-4">
-                <motion.div
-                  animate={{ rotate: [-4, 4, -4], scale: [1, 1.05, 1] }}
-                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-                  className="bg-emerald-500/15 border border-emerald-400/20 p-4 rounded-[1.5rem] text-emerald-300"
-                >
-                  <Bell size={34} />
-                </motion.div>
-
-                <div>
-                  <p className="text-emerald-300 text-[10px] font-black uppercase tracking-[0.3em] mb-2">
-                    Mensaje central
-                  </p>
-                  <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tighter leading-none">
-                    Mantener la calma salva vidas
-                  </h2>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative p-6 flex items-center justify-center overflow-hidden">
-              <motion.div
-                animate={{ x: ['-120%', '120%'] }}
-                transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute top-0 bottom-0 w-28 bg-emerald-300/10 blur-xl rotate-12"
-              />
-
-              <div className="relative z-10 max-w-2xl text-center">
-                <motion.div
-                  animate={{ y: [0, -8, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                  className="mx-auto mb-6 w-24 h-24 rounded-[2rem] bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center text-emerald-300 shadow-[0_0_50px_rgba(16,185,129,0.18)]"
-                >
-                  <Flag size={48} />
-                </motion.div>
-
-                <p className="text-xl md:text-3xl font-black text-white leading-tight mb-4">
-                  Sigue siempre la señalética verde y avanza hacia el punto seguro más cercano.
-                </p>
-
-                <p className="text-sm md:text-base text-white/60 font-semibold leading-relaxed">
-                  Esta es la evaluación final. Al aprobarla, el agente obtiene el rango de
-                  Comandante y desbloquea su credencial digital.
-                </p>
-              </div>
-            </div>
+          <section className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-[2rem] overflow-hidden min-h-0 grid grid-rows-[1fr_auto]">
+            <MissionVisualPanel
+              imageUrl={MISSION_IMAGE_URL}
+              missionLabel="Misión 03"
+              title="Punto seguro"
+              description="Sigue la señalética, mantén la calma y avanza hacia el punto de encuentro más cercano."
+              accentTextClass="text-emerald-300"
+              accentBgClass="from-emerald-950 via-teal-950 to-slate-950"
+              icon={<Flag size={16} />}
+            />
 
             <div className="p-4 md:p-5 bg-slate-950/60 border-t border-white/10">
               <div className="flex items-start gap-3">
@@ -250,12 +198,9 @@ const MisionEvacuacion = () => {
                 </div>
 
                 <div>
-                  <h3 className="text-emerald-300 font-black text-[10px] uppercase tracking-[0.25em] mb-1">
-                    Análisis de misión
-                  </h3>
+                  <h3 className="text-emerald-300 font-black text-[10px] uppercase tracking-[0.25em] mb-1">Análisis de misión</h3>
                   <p className="text-white/70 text-xs md:text-sm leading-relaxed font-semibold">
-                    Una evacuación segura depende de conocer la ruta, mantener la calma y reunirse
-                    en puntos previamente definidos por la familia o comunidad educativa.
+                    Una evacuación segura depende de conocer la ruta, mantener la calma y reunirse en puntos previamente definidos por la familia o comunidad educativa.
                   </p>
                 </div>
               </div>
@@ -266,9 +211,7 @@ const MisionEvacuacion = () => {
             <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-[2rem] p-5">
               <div className="flex items-center gap-2 text-emerald-300 mb-2">
                 <Sparkles size={16} />
-                <span className="text-[9px] font-black uppercase tracking-[0.28em]">
-                  Objetivo final
-                </span>
+                <span className="text-[9px] font-black uppercase tracking-[0.28em]">Objetivo final</span>
               </div>
               <p className="text-sm text-white/75 font-semibold leading-relaxed">
                 Repasa las reglas de evacuación, completa el examen final y desbloquea el rango Comandante.
@@ -277,23 +220,12 @@ const MisionEvacuacion = () => {
 
             <div className="grid grid-cols-1 gap-3 min-h-0">
               {consejos.map((item) => (
-                <motion.div
-                  key={item.titulo}
-                  whileHover={{ y: -3, scale: 1.01 }}
-                  className="bg-white/5 border border-white/10 rounded-[1.5rem] p-4 backdrop-blur-xl"
-                >
+                <motion.div key={item.titulo} whileHover={{ y: -3, scale: 1.01 }} className="bg-white/5 border border-white/10 rounded-[1.5rem] p-4 backdrop-blur-xl">
                   <div className="flex items-start gap-3">
-                    <div className="bg-emerald-500/15 border border-emerald-400/20 p-2.5 rounded-2xl text-emerald-300">
-                      {item.icono}
-                    </div>
-
+                    <div className="bg-emerald-500/15 border border-emerald-400/20 p-2.5 rounded-2xl text-emerald-300">{item.icono}</div>
                     <div>
-                      <h4 className="font-black text-[10px] uppercase tracking-widest mb-1 text-white">
-                        {item.titulo}
-                      </h4>
-                      <p className="text-slate-400 text-[11px] leading-relaxed font-semibold uppercase">
-                        {item.texto}
-                      </p>
+                      <h4 className="font-black text-[10px] uppercase tracking-widest mb-1 text-white">{item.titulo}</h4>
+                      <p className="text-slate-400 text-[11px] leading-relaxed font-semibold uppercase">{item.texto}</p>
                     </div>
                   </div>
                 </motion.div>
@@ -309,36 +241,16 @@ const MisionEvacuacion = () => {
               whileHover={!loading && !isCompleted ? { scale: 1.02, y: -2 } : {}}
               whileTap={!loading && !isCompleted ? { scale: 0.97 } : {}}
               className={`w-full p-4 rounded-[1.5rem] font-black uppercase tracking-[0.22em] transition-all flex items-center justify-center gap-3 text-xs md:text-sm ${
-                isCompleted
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_15px_35px_rgba(16,185,129,0.28)]'
+                isCompleted ? 'bg-emerald-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_15px_35px_rgba(16,185,129,0.28)]'
               } disabled:opacity-70`}
             >
-              {loading ? (
-                'Graduando agente...'
-              ) : isCompleted ? (
-                <>
-                  <CheckCircle2 size={18} />
-                  Comandante graduado
-                </>
-              ) : (
-                <>
-                  <PlayCircle size={18} />
-                  Examen final
-                </>
-              )}
+              {loading ? 'Graduando agente...' : isCompleted ? <><CheckCircle2 size={18} />Comandante graduado</> : <><Trophy size={18} />Examen final</>}
             </motion.button>
           </aside>
         </div>
       </section>
 
-      {showQuiz && (
-        <Quiz
-          tipo="evacuacion"
-          onClose={() => setShowQuiz(false)}
-          onWin={handleWinQuiz}
-        />
-      )}
+      {showQuiz && <Quiz tipo="evacuacion" onClose={() => setShowQuiz(false)} onWin={handleWinQuiz} />}
     </main>
   );
 };
