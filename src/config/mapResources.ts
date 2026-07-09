@@ -1,4 +1,10 @@
-export type MapResourceId = 'inundaciones' | 'volcanico' | 'deslizamientos';
+export type MapResourceId =
+  | 'inundaciones'
+  | 'volcanico'
+  | 'deslizamientos'
+  | 'heladas'
+  | 'incendios_forestales'
+  | 'sequia_hidrologica';
 
 export type MapResource = {
   id: MapResourceId;
@@ -29,7 +35,7 @@ export const MAP_RESOURCES: MapResource[] = [
     subtitle: 'Volcán + ceniza',
     description: 'Mapa temático de amenaza volcánica. Permite revisar zonas expuestas, cambiar simbología y cruzar la información con instituciones educativas.',
     storagePrefix: 'volcanico',
-    fileKeywords: ['peligro_volcanico', 'peligro-volcanico', 'volcanico', 'volcan'],
+    fileKeywords: ['peligro_volcanico', 'peligro_volcanico1', 'volcanico', 'volcan'],
     accent: 'from-orange-500 to-red-600'
   },
   {
@@ -41,6 +47,36 @@ export const MAP_RESOURCES: MapResource[] = [
     storagePrefix: 'deslizamientos',
     fileKeywords: ['deslizamientos', 'deslizamiento'],
     accent: 'from-emerald-500 to-lime-600'
+  },
+  {
+    id: 'heladas',
+    title: 'Mapa de amenaza por heladas',
+    shortTitle: 'Heladas',
+    subtitle: 'Frío + prevención',
+    description: 'Mapa temático de amenaza por heladas. Permite revisar zonas susceptibles y relacionarlas con instituciones educativas y medidas preventivas.',
+    storagePrefix: 'heladas',
+    fileKeywords: ['heladas1', 'heladas', 'helada'],
+    accent: 'from-sky-300 to-blue-500'
+  },
+  {
+    id: 'incendios_forestales',
+    title: 'Mapa de amenaza por incendios forestales',
+    shortTitle: 'Incendios forestales',
+    subtitle: 'Bosque + respuesta',
+    description: 'Mapa temático de amenaza por incendios forestales. Ayuda a ubicar sectores de riesgo y reforzar acciones de prevención comunitaria.',
+    storagePrefix: 'incendios-forestales',
+    fileKeywords: ['incendios_forestales1', 'incendios_forestales', 'incendios', 'forestales'],
+    accent: 'from-red-500 to-amber-500'
+  },
+  {
+    id: 'sequia_hidrologica',
+    title: 'Mapa de amenaza por sequía hidrológica',
+    shortTitle: 'Sequía hidrológica',
+    subtitle: 'Agua + territorio',
+    description: 'Mapa temático de amenaza por sequía hidrológica. Permite analizar zonas vulnerables y conversar sobre uso responsable del agua.',
+    storagePrefix: 'sequia-hidrologica',
+    fileKeywords: ['sequia_hidrologica1', 'sequia_hidrologica', 'sequia', 'hidrologica'],
+    accent: 'from-yellow-500 to-orange-600'
   }
 ];
 
@@ -57,11 +93,20 @@ export const normalizeFileName = (value: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9.]+/g, '_');
 
-export const findResourceFile = (files: File[], resource: MapResource, extensionRegex: RegExp) => {
-  const byKeyword = files.find((file) => {
-    const normalized = normalizeFileName(file.name);
-    return extensionRegex.test(file.name) && resource.fileKeywords.some((keyword) => normalized.includes(normalizeFileName(keyword)));
-  });
+export const fileMatchesResource = (file: File, resource: MapResource) => {
+  const normalized = normalizeFileName(file.name);
+  return resource.fileKeywords.some((keyword) => normalized.includes(normalizeFileName(keyword)));
+};
 
+export const findResourceFile = (files: File[], resource: MapResource, extensionRegex: RegExp) => {
+  const byKeyword = files.find((file) => extensionRegex.test(file.name) && fileMatchesResource(file, resource));
   return byKeyword || files.find((file) => extensionRegex.test(file.name));
+};
+
+export const findAssociatedFiles = (files: File[], resource: MapResource) => {
+  return files.filter((file) => {
+    const normalized = normalizeFileName(file.name);
+    const isCommonLayer = /\.kml$/i.test(file.name) || normalized.includes('territorio_banos');
+    return fileMatchesResource(file, resource) || isCommonLayer;
+  });
 };
