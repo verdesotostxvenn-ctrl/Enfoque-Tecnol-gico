@@ -6,10 +6,12 @@ import MisionVolcan from './components/MisionVolcan';
 import MisionInundacion from './components/MisionInundacion';
 import MisionEvacuacion from './components/MisionEvacuacion';
 import AdminPanel from './components/AdminPanel';
+import CustomCursor from './components/CustomCursor';
 
 function App() {
   return (
     <Router>
+      <CustomCursor />
       <Routes>
         {/* Registro inicial */}
         <Route path="/" element={<Lobby />} />
