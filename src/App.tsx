@@ -6,6 +6,7 @@ import MisionVolcan from './components/MisionVolcan';
 import MisionInundacion from './components/MisionInundacion';
 import MisionEvacuacion from './components/MisionEvacuacion';
 import AdminPanel from './components/AdminPanel';
+import AdminGate from './components/AdminGate';
 import CustomCursor from './components/CustomCursor';
 import MapasPage from './components/MapasPage';
 import MapasAdminWithTerritory from './components/MapasAdminWithTerritory';
@@ -28,9 +29,9 @@ function App() {
           <Route path="/mapas" element={<MapasPage />} />
           <Route path="/videos" element={<VideosPage />} />
 
-          <Route path="/admin" element={<AdminPanel />} />
-          <Route path="/admin/mapas" element={<MapasAdminWithTerritory />} />
-          <Route path="/admin/territorio" element={<TerritorialAdminPage />} />
+          <Route path="/admin" element={<AdminGate><AdminPanel /></AdminGate>} />
+          <Route path="/admin/mapas" element={<AdminGate><MapasAdminWithTerritory /></AdminGate>} />
+          <Route path="/admin/territorio" element={<AdminGate><TerritorialAdminPage /></AdminGate>} />
         </Routes>
       </div>
     </Router>
