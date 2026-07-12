@@ -77,8 +77,12 @@ const TerritorialAdminPage = () => {
     setStatus('Guardando los mapas para que todos los estudiantes puedan verlos...');
 
     try {
-      await publishTerritorialMaps(cantones, parroquias);
-      setStatus('¡Publicación completa! Los mapas ya aparecerán en la bienvenida de los estudiantes.');
+      const result = await publishTerritorialMaps(cantones, parroquias);
+      setStatus(
+        result.storageMode === 'database'
+          ? '¡Publicación completa! Como no existía el bucket, el sistema guardó los mapas directamente en la base de datos. Ya aparecerán en la bienvenida.'
+          : '¡Publicación completa! Los mapas ya aparecerán en la bienvenida de los estudiantes.'
+      );
     } catch (err) {
       console.error('Error de publicación:', err);
       setError(err instanceof Error ? err.message : 'No se pudieron publicar los mapas.');
@@ -164,7 +168,8 @@ const TerritorialAdminPage = () => {
                 <Cloud className={isSupabaseConfigured ? 'text-emerald-600' : 'text-orange-600'} size={30} />
                 <div>
                   <h3 className="text-xl font-black">¿Qué es Supabase?</h3>
-                  <p className="mt-2 text-sm font-bold leading-relaxed text-slate-700">Es la caja fuerte en internet donde la página guarda los mapas. Tú no tienes que entrar allí para cargar la carpeta: solo usa los botones de arriba. Estado actual: <strong>{isSupabaseConfigured ? 'conectado y listo' : 'falta configurar la conexión en Vercel'}</strong>.</p>
+                  <p className="mt-2 text-sm font-bold leading-relaxed text-slate-700">Es la caja fuerte en internet donde la página guarda los mapas. Tú solo eliges la carpeta y pulsas publicar. Estado actual: <strong>{isSupabaseConfigured ? 'conectado y listo' : 'falta configurar la conexión en Vercel'}</strong>.</p>
+                  <p className="mt-2 text-xs font-bold text-slate-500">Si el bucket no existe, la página ahora usa automáticamente un método alternativo y guarda el mapa en la base de datos.</p>
                 </div>
               </div>
             </div>
