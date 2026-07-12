@@ -122,14 +122,21 @@
   box-shadow: 0 24px 55px rgba(236, 72, 153, .2);
 }
 
-/* El archivo del logo trae bastante margen interno. Este zoom llena el marco blanco
-   sin quitarlo ni recortar el escudo azul. */
+/* El contenedor deja de dibujar el círculo blanco y el escudo se amplía
+   hasta ocultar el aro blanco exterior que viene dentro de la imagen. */
+.kids-theme div:has(> img[alt="Logo Misión Prevención"]),
+.kids-theme div:has(> img[alt="Logo Misión Prevención 18D03"]) {
+  border-color: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
 .kids-theme img[alt="Logo Misión Prevención 18D03"] {
-  transform: scale(2.28) !important;
+  transform: scale(2.62) !important;
 }
 
 .kids-theme img[alt="Logo Misión Prevención"] {
-  transform: scale(2.18) !important;
+  transform: scale(2.55) !important;
 }
 
 @media (pointer: fine) {
@@ -189,6 +196,6 @@
 
   .kids-theme img[alt="Logo Misión Prevención 18D03"],
   .kids-theme img[alt="Logo Misión Prevención"] {
-    transform: scale(2.05) !important;
+    transform: scale(2.4) !important;
   }
 }
