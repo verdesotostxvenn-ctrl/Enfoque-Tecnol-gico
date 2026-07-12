@@ -22,20 +22,19 @@ const CURSOR_IMAGES = {
 
 type CursorMode = keyof typeof CURSOR_IMAGES;
 
-const CURSOR_SIZE = 72;
+const CURSOR_SIZE = 74;
 
-// La punta del pico coincide con el punto real de selección.
+// Las imágenes originales miran a la derecha. Al invertirlas, la punta del pico queda a la izquierda.
 const HOTSPOT_RATIO: Record<CursorMode, { x: number; y: number }> = {
-  idle: { x: 0.91, y: 0.25 },
-  hover: { x: 0.91, y: 0.3 },
-  click: { x: 0.91, y: 0.57 }
+  idle: { x: 0.09, y: 0.25 },
+  hover: { x: 0.09, y: 0.3 },
+  click: { x: 0.09, y: 0.57 }
 };
 
 const CustomCursor = () => {
   const cursorX = useMotionValue(-200);
   const cursorY = useMotionValue(-200);
   const modeRef = useRef<CursorMode>('idle');
-  const hoveringRef = useRef(false);
   const clickingRef = useRef(false);
   const [mode, setMode] = useState<CursorMode>('idle');
   const [visible, setVisible] = useState(false);
@@ -61,7 +60,6 @@ const CustomCursor = () => {
     };
 
     idleImage.src = CURSOR_IMAGES.idle;
-
     (['hover', 'click'] as CursorMode[]).forEach((imageMode) => {
       const image = new Image();
       image.src = CURSOR_IMAGES[imageMode];
@@ -96,8 +94,6 @@ const CustomCursor = () => {
 
     const move = (event: PointerEvent) => {
       const hovering = getHoverState(event.target);
-      hoveringRef.current = hovering;
-
       const nextMode: CursorMode = clickingRef.current ? 'click' : hovering ? 'hover' : 'idle';
       changeMode(nextMode);
       positionCursor(event.clientX, event.clientY, nextMode);
@@ -113,16 +109,13 @@ const CustomCursor = () => {
     const up = (event: PointerEvent) => {
       clickingRef.current = false;
       const target = document.elementFromPoint(event.clientX, event.clientY);
-      const hovering = getHoverState(target);
-      hoveringRef.current = hovering;
-      const nextMode: CursorMode = hovering ? 'hover' : 'idle';
+      const nextMode: CursorMode = getHoverState(target) ? 'hover' : 'idle';
       changeMode(nextMode);
       positionCursor(event.clientX, event.clientY, nextMode);
     };
 
     const leave = () => {
       setVisible(false);
-      hoveringRef.current = false;
       clickingRef.current = false;
       changeMode('idle');
     };
@@ -160,17 +153,13 @@ const CustomCursor = () => {
       aria-hidden="true"
       draggable={false}
       className="custom-hummingbird-cursor"
-      style={{
-        x: cursorX,
-        y: cursorY,
-        width: CURSOR_SIZE,
-        height: CURSOR_SIZE
-      }}
+      style={{ x: cursorX, y: cursorY, width: CURSOR_SIZE, height: CURSOR_SIZE }}
       initial={false}
       animate={{
         opacity: visible ? 1 : 0,
-        scale: mode === 'click' ? 0.94 : mode === 'hover' ? 1.06 : 1,
-        rotate: mode === 'click' ? -5 : mode === 'hover' ? 2 : 0
+        scaleX: -1,
+        scaleY: mode === 'click' ? 0.94 : mode === 'hover' ? 1.06 : 1,
+        rotate: mode === 'click' ? 5 : mode === 'hover' ? -2 : 0
       }}
       transition={{ duration: 0.1, ease: 'easeOut' }}
     />
