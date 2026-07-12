@@ -40,7 +40,7 @@ type PreparedMap = {
 };
 
 type PublishResult = {
-  mode: 'remote' | 'local';
+  mode: 'remote' | 'database' | 'local';
   warning?: string;
 };
 
@@ -221,12 +221,33 @@ const MapasAdminPage = () => {
       if (dbError) throw dbError;
 
       return { mode: 'remote' };
-    } catch (error) {
-      console.warn(`Publicación remota de ${prepared.resource.id} no disponible; se usará copia local:`, error);
-      return {
-        mode: 'local',
-        warning: `La copia en internet no se pudo completar (${getErrorMessage(error)}), pero el mapa ya funciona en este navegador.`
-      };
+    } catch (storageError) {
+      console.warn(`Storage no disponible para ${prepared.resource.id}; intentando guardar la vista en la tabla:`, storageError);
+
+      try {
+        const { error: databaseError } = await supabase.from('mapas_recursos').upsert({
+          id: prepared.resource.id,
+          titulo: prepared.resource.title,
+          descripcion: prepared.resource.description,
+          tif_url: null,
+          preview_url: prepared.previewDataUrl,
+          storage_folder: 'database-preview',
+          updated_at: updatedAt
+        });
+
+        if (databaseError) throw databaseError;
+
+        return {
+          mode: 'database',
+          warning: 'El bucket no estaba disponible, así que se publicó una vista del mapa directamente en la base de datos.'
+        };
+      } catch (databaseError) {
+        console.warn(`Tampoco se pudo publicar en mapas_recursos; queda la copia local:`, databaseError);
+        return {
+          mode: 'local',
+          warning: `La copia en internet no se pudo completar (${getErrorMessage(databaseError)}), pero el mapa ya funciona en este navegador.`
+        };
+      }
     }
   };
 
@@ -242,7 +263,9 @@ const MapasAdminPage = () => {
       const result = await savePreparedMap(prepared);
 
       if (result.mode === 'remote') {
-        setStatus(`${selectedResource.shortTitle} publicado correctamente. Los estudiantes ya lo verán en /mapas.`);
+        setStatus(`${selectedResource.shortTitle} publicado con todas sus funciones. Los estudiantes ya lo verán en /mapas.`);
+      } else if (result.mode === 'database') {
+        setStatus(`${selectedResource.shortTitle} publicado como vista en internet. En este navegador también conserva zoom, colores y escuelas.`);
       } else {
         setStatus(`${selectedResource.shortTitle} ya está disponible en este navegador. ${result.warning || ''}`);
       }
@@ -267,6 +290,7 @@ const MapasAdminPage = () => {
 
     const log = (message: string) => setBulkStatus((previous) => [...previous, message]);
     let localCount = 0;
+    let databaseCount = 0;
     let remoteCount = 0;
 
     try {
@@ -285,18 +309,17 @@ const MapasAdminPage = () => {
 
         if (result.mode === 'remote') {
           remoteCount += 1;
-          log(`✅ ${resource.shortTitle}: publicado en internet con ${inside} puntos.`);
+          log(`✅ ${resource.shortTitle}: publicado completo con ${inside} puntos.`);
+        } else if (result.mode === 'database') {
+          databaseCount += 1;
+          log(`✅ ${resource.shortTitle}: vista publicada en internet y versión interactiva guardada en este navegador.`);
         } else {
           localCount += 1;
           log(`✅ ${resource.shortTitle}: guardado en este navegador con ${inside} puntos.`);
         }
       }
 
-      setStatus(
-        remoteCount > 0
-          ? `Listo: ${remoteCount} mapa(s) publicados y ${localCount} guardados localmente. Abre /mapas para revisarlos.`
-          : `Listo: ${localCount} mapa(s) ya están disponibles en este navegador. Abre /mapas para revisarlos.`
-      );
+      setStatus(`Listo: ${remoteCount} completos, ${databaseCount} como vista en internet y ${localCount} solo en este navegador. Abre /mapas para revisarlos.`);
     } catch (error) {
       console.error(error);
       const message = getErrorMessage(error);
@@ -324,7 +347,7 @@ const MapasAdminPage = () => {
           </div>
           <p className="text-cyan-300 text-[10px] font-black uppercase tracking-[0.32em] mb-2">Administrador / Mapas GIS</p>
           <h1 className="text-3xl md:text-6xl font-black tracking-tight leading-none">Publicar carpeta completa</h1>
-          <p className="mt-4 max-w-3xl text-slate-300 font-semibold leading-relaxed">Sube una sola carpeta con todos los TIF/TFW/KML. Aunque Supabase no esté disponible, los mapas quedarán guardados en este navegador para poder probar la experiencia infantil.</p>
+          <p className="mt-4 max-w-3xl text-slate-300 font-semibold leading-relaxed">Sube una sola carpeta con todos los TIF/TFW/KML. Si Storage no está listo, la página intenta publicar una vista en la base de datos y además conserva la versión interactiva en este navegador.</p>
         </header>
 
         <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
