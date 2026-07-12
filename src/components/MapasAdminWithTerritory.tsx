@@ -1,12 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { MapPinned } from 'lucide-react';
-import MapasAdminPage from './MapasAdminPage';
+import FastMapAdminPage from './FastMapAdminPage';
 
 const MapasAdminWithTerritory = () => {
   const navigate = useNavigate();
   return (
     <>
-      <MapasAdminPage />
+      <FastMapAdminPage />
       <button
         type="button"
         onClick={() => navigate('/admin/territorio')}
