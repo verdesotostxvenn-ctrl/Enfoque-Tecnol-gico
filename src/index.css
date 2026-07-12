@@ -36,7 +36,9 @@
   html.custom-cursor-ready,
   html.custom-cursor-ready body,
   html.custom-cursor-ready #root,
-  html.custom-cursor-ready #root * {
+  html.custom-cursor-ready #root *,
+  html.custom-cursor-ready .lobby-safe,
+  html.custom-cursor-ready .lobby-safe * {
     cursor: none !important;
   }
 }
@@ -58,13 +60,26 @@
     drop-shadow(0 0 13px rgba(251, 146, 60, 0.16));
 }
 
+/* Sustituye visualmente el emblema antiguo del registro por el logo oficial. */
+.lobby-safe .flex.justify-center.py-6.md\:py-7 > div {
+  background-image: url('https://blogger.googleusercontent.com/img/a/AVvXsEhy3dwaYQj6R2ws_jFzJAR7c3yKKTE6lbdml-nVgm4NwaM-W-5MXjgblPUVcqzs1KnN806FhXVXwvPsl9lJyYyGnbNbuSXyvXJCZvtlYw752K1uI63zBuNOHArFLhALPQPGLWy7TsYgi0UwtCxN_PFsTchZlW6fAPQ9sbzPwjfdBWoiwfiN2lywSte4Plw') !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-size: contain !important;
+  background-color: transparent !important;
+  box-shadow: 0 24px 80px rgba(34, 211, 238, 0.16) !important;
+}
+
+.lobby-safe .flex.justify-center.py-6.md\:py-7 > div > div {
+  display: none !important;
+}
+
 @media (pointer: coarse) {
   .custom-hummingbird-cursor {
     display: none !important;
   }
 }
 
-/* Scrollbar personalizada: Color Cyan para que combine con el proyecto */
 ::-webkit-scrollbar {
   width: 6px;
 }
