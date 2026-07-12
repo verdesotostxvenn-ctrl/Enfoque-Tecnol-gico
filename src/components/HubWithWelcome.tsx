@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Compass, MapPinned, ShieldCheck, Sparkles, X } from 'lucide-react';
 import KidHub from './KidHub';
@@ -19,17 +19,42 @@ const HubWithWelcome = () => {
   const nombre = localStorage.getItem('agenteNombre') || 'Agente';
   const avatarKey = localStorage.getItem('agenteAvatar') === 'chica' ? 'chica' : 'chico';
 
-  useEffect(() => {
-    Promise.all([
-      fetchTerritorialMap(TERRITORIAL_IDS.cantones),
-      fetchTerritorialMap(TERRITORIAL_IDS.parroquias)
-    ])
-      .then(([cantonalMap, parishMap]) => {
-        setCantones(cantonalMap);
-        setParroquias(parishMap);
-      })
-      .catch((error) => console.warn('Mapas territoriales todavía no disponibles:', error));
+  const loadTerritorialMaps = useCallback(async () => {
+    try {
+      const [cantonalMap, parishMap] = await Promise.all([
+        fetchTerritorialMap(TERRITORIAL_IDS.cantones),
+        fetchTerritorialMap(TERRITORIAL_IDS.parroquias)
+      ]);
+      setCantones(cantonalMap);
+      setParroquias(parishMap);
+    } catch (error) {
+      console.warn('Mapas territoriales todavía no disponibles:', error);
+    }
   }, []);
+
+  useEffect(() => {
+    const refresh = () => loadTerritorialMaps();
+    const visibility = () => {
+      if (!document.hidden) loadTerritorialMaps();
+    };
+
+    loadTerritorialMaps();
+    window.addEventListener('focus', refresh);
+    window.addEventListener('storage', refresh);
+    window.addEventListener('territorialMapsUpdated', refresh as EventListener);
+    document.addEventListener('visibilitychange', visibility);
+
+    return () => {
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('territorialMapsUpdated', refresh as EventListener);
+      document.removeEventListener('visibilitychange', visibility);
+    };
+  }, [loadTerritorialMaps]);
+
+  useEffect(() => {
+    if (open && step > 0) loadTerritorialMaps();
+  }, [open, step, loadTerritorialMaps]);
 
   const close = () => {
     sessionStorage.setItem('introTerritorialVista', 'true');
@@ -54,7 +79,7 @@ const HubWithWelcome = () => {
 
       <button
         type="button"
-        onClick={() => { setStep(0); setOpen(true); }}
+        onClick={() => { setStep(0); setOpen(true); loadTerritorialMaps(); }}
         className="fixed bottom-5 right-5 z-40 rounded-full border-4 border-white bg-gradient-to-br from-orange-500 to-pink-500 p-4 text-white shadow-2xl transition hover:-translate-y-1 hover:scale-105"
         aria-label="Abrir introducción territorial"
       >
