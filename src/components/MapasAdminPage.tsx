@@ -23,6 +23,7 @@ import {
   type GeoTiffRaster,
   type InstitutionPoint
 } from '../utils/geotiffRenderer';
+import { saveLocalHazardMap } from '../utils/localMapStore';
 
 type FolderInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   webkitdirectory?: string;
@@ -38,12 +39,19 @@ type PreparedMap = {
   points: InstitutionPoint[];
 };
 
+type PublishResult = {
+  mode: 'remote' | 'local';
+  warning?: string;
+};
+
 const cleanPath = (value: string) => value
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
   .replace(/[^a-zA-Z0-9._/-]/g, '-')
   .replace(/-+/g, '-')
   .replace(/^[-/]+|[-/]+$/g, '');
+
+const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : String(error || 'Error desconocido');
 
 const MapasAdminPage = () => {
   const navigate = useNavigate();
@@ -81,9 +89,7 @@ const MapasAdminPage = () => {
     const associatedFiles = findAssociatedFiles(selected, resource);
     const tif = findResourceFile(associatedFiles, resource, /\.tiff?$/i);
 
-    if (!tif) {
-      throw new Error(`No encontré TIF para ${resource.shortTitle}.`);
-    }
+    if (!tif) throw new Error(`No encontré TIF para ${resource.shortTitle}.`);
 
     const tfw = findResourceFile(associatedFiles, resource, /\.tfw$/i);
     const kml = selected.find((file) => /\.kml$/i.test(file.name));
@@ -111,7 +117,6 @@ const MapasAdminPage = () => {
   const processSelectedFiles = async (selected: File[], resource = selectedResource) => {
     setFiles(selected);
     resetPreview();
-
     setIsRendering(true);
     setStatus(`Leyendo ${resource.shortTitle}...`);
 
@@ -127,7 +132,7 @@ const MapasAdminPage = () => {
       setStatus(`Vista previa lista para ${resource.shortTitle}. ${geoText}${pointText}`);
     } catch (error) {
       console.error(error);
-      setLastError(error instanceof Error ? error.message : 'No se pudo leer el mapa o el KML.');
+      setLastError(getErrorMessage(error));
       setStatus('Error al renderizar el mapa.');
     } finally {
       setIsRendering(false);
@@ -148,86 +153,109 @@ const MapasAdminPage = () => {
     setStatus(`Listo para revisar ${getMapResource(id).shortTitle}. Puedes elegir la carpeta completa o publicar todo de una.`);
   };
 
-  const uploadPreparedMap = async (prepared: PreparedMap) => {
+  const savePreparedMap = async (prepared: PreparedMap): Promise<PublishResult> => {
+    const updatedAt = new Date().toISOString();
+    const rasterPayload = rasterToPortablePayload(prepared.raster);
+
+    await saveLocalHazardMap({
+      id: prepared.resource.id,
+      title: prepared.resource.title,
+      description: prepared.resource.description,
+      previewDataUrl: prepared.previewDataUrl,
+      raster: rasterPayload,
+      updatedAt
+    });
+
+    if (!isSupabaseConfigured) {
+      return {
+        mode: 'local',
+        warning: 'Supabase no está configurado; el mapa quedó disponible en este navegador.'
+      };
+    }
+
     const folder = `${prepared.resource.storagePrefix}/${Date.now()}`;
     let tifStoragePath = '';
 
-    for (const file of prepared.files) {
-      const relativePath = (file as any).webkitRelativePath || file.name;
-      const withoutRoot = relativePath.split('/').slice(1).join('/') || file.name;
-      const storagePath = `${folder}/${cleanPath(withoutRoot)}`;
+    try {
+      for (const file of prepared.files) {
+        const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
+        const withoutRoot = relativePath.split('/').slice(1).join('/') || file.name;
+        const storagePath = `${folder}/${cleanPath(withoutRoot)}`;
 
-      const { error } = await supabase.storage.from('mapas').upload(storagePath, file, {
+        const { error } = await supabase.storage.from('mapas').upload(storagePath, file, {
+          upsert: true,
+          contentType: file.type || 'application/octet-stream'
+        });
+        if (error) throw error;
+        if (file === prepared.tifFile) tifStoragePath = storagePath;
+      }
+
+      const previewBlob = await dataUrlToBlob(prepared.previewDataUrl);
+      const previewPath = `${folder}/preview-renderizado.png`;
+      const { error: previewError } = await supabase.storage.from('mapas').upload(previewPath, previewBlob, {
         upsert: true,
-        contentType: file.type || 'application/octet-stream'
+        contentType: 'image/png'
       });
-      if (error) throw error;
-      if (file === prepared.tifFile) tifStoragePath = storagePath;
+      if (previewError) throw previewError;
+
+      const rasterBlob = new Blob([JSON.stringify(rasterPayload)], { type: 'application/json' });
+      const rasterPath = `${folder}/raster.json`;
+      const { error: rasterError } = await supabase.storage.from('mapas').upload(rasterPath, rasterBlob, {
+        upsert: true,
+        contentType: 'application/json'
+      });
+      if (rasterError) throw rasterError;
+
+      const { data: tifPublic } = supabase.storage.from('mapas').getPublicUrl(tifStoragePath);
+      const { data: previewPublic } = supabase.storage.from('mapas').getPublicUrl(previewPath);
+
+      const { error: dbError } = await supabase.from('mapas_recursos').upsert({
+        id: prepared.resource.id,
+        titulo: prepared.resource.title,
+        descripcion: prepared.resource.description,
+        tif_url: tifPublic.publicUrl,
+        preview_url: previewPublic.publicUrl,
+        storage_folder: folder,
+        updated_at: updatedAt
+      });
+      if (dbError) throw dbError;
+
+      return { mode: 'remote' };
+    } catch (error) {
+      console.warn(`Publicación remota de ${prepared.resource.id} no disponible; se usará copia local:`, error);
+      return {
+        mode: 'local',
+        warning: `La copia en internet no se pudo completar (${getErrorMessage(error)}), pero el mapa ya funciona en este navegador.`
+      };
     }
-
-    const previewBlob = await dataUrlToBlob(prepared.previewDataUrl);
-    const previewPath = `${folder}/preview-renderizado.png`;
-    const { error: previewError } = await supabase.storage.from('mapas').upload(previewPath, previewBlob, {
-      upsert: true,
-      contentType: 'image/png'
-    });
-    if (previewError) throw previewError;
-
-    const rasterPayload = rasterToPortablePayload(prepared.raster);
-    const rasterBlob = new Blob([JSON.stringify(rasterPayload)], { type: 'application/json' });
-    const rasterPath = `${folder}/raster.json`;
-    const { error: rasterError } = await supabase.storage.from('mapas').upload(rasterPath, rasterBlob, {
-      upsert: true,
-      contentType: 'application/json'
-    });
-    if (rasterError) throw rasterError;
-
-    const { data: tifPublic } = supabase.storage.from('mapas').getPublicUrl(tifStoragePath);
-    const { data: previewPublic } = supabase.storage.from('mapas').getPublicUrl(previewPath);
-
-    const { error: dbError } = await supabase.from('mapas_recursos').upsert({
-      id: prepared.resource.id,
-      titulo: prepared.resource.title,
-      descripcion: prepared.resource.description,
-      tif_url: tifPublic.publicUrl,
-      preview_url: previewPublic.publicUrl,
-      storage_folder: folder,
-      updated_at: new Date().toISOString()
-    });
-    if (dbError) throw dbError;
   };
 
   const publicarMapa = async () => {
-    if (!isSupabaseConfigured) {
-      setLastError('Supabase no está configurado. Agrega VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en Vercel.');
-      return;
-    }
-
     setIsPublishing(true);
     setLastError('');
-    setStatus(`Publicando ${selectedResource.shortTitle}...`);
+    setStatus(`Preparando ${selectedResource.shortTitle}...`);
 
     try {
       const prepared = raster && previewDataUrl && tifFile
         ? { resource: selectedResource, files: findAssociatedFiles(files, selectedResource), tifFile, raster, previewDataUrl, points }
         : await prepareMap(files, selectedResource);
-      await uploadPreparedMap(prepared);
-      setStatus(`${selectedResource.shortTitle} publicado correctamente. Los estudiantes ya lo verán en /mapas.`);
+      const result = await savePreparedMap(prepared);
+
+      if (result.mode === 'remote') {
+        setStatus(`${selectedResource.shortTitle} publicado correctamente. Los estudiantes ya lo verán en /mapas.`);
+      } else {
+        setStatus(`${selectedResource.shortTitle} ya está disponible en este navegador. ${result.warning || ''}`);
+      }
     } catch (error) {
       console.error(error);
-      setLastError(error instanceof Error ? error.message : 'No se pudo publicar. Revisa Supabase.');
-      setStatus('Error al publicar el mapa.');
+      setLastError(getErrorMessage(error));
+      setStatus('No se pudo preparar el mapa.');
     } finally {
       setIsPublishing(false);
     }
   };
 
   const publicarTodos = async () => {
-    if (!isSupabaseConfigured) {
-      setLastError('Supabase no está configurado. Agrega VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en Vercel.');
-      return;
-    }
-
     if (!files.length) {
       setLastError('Primero selecciona la carpeta completa de Amenazas Naturales.');
       return;
@@ -237,7 +265,9 @@ const MapasAdminPage = () => {
     setLastError('');
     setBulkStatus([]);
 
-    const log = (message: string) => setBulkStatus((prev) => [...prev, message]);
+    const log = (message: string) => setBulkStatus((previous) => [...previous, message]);
+    let localCount = 0;
+    let remoteCount = 0;
 
     try {
       for (const resource of MAP_RESOURCES) {
@@ -250,18 +280,29 @@ const MapasAdminPage = () => {
         setStatus(`Procesando ${resource.shortTitle}...`);
         log(`⏳ Procesando ${resource.shortTitle}...`);
         const prepared = await prepareMap(files, resource);
-        await uploadPreparedMap(prepared);
+        const result = await savePreparedMap(prepared);
         const inside = (prepared.raster.points || []).filter((point) => point.insideMap).length;
-        log(`✅ ${resource.shortTitle}: publicado con ${inside} puntos dentro del mapa.`);
+
+        if (result.mode === 'remote') {
+          remoteCount += 1;
+          log(`✅ ${resource.shortTitle}: publicado en internet con ${inside} puntos.`);
+        } else {
+          localCount += 1;
+          log(`✅ ${resource.shortTitle}: guardado en este navegador con ${inside} puntos.`);
+        }
       }
 
-      setStatus('Publicación masiva terminada. Revisa /mapas.');
+      setStatus(
+        remoteCount > 0
+          ? `Listo: ${remoteCount} mapa(s) publicados y ${localCount} guardados localmente. Abre /mapas para revisarlos.`
+          : `Listo: ${localCount} mapa(s) ya están disponibles en este navegador. Abre /mapas para revisarlos.`
+      );
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : 'Error en publicación masiva.';
+      const message = getErrorMessage(error);
       setLastError(message);
       log(`❌ ${message}`);
-      setStatus('Error al publicar la carpeta completa.');
+      setStatus('Uno de los archivos no se pudo preparar. Los mapas anteriores sí quedaron guardados.');
     } finally {
       setIsBulkPublishing(false);
     }
@@ -283,7 +324,7 @@ const MapasAdminPage = () => {
           </div>
           <p className="text-cyan-300 text-[10px] font-black uppercase tracking-[0.32em] mb-2">Administrador / Mapas GIS</p>
           <h1 className="text-3xl md:text-6xl font-black tracking-tight leading-none">Publicar carpeta completa</h1>
-          <p className="mt-4 max-w-3xl text-slate-300 font-semibold leading-relaxed">Sube una sola carpeta con todos los TIF/TFW/KML y el sistema detecta los mapas disponibles: inundaciones, volcánico, deslizamientos, heladas, incendios y sequía.</p>
+          <p className="mt-4 max-w-3xl text-slate-300 font-semibold leading-relaxed">Sube una sola carpeta con todos los TIF/TFW/KML. Aunque Supabase no esté disponible, los mapas quedarán guardados en este navegador para poder probar la experiencia infantil.</p>
         </header>
 
         <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -301,7 +342,7 @@ const MapasAdminPage = () => {
           <aside className="rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur-2xl space-y-4 xl:sticky xl:top-4 self-start">
             <div className="rounded-[1.5rem] border border-cyan-300/20 bg-cyan-400/10 p-4">
               <div className="flex items-center gap-3 mb-3"><FileArchive className="text-cyan-300" /><h2 className="text-xl font-black">Carpeta GIS completa</h2></div>
-              <p className="text-sm text-slate-300 font-semibold leading-relaxed">Selecciona la carpeta “Amenazas Naturales”. Luego puedes publicar un mapa individual o todos los encontrados de una sola vez.</p>
+              <p className="text-sm text-slate-300 font-semibold leading-relaxed">Selecciona “Amenazas Naturales”. Luego publica un mapa individual o todos los encontrados.</p>
             </div>
 
             <label className="block rounded-[1.5rem] border border-dashed border-white/20 bg-slate-950/60 p-5 text-center hover:border-cyan-300/50 transition-colors">
@@ -345,8 +386,8 @@ const MapasAdminPage = () => {
               <p className="text-sm font-semibold text-slate-300">Raster web: {raster ? `${raster.width} × ${raster.height}` : 'Pendiente'}</p>
             </div>
 
-            <button onClick={publicarTodos} disabled={!files.length || isRendering || isPublishing || isBulkPublishing} className="w-full rounded-2xl bg-emerald-400 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-slate-950 hover:bg-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"><Layers3 size={18} /> {isBulkPublishing ? 'Publicando carpeta...' : 'Publicar todos los detectados'}</button>
-            <button onClick={publicarMapa} disabled={!files.length || isRendering || isPublishing || isBulkPublishing} className="w-full rounded-2xl bg-cyan-400 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-slate-950 hover:bg-cyan-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"><Database size={18} /> {isPublishing ? 'Publicando...' : `Publicar solo ${selectedResource.shortTitle}`}</button>
+            <button onClick={publicarTodos} disabled={!files.length || isRendering || isPublishing || isBulkPublishing} className="w-full rounded-2xl bg-emerald-400 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-slate-950 hover:bg-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"><Layers3 size={18} /> {isBulkPublishing ? 'Preparando carpeta...' : 'Publicar todos los detectados'}</button>
+            <button onClick={publicarMapa} disabled={!files.length || isRendering || isPublishing || isBulkPublishing} className="w-full rounded-2xl bg-cyan-400 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-slate-950 hover:bg-cyan-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"><Database size={18} /> {isPublishing ? 'Preparando...' : `Publicar solo ${selectedResource.shortTitle}`}</button>
           </aside>
 
           <section className="rounded-[2rem] border border-white/10 bg-slate-950/70 p-5 shadow-2xl">
@@ -360,7 +401,7 @@ const MapasAdminPage = () => {
 
             <div className="mt-5 grid grid-cols-1 md:grid-cols-5 gap-3">{susceptibilityLegend.map((item) => <div key={item.value} className="rounded-2xl border border-white/10 bg-white/5 p-3"><div className="h-8 rounded-xl border border-white/20 mb-2" style={{ backgroundColor: item.color }} /><p className="text-xs font-black">{item.label}</p><p className="text-[10px] text-slate-500 font-bold">Valor {item.value}</p>{raster && <p className="text-[10px] text-slate-400 font-bold">{raster.counts[item.value].toLocaleString('es-EC')} celdas</p>}</div>)}</div>
 
-            {bulkStatus.length > 0 && <div className="mt-5 rounded-[1.5rem] border border-white/10 bg-slate-950/60 p-4"><p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-300 mb-3">Registro de publicación masiva</p><div className="space-y-2">{bulkStatus.map((item, index) => <p key={`${item}-${index}`} className="text-sm font-bold text-slate-300">{item}</p>)}</div></div>}
+            {bulkStatus.length > 0 && <div className="mt-5 rounded-[1.5rem] border border-white/10 bg-slate-950/60 p-4"><p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-300 mb-3">Registro de preparación</p><div className="space-y-2">{bulkStatus.map((item, index) => <p key={`${item}-${index}`} className="text-sm font-bold text-slate-300">{item}</p>)}</div></div>}
           </section>
         </section>
       </section>
