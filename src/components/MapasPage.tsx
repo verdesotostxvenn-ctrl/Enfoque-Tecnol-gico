@@ -1,18 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Database, Eye, EyeOff, Info, Layers3, MapPin, Maximize2, Minus, Move, Plus, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Info, Layers3, MapPin, Maximize2, Minus, Move, Plus, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MAP_RESOURCES, type MapResourceId, getMapResource } from '../config/mapResources';
 import { isSupabaseConfigured, supabase } from '../supabaseClient';
 import {
-  GeoTiffRaster,
-  InstitutionPoint,
-  PaletteName,
+  type GeoTiffRaster,
+  type InstitutionPoint,
+  type PaletteName,
   fetchPortableRaster,
   loadGeoTiffRaster,
+  portablePayloadToRaster,
   renderRasterToDataUrl,
   susceptibilityPalettes
 } from '../utils/geotiffRenderer';
+import { getLocalHazardMap, getLocalHazardMapIds } from '../utils/localMapStore';
 
 const paletteLabels: Record<PaletteName, string> = {
   institucional: 'Original',
@@ -40,6 +42,8 @@ type HoverInfo = {
   color: string;
 } | null;
 
+type RenderMode = 'raster' | 'tif' | 'preview' | 'local' | 'fallback';
+
 const getThreatColor = (value?: number) => susceptibilityPalettes.institucional.find((item) => item.value === value)?.color || '#ef4444';
 
 const MapasPage = () => {
@@ -57,16 +61,17 @@ const MapasPage = () => {
   const [raster, setRaster] = useState<GeoTiffRaster | null>(null);
   const [titulo, setTitulo] = useState(selectedResource.title);
   const [descripcion, setDescripcion] = useState(selectedResource.description);
-  const [estado, setEstado] = useState('Cargando mapa publicado...');
+  const [estado, setEstado] = useState('Cargando mapa...');
   const [isLoading, setIsLoading] = useState(true);
   const [isRecoloring, setIsRecoloring] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [activePalette, setActivePalette] = useState<PaletteName>('institucional');
   const [counts, setCounts] = useState<Record<number, number> | null>(null);
-  const [renderMode, setRenderMode] = useState<'raster' | 'tif' | 'preview' | 'fallback'>('fallback');
+  const [renderMode, setRenderMode] = useState<RenderMode>('fallback');
   const [hoverInfo, setHoverInfo] = useState<HoverInfo>(null);
   const [showSchools, setShowSchools] = useState(true);
   const [activePoint, setActivePoint] = useState<InstitutionPoint | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   const selectedLegend = useMemo(() => susceptibilityPalettes[activePalette], [activePalette]);
   const schoolPoints = useMemo(() => (raster?.points || []).filter((point) => point.insideMap && point.xRatio !== undefined && point.yRatio !== undefined), [raster]);
@@ -78,23 +83,129 @@ const MapasPage = () => {
   };
 
   const refreshPublishedList = async () => {
-    if (!isSupabaseConfigured) return;
+    const ids = new Set<string>();
 
     try {
-      const { data, error } = await supabase.from('mapas_recursos').select('id');
-      if (error) throw error;
-      setPublishedIds(new Set((data || []).map((item: { id: string }) => item.id)));
+      (await getLocalHazardMapIds()).forEach((id) => ids.add(id));
     } catch (error) {
-      console.warn('No se pudo leer listado de mapas publicados:', error);
+      console.warn('No se pudo leer el listado local de mapas:', error);
     }
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase.from('mapas_recursos').select('id');
+        if (error) throw error;
+        (data || []).forEach((item: { id: string }) => ids.add(item.id));
+      } catch (error) {
+        console.warn('No se pudo leer listado remoto de mapas:', error);
+      }
+    }
+
+    setPublishedIds(ids);
   };
 
   useEffect(() => {
+    const refresh = () => {
+      refreshPublishedList();
+      setReloadToken((value) => value + 1);
+    };
+
     refreshPublishedList();
+    window.addEventListener('hazardMapsUpdated', refresh as EventListener);
+    window.addEventListener('focus', refresh);
+    window.addEventListener('storage', refresh);
+
+    return () => {
+      window.removeEventListener('hazardMapsUpdated', refresh as EventListener);
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('storage', refresh);
+    };
   }, []);
 
   useEffect(() => {
-    const cargarMapaPublicado = async () => {
+    let cancelled = false;
+
+    const applyRaster = (loadedRaster: GeoTiffRaster, mode: RenderMode, message: string) => {
+      if (cancelled) return;
+      setRaster(loadedRaster);
+      setMapaUrl(renderRasterToDataUrl(loadedRaster, selectedLegend));
+      setCounts(loadedRaster.counts);
+      setRenderMode(mode);
+      setEstado(message);
+      setPublishedIds((previous) => new Set(previous).add(selectedResource.id));
+    };
+
+    const loadLocal = async () => {
+      try {
+        const local = await getLocalHazardMap(selectedResource.id);
+        if (!local || cancelled) return false;
+
+        const loadedRaster = portablePayloadToRaster(local.raster);
+        setTitulo(local.title || selectedResource.title);
+        setDescripcion(local.description || selectedResource.description);
+        setUpdatedAt(local.updatedAt);
+        applyRaster(loadedRaster, 'local', 'Mapa listo. Puedes acercar, mover, cambiar colores y explorar las escuelas.');
+        return true;
+      } catch (error) {
+        console.warn('No se pudo abrir el mapa guardado en este navegador:', error);
+        return false;
+      }
+    };
+
+    const loadRemote = async () => {
+      if (!isSupabaseConfigured) return false;
+
+      try {
+        const { data, error } = await supabase
+          .from('mapas_recursos')
+          .select('id, titulo, descripcion, tif_url, preview_url, storage_folder, updated_at')
+          .eq('id', selectedResource.id)
+          .maybeSingle();
+
+        if (error || !data || cancelled) return false;
+        const mapa = data as MapaRecord;
+
+        setTitulo(mapa.titulo || selectedResource.title);
+        setDescripcion(mapa.descripcion || selectedResource.description);
+        setUpdatedAt(mapa.updated_at);
+
+        if (mapa.storage_folder && mapa.storage_folder !== 'database-fallback') {
+          try {
+            const rasterPath = `${mapa.storage_folder}/raster.json`;
+            const { data: rasterPublic } = supabase.storage.from('mapas').getPublicUrl(rasterPath);
+            const loadedRaster = await fetchPortableRaster(rasterPublic.publicUrl);
+            applyRaster(loadedRaster, 'raster', 'Mapa listo. Puedes acercar, mover y cambiar colores.');
+            return true;
+          } catch (error) {
+            console.warn('No se pudo cargar raster.json:', error);
+          }
+        }
+
+        if (mapa.tif_url) {
+          try {
+            const loadedRaster = await loadGeoTiffRaster(mapa.tif_url, 1200);
+            applyRaster(loadedRaster, 'tif', 'Mapa GeoTIFF listo para explorar.');
+            return true;
+          } catch (error) {
+            console.warn('No se pudo cargar el GeoTIFF publicado:', error);
+          }
+        }
+
+        if (mapa.preview_url) {
+          setMapaUrl(mapa.preview_url);
+          setRenderMode('preview');
+          setEstado('Mapa listo para observar.');
+          setPublishedIds((previous) => new Set(previous).add(selectedResource.id));
+          return true;
+        }
+      } catch (error) {
+        console.warn('No se pudo consultar el mapa remoto:', error);
+      }
+
+      return false;
+    };
+
+    const load = async () => {
       setIsLoading(true);
       setRaster(null);
       setCounts(null);
@@ -104,89 +215,25 @@ const MapasPage = () => {
       setTitulo(selectedResource.title);
       setDescripcion(selectedResource.description);
       setUpdatedAt(null);
-      setEstado(`Buscando ${selectedResource.shortTitle} publicado...`);
+      setEstado(`Buscando ${selectedResource.shortTitle}...`);
+      setRenderMode('fallback');
       resetView();
 
-      try {
-        if (!isSupabaseConfigured) {
-          setEstado('Supabase todavía no está configurado para mapas publicados.');
+      const localLoaded = await loadLocal();
+      if (!localLoaded) {
+        const remoteLoaded = await loadRemote();
+        if (!remoteLoaded && !cancelled) {
+          setEstado('Este mapa todavía no está disponible. Pide a tu docente que lo prepare.');
           setRenderMode('fallback');
-          return;
         }
-
-        const { data, error } = await supabase
-          .from('mapas_recursos')
-          .select('id, titulo, descripcion, tif_url, preview_url, storage_folder, updated_at')
-          .eq('id', selectedResource.id)
-          .maybeSingle();
-
-        if (error) throw error;
-        const mapa = data as MapaRecord | null;
-
-        if (!mapa) {
-          setEstado(`${selectedResource.shortTitle} aún no está publicado. Publícalo desde /admin/mapas.`);
-          setRenderMode('fallback');
-          return;
-        }
-
-        setPublishedIds((prev) => new Set(prev).add(selectedResource.id));
-        setTitulo(mapa.titulo || selectedResource.title);
-        setDescripcion(mapa.descripcion || selectedResource.description);
-        setUpdatedAt(mapa.updated_at);
-
-        if (mapa.storage_folder) {
-          const rasterPath = `${mapa.storage_folder}/raster.json`;
-          const { data: rasterPublic } = supabase.storage.from('mapas').getPublicUrl(rasterPath);
-
-          try {
-            setEstado('Cargando raster interactivo...');
-            const loadedRaster = await fetchPortableRaster(rasterPublic.publicUrl);
-            setRaster(loadedRaster);
-            setMapaUrl(renderRasterToDataUrl(loadedRaster, selectedLegend));
-            setCounts(loadedRaster.counts);
-            setRenderMode('raster');
-            setEstado('Mapa listo. Pasa el mouse para ver amenaza; activa u oculta instituciones.');
-            return;
-          } catch (jsonError) {
-            console.warn('No se pudo cargar raster.json:', jsonError);
-          }
-        }
-
-        if (mapa.tif_url) {
-          try {
-            setEstado('Intentando leer GeoTIFF publicado...');
-            const loadedRaster = await loadGeoTiffRaster(mapa.tif_url, 1200);
-            setRaster(loadedRaster);
-            setMapaUrl(renderRasterToDataUrl(loadedRaster, selectedLegend));
-            setCounts(loadedRaster.counts);
-            setRenderMode('tif');
-            setEstado('GeoTIFF cargado. Para puntos KML, vuelve a publicar desde /admin/mapas.');
-            return;
-          } catch (tifError) {
-            console.warn('No se pudo leer GeoTIFF publicado:', tifError);
-          }
-        }
-
-        if (mapa.preview_url) {
-          setMapaUrl(mapa.preview_url);
-          setRenderMode('preview');
-          setEstado('Mapa publicado como PNG. Vuelve a publicar desde /admin/mapas para activar puntos y tooltip.');
-          return;
-        }
-
-        setRenderMode('fallback');
-        setEstado('Registro encontrado, pero no tiene archivos publicados.');
-      } catch (error) {
-        console.error(error);
-        setEstado('No se pudo cargar este mapa. Revisa si está publicado en /admin/mapas.');
-        setRenderMode('fallback');
-      } finally {
-        setIsLoading(false);
       }
+
+      if (!cancelled) setIsLoading(false);
     };
 
-    cargarMapaPublicado();
-  }, [selectedMapId]);
+    load();
+    return () => { cancelled = true; };
+  }, [selectedMapId, reloadToken]);
 
   useEffect(() => {
     if (!raster) return;
@@ -197,7 +244,7 @@ const MapasPage = () => {
     const frame = window.requestAnimationFrame(() => {
       try {
         setMapaUrl(renderRasterToDataUrl(raster, selectedLegend));
-        setEstado('Mapa listo. Pasa el mouse para ver amenaza; activa u oculta instituciones.');
+        setEstado('Mapa listo. Pasa el mouse para descubrir el nivel de amenaza.');
       } catch (error) {
         console.error(error);
         setEstado('No se pudo aplicar la paleta seleccionada.');
@@ -209,8 +256,8 @@ const MapasPage = () => {
     return () => window.cancelAnimationFrame(frame);
   }, [activePalette, raster, selectedLegend]);
 
-  const zoomIn = () => setZoom((prev) => Math.min(prev + 0.2, 4));
-  const zoomOut = () => setZoom((prev) => Math.max(prev - 0.2, 0.55));
+  const zoomIn = () => setZoom((previous) => Math.min(previous + 0.2, 4));
+  const zoomOut = () => setZoom((previous) => Math.max(previous - 0.2, 0.55));
 
   const updateHoverInfo = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!raster || !imageRef.current) {
@@ -256,7 +303,10 @@ const MapasPage = () => {
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     updateHoverInfo(event);
     if (!dragging) return;
-    setPan({ x: dragStart.current.panX + event.clientX - dragStart.current.x, y: dragStart.current.panY + event.clientY - dragStart.current.y });
+    setPan({
+      x: dragStart.current.panX + event.clientX - dragStart.current.x,
+      y: dragStart.current.panY + event.clientY - dragStart.current.y
+    });
   };
 
   const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -284,18 +334,15 @@ const MapasPage = () => {
 
       <section className="relative z-10 mx-auto max-w-[96rem] space-y-4">
         <header className="rounded-[2rem] border border-white/10 bg-white/5 p-4 md:p-6 backdrop-blur-2xl shadow-[0_30px_100px_rgba(0,0,0,0.35)]">
-          <div className="flex flex-wrap gap-3 mb-5">
-            <button onClick={() => navigate('/hub')} className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 hover:bg-white/15"><ArrowLeft size={16} /> Volver al centro de mando</button>
-            <button onClick={() => navigate('/admin/mapas')} className="inline-flex items-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 hover:bg-cyan-400/20"><Database size={16} /> Gestión de mapas</button>
-          </div>
+          <button onClick={() => navigate('/hub')} className="mb-5 inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 hover:bg-white/15"><ArrowLeft size={16} /> Volver al centro de mando</button>
 
           <div className="grid gap-4 lg:grid-cols-[1fr_0.75fr] lg:items-end">
             <div>
-              <p className="text-cyan-300 text-[10px] font-black uppercase tracking-[0.32em] mb-2">Caja de herramientas / Mapas</p>
+              <p className="text-cyan-300 text-[10px] font-black uppercase tracking-[0.32em] mb-2">Explorador de amenazas</p>
               <h1 className="text-3xl md:text-5xl xl:text-6xl font-black tracking-tight leading-none">{titulo}</h1>
               <p className="mt-3 max-w-3xl text-slate-300 font-semibold leading-relaxed">{descripcion}</p>
             </div>
-            <div className="rounded-[1.7rem] border border-cyan-300/20 bg-cyan-400/10 p-4 flex items-start gap-3"><Info className="text-cyan-300 shrink-0" size={22} /><p className="text-sm text-cyan-50/80 font-semibold leading-relaxed">Selecciona un mapa, cambia la simbología y activa instituciones para cruzar información.</p></div>
+            <div className="rounded-[1.7rem] border border-cyan-300/20 bg-cyan-400/10 p-4 flex items-start gap-3"><Info className="text-cyan-300 shrink-0" size={22} /><p className="text-sm text-cyan-50/80 font-semibold leading-relaxed">Selecciona un mapa, cambia los colores y observa las instituciones educativas.</p></div>
           </div>
         </header>
 
@@ -307,7 +354,7 @@ const MapasPage = () => {
                 <div className={`mb-3 h-1.5 rounded-full bg-gradient-to-r ${resource.accent}`} />
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Amenaza</p>
-                  <span className={`rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] ${isPublished ? 'bg-emerald-400/15 text-emerald-200 border border-emerald-300/20' : 'bg-orange-400/10 text-orange-200 border border-orange-300/20'}`}>{isPublished ? 'Publicado' : 'Pendiente'}</span>
+                  <span className={`rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] ${isPublished ? 'bg-emerald-400/15 text-emerald-200 border border-emerald-300/20' : 'bg-orange-400/10 text-orange-200 border border-orange-300/20'}`}>{isPublished ? 'Disponible' : 'Próximamente'}</span>
                 </div>
                 <h2 className="mt-1 text-lg md:text-xl font-black leading-tight">{resource.shortTitle}</h2>
                 <p className="mt-1 text-xs md:text-sm font-semibold text-slate-400">{resource.subtitle}</p>
@@ -336,16 +383,15 @@ const MapasPage = () => {
                   <div className="absolute inset-0 flex items-center justify-center p-8 text-center">
                     <div className="max-w-md rounded-[2rem] border border-slate-200 bg-slate-50 p-6 text-slate-900 shadow-xl">
                       <MapPin className="mx-auto mb-4 text-cyan-600" size={42} />
-                      <h3 className="text-2xl font-black">Mapa pendiente</h3>
-                      <p className="mt-3 text-sm font-bold text-slate-600">{selectedResource.shortTitle} todavía no tiene raster publicado. Sube la carpeta completa desde el panel de gestión y usa “Publicar todos los detectados”.</p>
-                      <button onClick={() => navigate('/admin/mapas')} className="mt-5 rounded-2xl bg-cyan-500 px-5 py-3 text-xs font-black uppercase tracking-[0.16em] text-slate-950 hover:bg-cyan-400">Ir a gestión</button>
+                      <h3 className="text-2xl font-black">Mapa en preparación</h3>
+                      <p className="mt-3 text-sm font-bold text-slate-600">Este contenido todavía no está disponible. Tu docente lo habilitará muy pronto.</p>
                     </div>
                   </div>
                 )}
 
                 {hasVisibleMap && <div className="absolute left-4 top-4 rounded-2xl bg-white/90 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-900 shadow border border-slate-200">Zoom: {Math.round(zoom * 100)}%</div>}
                 {hasVisibleMap && <div className="absolute bottom-4 left-4 rounded-2xl bg-white/90 px-4 py-3 text-xs font-bold text-slate-800 shadow border border-slate-200 flex items-center gap-2"><Move size={16} className="text-cyan-600" /> Mover con el mouse o touch</div>}
-                {hasVisibleMap && <div className="absolute bottom-4 right-4 rounded-2xl bg-white/90 px-4 py-3 text-xs font-bold text-slate-800 shadow border border-slate-200">Modo: {renderMode === 'raster' ? 'Raster interactivo' : renderMode === 'tif' ? 'GeoTIFF editable' : renderMode === 'preview' ? 'PNG publicado' : 'Base'}</div>}
+                {hasVisibleMap && <div className="absolute bottom-4 right-4 rounded-2xl bg-white/90 px-4 py-3 text-xs font-bold text-slate-800 shadow border border-slate-200">Modo: {renderMode === 'local' ? 'Disponible en este dispositivo' : renderMode === 'raster' ? 'Raster interactivo' : renderMode === 'tif' ? 'GeoTIFF' : renderMode === 'preview' ? 'Vista publicada' : 'Base'}</div>}
 
                 {hoverInfo && !activePoint && <div className="pointer-events-none absolute z-30 rounded-2xl bg-slate-950 px-4 py-3 text-white shadow-2xl border border-white/10" style={{ left: Math.min(hoverInfo.x + 16, (viewerRef.current?.clientWidth || 0) - 190), top: Math.max(12, hoverInfo.y - 62) }}><p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">Nivel de amenaza</p><div className="mt-1 flex items-center gap-2"><span className="h-4 w-4 rounded-full border border-white/20" style={{ backgroundColor: hoverInfo.color }} /><span className="text-lg font-black">{hoverInfo.label}</span></div><p className="text-[10px] font-bold text-slate-400">Valor raster: {hoverInfo.value}</p></div>}
                 {activePoint && <div className="absolute right-4 top-4 z-30 max-w-sm rounded-2xl bg-slate-950 px-4 py-3 text-white shadow-2xl border border-white/10"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-200">Institución educativa</p><h3 className="mt-1 text-lg font-black leading-tight">{activePoint.name}</h3><div className="mt-2 flex items-center gap-2"><span className="h-4 w-4 rounded-full border border-white/20" style={{ backgroundColor: getThreatColor(activePoint.threatValue) }} /><span className="text-sm font-bold text-slate-300">Amenaza: {activePoint.threatLabel || 'Sin dato'}</span></div></div>}
@@ -359,9 +405,9 @@ const MapasPage = () => {
               </PanelCard>
 
               <PanelCard>
-                <div className="mb-4 flex items-center justify-between gap-3"><div className="flex items-center gap-3"><MapPin className="text-orange-300" size={22} /><div><p className="text-orange-300 text-[10px] font-black uppercase tracking-[0.3em]">Instituciones</p><h2 className="text-2xl font-black">Escuelas</h2></div></div><button onClick={() => setShowSchools((prev) => !prev)} disabled={!schoolPoints.length} className="rounded-2xl border border-white/10 bg-slate-950/60 p-3 text-cyan-200 hover:bg-cyan-400 hover:text-slate-950 disabled:opacity-40">{showSchools ? <Eye size={18} /> : <EyeOff size={18} />}</button></div>
+                <div className="mb-4 flex items-center justify-between gap-3"><div className="flex items-center gap-3"><MapPin className="text-orange-300" size={22} /><div><p className="text-orange-300 text-[10px] font-black uppercase tracking-[0.3em]">Instituciones</p><h2 className="text-2xl font-black">Escuelas</h2></div></div><button onClick={() => setShowSchools((previous) => !previous)} disabled={!schoolPoints.length} className="rounded-2xl border border-white/10 bg-slate-950/60 p-3 text-cyan-200 hover:bg-cyan-400 hover:text-slate-950 disabled:opacity-40">{showSchools ? <Eye size={18} /> : <EyeOff size={18} />}</button></div>
                 <p className="text-sm font-semibold text-slate-400">Puntos cargados: {schoolPoints.length}</p>
-                <div className="mt-3 max-h-44 space-y-2 overflow-auto pr-1">{schoolPoints.length ? schoolPoints.map((point) => <button key={point.id} onClick={() => setActivePoint(point)} className="w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2 text-left hover:border-orange-300/50"><p className="text-xs font-black text-white">{point.name}</p><p className="text-[10px] font-bold text-slate-500">Amenaza: {point.threatLabel || 'Sin dato'}</p></button>) : <p className="text-sm font-bold text-slate-500">Aún no hay puntos KML publicados para este mapa.</p>}</div>
+                <div className="mt-3 max-h-44 space-y-2 overflow-auto pr-1">{schoolPoints.length ? schoolPoints.map((point) => <button key={point.id} onClick={() => setActivePoint(point)} className="w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2 text-left hover:border-orange-300/50"><p className="text-xs font-black text-white">{point.name}</p><p className="text-[10px] font-bold text-slate-500">Amenaza: {point.threatLabel || 'Sin dato'}</p></button>) : <p className="text-sm font-bold text-slate-500">Aún no hay puntos KML para este mapa.</p>}</div>
               </PanelCard>
 
               <PanelCard>
@@ -381,11 +427,11 @@ const MapasPage = () => {
 };
 
 const PanelCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4 backdrop-blur-2xl">
-    {children}
-  </div>
+  <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4 backdrop-blur-2xl">{children}</div>
 );
 
-const ControlButton = ({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) => <button onClick={onClick} title={label} className="rounded-2xl border border-white/10 bg-white/10 p-3 text-white hover:bg-cyan-400 hover:text-slate-950 transition-colors">{children}</button>;
+const ControlButton = ({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) => (
+  <button onClick={onClick} title={label} className="rounded-2xl border border-white/10 bg-white/10 p-3 text-white hover:bg-cyan-400 hover:text-slate-950 transition-colors">{children}</button>
+);
 
 export default MapasPage;
