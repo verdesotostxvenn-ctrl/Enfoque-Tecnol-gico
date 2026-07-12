@@ -28,6 +28,7 @@ export const TERRITORIAL_IDS = {
 } as const;
 
 const publicMapCache = new Map<string, GeoJsonFeatureCollection>();
+const STORAGE_BUCKET = 'mapas';
 
 const normalize = (value: string) =>
   value
@@ -172,7 +173,7 @@ export const parseTerritorialFiles = async (files: File[]) => {
     const shapeFiles = required.filter((file) => /\.shp$/i.test(file.name));
 
     if (shapeFiles.length < 2) {
-      throw new Error('La carpeta debe incluir por lo menos Cantones.shp y Parroquias.shp con sus archivos acompañantes.');
+      throw new Error('La carpeta debe incluir Cantones.shp y Parroquias.shp con sus archivos acompañantes.');
     }
 
     const zip = new JSZip();
@@ -197,56 +198,145 @@ export const parseTerritorialFiles = async (files: File[]) => {
   };
 };
 
+const simplifyRing = (ring: Position[], maxPoints = 180): Position[] => {
+  const valid = ring.filter((point) => Array.isArray(point) && Number.isFinite(point[0]) && Number.isFinite(point[1]));
+  if (valid.length <= maxPoints) return valid;
+
+  const step = Math.ceil(valid.length / maxPoints);
+  const sampled = valid.filter((_, index) => index === 0 || index === valid.length - 1 || index % step === 0);
+  const first = sampled[0];
+  const last = sampled[sampled.length - 1];
+  if (first && last && (first[0] !== last[0] || first[1] !== last[1])) sampled.push(first);
+  return sampled;
+};
+
+const optimizeCollectionForPublishing = (collection: GeoJsonFeatureCollection): GeoJsonFeatureCollection => ({
+  type: 'FeatureCollection',
+  name: collection.name,
+  fileName: collection.fileName,
+  features: collection.features.map((feature) => {
+    if (!feature.geometry) return feature;
+
+    const geometry: GeoJsonGeometry = feature.geometry.type === 'Polygon'
+      ? {
+          type: 'Polygon',
+          coordinates: (feature.geometry.coordinates as Position[][]).map((ring) => simplifyRing(ring))
+        }
+      : {
+          type: 'MultiPolygon',
+          coordinates: (feature.geometry.coordinates as Position[][][]).map((polygon) =>
+            polygon.map((ring) => simplifyRing(ring))
+          )
+        };
+
+    return {
+      type: 'Feature',
+      properties: feature.properties,
+      geometry
+    };
+  })
+});
+
+const encodeDataUrl = (collection: GeoJsonFeatureCollection) => {
+  const bytes = new TextEncoder().encode(JSON.stringify(collection));
+  let binary = '';
+  const chunkSize = 0x8000;
+
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    const chunk = bytes.subarray(offset, Math.min(offset + chunkSize, bytes.length));
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return `data:application/geo+json;base64,${btoa(binary)}`;
+};
+
+const decodeDataUrl = (url: string) => {
+  const commaIndex = url.indexOf(',');
+  if (commaIndex < 0) throw new Error('El mapa guardado no tiene un formato válido.');
+
+  const metadata = url.slice(0, commaIndex);
+  const payload = url.slice(commaIndex + 1);
+  const binary = metadata.includes(';base64') ? atob(payload) : decodeURIComponent(payload);
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+};
+
+const isMissingBucketError = (error: any) => {
+  const message = String(error?.message || error || '').toLowerCase();
+  return message.includes('bucket not found') || message.includes('bucket') && message.includes('not found');
+};
+
 export const publishTerritorialMaps = async (
   cantones: GeoJsonFeatureCollection,
   parroquias: GeoJsonFeatureCollection
 ) => {
   if (!isSupabaseConfigured) {
-    throw new Error('La conexión de almacenamiento todavía no está configurada. Revisa las variables de Supabase en Vercel.');
+    throw new Error('La conexión de Supabase no está configurada en Vercel.');
   }
 
   const folder = `territorial/${Date.now()}`;
+  let usedDatabaseFallback = false;
+
   const payloads = [
     {
       id: TERRITORIAL_IDS.cantones,
       title: 'Cantones de Tungurahua',
       description: 'Ubicación provincial con Baños de Agua Santa destacado.',
       filename: 'cantones.geojson',
-      collection: cantones
+      collection: optimizeCollectionForPublishing(cantones)
     },
     {
       id: TERRITORIAL_IDS.parroquias,
       title: 'Parroquias de Baños de Agua Santa',
       description: 'Territorio cantonal dividido por parroquias.',
       filename: 'parroquias.geojson',
-      collection: parroquias
+      collection: optimizeCollectionForPublishing(parroquias)
     }
   ];
 
   for (const item of payloads) {
     const path = `${folder}/${item.filename}`;
     const blob = new Blob([JSON.stringify(item.collection)], { type: 'application/geo+json' });
-    const { error: uploadError } = await supabase.storage.from('mapas').upload(path, blob, {
+    let publicUrl = '';
+    let storageFolder = folder;
+
+    const { error: uploadError } = await supabase.storage.from(STORAGE_BUCKET).upload(path, blob, {
       upsert: true,
       contentType: 'application/geo+json'
     });
-    if (uploadError) throw uploadError;
 
-    const { data: publicData } = supabase.storage.from('mapas').getPublicUrl(path);
+    if (uploadError) {
+      if (!isMissingBucketError(uploadError)) throw uploadError;
+
+      usedDatabaseFallback = true;
+      publicUrl = encodeDataUrl(item.collection);
+      storageFolder = 'database-fallback';
+    } else {
+      const { data: publicData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+      publicUrl = publicData.publicUrl;
+    }
+
     const { error: dbError } = await supabase.from('mapas_recursos').upsert({
       id: item.id,
       titulo: item.title,
       descripcion: item.description,
       tif_url: null,
-      preview_url: publicData.publicUrl,
-      storage_folder: folder,
+      preview_url: publicUrl,
+      storage_folder: storageFolder,
       updated_at: new Date().toISOString()
     });
-    if (dbError) throw dbError;
+
+    if (dbError) {
+      throw new Error(`Los mapas se prepararon, pero la tabla mapas_recursos no permitió guardarlos: ${dbError.message}`);
+    }
+
     publicMapCache.set(item.id, item.collection);
   }
 
-  return folder;
+  return {
+    folder,
+    storageMode: usedDatabaseFallback ? 'database' as const : 'bucket' as const
+  };
 };
 
 export const fetchTerritorialMap = async (id: string) => {
@@ -262,9 +352,16 @@ export const fetchTerritorialMap = async (id: string) => {
 
   if (error || !data?.preview_url) return null;
 
-  const response = await fetch(data.preview_url, { cache: 'no-store' });
-  if (!response.ok) throw new Error('No se pudo descargar el mapa territorial publicado.');
-  const collection = normalizeFeatureCollection(await response.json());
+  let raw: unknown;
+  if (String(data.preview_url).startsWith('data:')) {
+    raw = decodeDataUrl(String(data.preview_url));
+  } else {
+    const response = await fetch(data.preview_url, { cache: 'no-store' });
+    if (!response.ok) throw new Error('No se pudo descargar el mapa territorial publicado.');
+    raw = await response.json();
+  }
+
+  const collection = normalizeFeatureCollection(raw);
   publicMapCache.set(id, collection);
   return collection;
 };
