@@ -11,7 +11,7 @@ const AVATARS = {
 };
 
 const HubWithWelcome = () => {
-  const [open, setOpen] = useState(() => localStorage.getItem('introTerritorialVista') !== 'true');
+  const [open, setOpen] = useState(() => sessionStorage.getItem('introTerritorialVista') !== 'true');
   const [step, setStep] = useState(0);
   const [cantones, setCantones] = useState<GeoJsonFeatureCollection | null>(null);
   const [parroquias, setParroquias] = useState<GeoJsonFeatureCollection | null>(null);
@@ -30,7 +30,7 @@ const HubWithWelcome = () => {
   }, []);
 
   const close = () => {
-    localStorage.setItem('introTerritorialVista', 'true');
+    sessionStorage.setItem('introTerritorialVista', 'true');
     setOpen(false);
   };
 
