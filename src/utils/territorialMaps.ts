@@ -1,3 +1,5 @@
+import JSZip from 'jszip';
+import shp from 'shpjs';
 import { isSupabaseConfigured, supabase } from '../supabaseClient';
 
 export type Position = [number, number];
@@ -60,29 +62,74 @@ export const isBanosFeature = (feature: GeoJsonFeature) => {
   return normalize(searchable).includes('banos');
 };
 
-export const normalizeFeatureCollection = (value: unknown): GeoJsonFeatureCollection => {
+const isPolygonGeometry = (geometry: any): geometry is GeoJsonGeometry =>
+  geometry?.type === 'Polygon' || geometry?.type === 'MultiPolygon';
+
+export const normalizeFeatureCollection = (value: unknown, forcedName = ''): GeoJsonFeatureCollection => {
   const candidate = value as any;
 
   if (candidate?.type === 'FeatureCollection' && Array.isArray(candidate.features)) {
+    const features = candidate.features
+      .filter((feature: any) => feature?.type === 'Feature' && isPolygonGeometry(feature.geometry))
+      .map((feature: any) => ({
+        type: 'Feature' as const,
+        properties: feature.properties && typeof feature.properties === 'object' ? feature.properties : {},
+        geometry: feature.geometry
+      }));
+
+    if (!features.length) throw new Error('Una de las capas no contiene polígonos válidos.');
+
     return {
       type: 'FeatureCollection',
-      name: candidate.name,
-      fileName: candidate.fileName,
-      features: candidate.features.filter((feature: any) => feature?.type === 'Feature')
+      name: candidate.name || forcedName,
+      fileName: candidate.fileName || forcedName,
+      features
     };
   }
 
-  if (candidate?.type === 'Feature') {
-    return { type: 'FeatureCollection', features: [candidate] };
+  if (candidate?.type === 'Feature' && isPolygonGeometry(candidate.geometry)) {
+    return {
+      type: 'FeatureCollection',
+      name: forcedName,
+      fileName: forcedName,
+      features: [{
+        type: 'Feature',
+        properties: candidate.properties && typeof candidate.properties === 'object' ? candidate.properties : {},
+        geometry: candidate.geometry
+      }]
+    };
   }
 
   throw new Error('El archivo no contiene un mapa vectorial válido.');
 };
 
-export const classifyCollections = (value: unknown) => {
-  const rawCollections = Array.isArray(value) ? value : [value];
-  const collections = rawCollections.map(normalizeFeatureCollection);
+const extractCollections = (value: unknown): GeoJsonFeatureCollection[] => {
+  if (Array.isArray(value)) {
+    return value.map((item, index) => normalizeFeatureCollection(item, `capa-${index + 1}`));
+  }
 
+  const candidate = value as any;
+  if (candidate?.type === 'FeatureCollection' || candidate?.type === 'Feature') {
+    return [normalizeFeatureCollection(candidate)];
+  }
+
+  if (candidate && typeof candidate === 'object') {
+    return Object.entries(candidate)
+      .map(([key, item]) => {
+        try {
+          return normalizeFeatureCollection(item, key);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean) as GeoJsonFeatureCollection[];
+  }
+
+  return [];
+};
+
+export const classifyCollections = (value: unknown) => {
+  const collections = extractCollections(value);
   let cantones: GeoJsonFeatureCollection | null = null;
   let parroquias: GeoJsonFeatureCollection | null = null;
 
@@ -109,19 +156,12 @@ export const classifyCollections = (value: unknown) => {
     parroquias ||= collections.find((collection) => collection !== cantones) || null;
   }
 
-  return { cantones, parroquias };
-};
-
-export const loadRemoteModule = async <T = any>(url: string): Promise<T> => {
-  const dynamicImporter = new Function('moduleUrl', 'return import(moduleUrl);');
-  return dynamicImporter(url) as Promise<T>;
+  return { cantones, parroquias, collections };
 };
 
 export const parseTerritorialFiles = async (files: File[]) => {
   if (!files.length) throw new Error('Selecciona la carpeta o el ZIP con Cantones y Parroquias.');
 
-  const shpModule = await loadRemoteModule<any>('https://cdn.jsdelivr.net/npm/shpjs@6.2.0/+esm');
-  const parseShapefile = shpModule.default || shpModule;
   const directZip = files.find((file) => /\.zip$/i.test(file.name));
   let buffer: ArrayBuffer;
 
@@ -129,32 +169,31 @@ export const parseTerritorialFiles = async (files: File[]) => {
     buffer = await directZip.arrayBuffer();
   } else {
     const required = files.filter((file) => /\.(shp|shx|dbf|prj|cpg)$/i.test(file.name));
-    if (!required.some((file) => /\.shp$/i.test(file.name))) {
-      throw new Error('No encontré archivos .shp dentro de la carpeta seleccionada.');
+    const shapeFiles = required.filter((file) => /\.shp$/i.test(file.name));
+
+    if (shapeFiles.length < 2) {
+      throw new Error('La carpeta debe incluir por lo menos Cantones.shp y Parroquias.shp con sus archivos acompañantes.');
     }
 
-    const zipModule = await loadRemoteModule<any>('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
-    const JSZip = zipModule.default || zipModule;
     const zip = new JSZip();
-
     for (const file of required) {
       const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
       zip.file(relativePath.split('/').pop() || file.name, await file.arrayBuffer());
     }
-
     buffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
   }
 
-  const parsed = await parseShapefile(buffer);
+  const parsed = await shp(buffer as any);
   const classified = classifyCollections(parsed);
 
   if (!classified.cantones || !classified.parroquias) {
-    throw new Error('Pude leer el archivo, pero no identifiqué ambos mapas: Cantones y Parroquias. Conserva sus nombres originales.');
+    const detectedNames = classified.collections.map((collection) => collection.fileName || collection.name || 'capa').join(', ');
+    throw new Error(`Se leyó el archivo, pero no pude reconocer Cantones y Parroquias. Capas detectadas: ${detectedNames || 'ninguna'}. Mantén los nombres Cantones.* y Parroquias.*.`);
   }
 
-  return classified as {
-    cantones: GeoJsonFeatureCollection;
-    parroquias: GeoJsonFeatureCollection;
+  return {
+    cantones: classified.cantones,
+    parroquias: classified.parroquias
   };
 };
 
@@ -163,7 +202,7 @@ export const publishTerritorialMaps = async (
   parroquias: GeoJsonFeatureCollection
 ) => {
   if (!isSupabaseConfigured) {
-    throw new Error('Supabase no está configurado en este despliegue.');
+    throw new Error('La conexión de almacenamiento todavía no está configurada. Revisa las variables de Supabase en Vercel.');
   }
 
   const folder = `territorial/${Date.now()}`;
