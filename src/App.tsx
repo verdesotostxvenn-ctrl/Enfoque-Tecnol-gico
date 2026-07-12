@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Lobby from './components/Lobby';
+import KidLobby from './components/KidLobby';
 import HubWithWelcome from './components/HubWithWelcome';
 import MisionVolcan from './components/MisionVolcan';
 import MisionInundacion from './components/MisionInundacion';
@@ -15,22 +15,24 @@ import VideosPage from './components/VideosPage';
 function App() {
   return (
     <Router>
-      <CustomCursor />
-      <Routes>
-        <Route path="/" element={<Lobby />} />
-        <Route path="/hub" element={<HubWithWelcome />} />
+      <div className="kids-theme min-h-screen">
+        <CustomCursor />
+        <Routes>
+          <Route path="/" element={<KidLobby />} />
+          <Route path="/hub" element={<HubWithWelcome />} />
 
-        <Route path="/volcan" element={<MisionVolcan />} />
-        <Route path="/inundacion" element={<MisionInundacion />} />
-        <Route path="/evacuacion" element={<MisionEvacuacion />} />
+          <Route path="/volcan" element={<MisionVolcan />} />
+          <Route path="/inundacion" element={<MisionInundacion />} />
+          <Route path="/evacuacion" element={<MisionEvacuacion />} />
 
-        <Route path="/mapas" element={<MapasPage />} />
-        <Route path="/videos" element={<VideosPage />} />
+          <Route path="/mapas" element={<MapasPage />} />
+          <Route path="/videos" element={<VideosPage />} />
 
-        <Route path="/admin" element={<AdminPanel />} />
-        <Route path="/admin/mapas" element={<MapasAdminWithTerritory />} />
-        <Route path="/admin/territorio" element={<TerritorialAdminPage />} />
-      </Routes>
+          <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/admin/mapas" element={<MapasAdminWithTerritory />} />
+          <Route path="/admin/territorio" element={<TerritorialAdminPage />} />
+        </Routes>
+      </div>
     </Router>
   );
 }
