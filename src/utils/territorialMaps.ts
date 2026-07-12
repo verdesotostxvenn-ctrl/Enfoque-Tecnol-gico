@@ -27,8 +27,11 @@ export const TERRITORIAL_IDS = {
   parroquias: 'territorial-parroquias'
 } as const;
 
+export type TerritorialStorageMode = 'bucket' | 'database' | 'local';
+
 const publicMapCache = new Map<string, GeoJsonFeatureCollection>();
 const STORAGE_BUCKET = 'mapas';
+const LOCAL_PREFIX = 'mision-prevencion:territorio:';
 
 const normalize = (value: string) =>
   value
@@ -51,7 +54,6 @@ export const getFeatureName = (feature: GeoJsonFeature, fallback = 'Territorio')
   });
 
   if (preferred) return String(preferred[1]);
-
   const firstText = entries.find(([, value]) => typeof value === 'string' && value.trim());
   return firstText ? String(firstText[1]) : fallback;
 };
@@ -229,11 +231,7 @@ const optimizeCollectionForPublishing = (collection: GeoJsonFeatureCollection): 
           )
         };
 
-    return {
-      type: 'Feature',
-      properties: feature.properties,
-      geometry
-    };
+    return { type: 'Feature', properties: feature.properties, geometry };
   })
 });
 
@@ -261,17 +259,55 @@ const decodeDataUrl = (url: string) => {
   return JSON.parse(new TextDecoder().decode(bytes));
 };
 
+const saveLocalMap = (id: string, collection: GeoJsonFeatureCollection) => {
+  try {
+    localStorage.setItem(`${LOCAL_PREFIX}${id}`, JSON.stringify(collection));
+  } catch (error) {
+    console.warn('No se pudo guardar el mapa territorial en el navegador:', error);
+  }
+};
+
+const readLocalMap = (id: string) => {
+  try {
+    const value = localStorage.getItem(`${LOCAL_PREFIX}${id}`);
+    return value ? normalizeFeatureCollection(JSON.parse(value)) : null;
+  } catch {
+    return null;
+  }
+};
+
 const isMissingBucketError = (error: any) => {
   const message = String(error?.message || error || '').toLowerCase();
-  return message.includes('bucket not found') || message.includes('bucket') && message.includes('not found');
+  return message.includes('bucket not found') || (message.includes('bucket') && message.includes('not found'));
+};
+
+const isMissingTableError = (error: any) => {
+  const message = String(error?.message || error || '').toLowerCase();
+  return (
+    message.includes('could not find the table') ||
+    message.includes('schema cache') ||
+    message.includes('mapas_recursos') && message.includes('not found')
+  );
 };
 
 export const publishTerritorialMaps = async (
   cantones: GeoJsonFeatureCollection,
   parroquias: GeoJsonFeatureCollection
 ) => {
+  const optimizedCantones = optimizeCollectionForPublishing(cantones);
+  const optimizedParroquias = optimizeCollectionForPublishing(parroquias);
+
+  saveLocalMap(TERRITORIAL_IDS.cantones, optimizedCantones);
+  saveLocalMap(TERRITORIAL_IDS.parroquias, optimizedParroquias);
+  publicMapCache.set(TERRITORIAL_IDS.cantones, optimizedCantones);
+  publicMapCache.set(TERRITORIAL_IDS.parroquias, optimizedParroquias);
+
   if (!isSupabaseConfigured) {
-    throw new Error('La conexión de Supabase no está configurada en Vercel.');
+    return {
+      folder: 'local-browser',
+      storageMode: 'local' as TerritorialStorageMode,
+      warning: 'Supabase no está configurado. Los mapas quedaron guardados en este navegador.'
+    };
   }
 
   const folder = `territorial/${Date.now()}`;
@@ -283,14 +319,14 @@ export const publishTerritorialMaps = async (
       title: 'Cantones de Tungurahua',
       description: 'Ubicación provincial con Baños de Agua Santa destacado.',
       filename: 'cantones.geojson',
-      collection: optimizeCollectionForPublishing(cantones)
+      collection: optimizedCantones
     },
     {
       id: TERRITORIAL_IDS.parroquias,
       title: 'Parroquias de Baños de Agua Santa',
       description: 'Territorio cantonal dividido por parroquias.',
       filename: 'parroquias.geojson',
-      collection: optimizeCollectionForPublishing(parroquias)
+      collection: optimizedParroquias
     }
   ];
 
@@ -306,7 +342,13 @@ export const publishTerritorialMaps = async (
     });
 
     if (uploadError) {
-      if (!isMissingBucketError(uploadError)) throw uploadError;
+      if (!isMissingBucketError(uploadError)) {
+        return {
+          folder: 'local-browser',
+          storageMode: 'local' as TerritorialStorageMode,
+          warning: `Los mapas quedaron guardados en este navegador. Supabase respondió: ${uploadError.message || uploadError}`
+        };
+      }
 
       usedDatabaseFallback = true;
       publicUrl = encodeDataUrl(item.collection);
@@ -327,41 +369,59 @@ export const publishTerritorialMaps = async (
     });
 
     if (dbError) {
-      throw new Error(`Los mapas se prepararon, pero la tabla mapas_recursos no permitió guardarlos: ${dbError.message}`);
-    }
+      const details = isMissingTableError(dbError)
+        ? 'La cuenta de Vercel parece estar conectada a otro proyecto de Supabase o la tabla todavía no está visible para la API.'
+        : dbError.message;
 
-    publicMapCache.set(item.id, item.collection);
+      return {
+        folder: 'local-browser',
+        storageMode: 'local' as TerritorialStorageMode,
+        warning: `Los mapas quedaron guardados en este navegador. ${details}`
+      };
+    }
   }
 
   return {
     folder,
-    storageMode: usedDatabaseFallback ? 'database' as const : 'bucket' as const
+    storageMode: (usedDatabaseFallback ? 'database' : 'bucket') as TerritorialStorageMode,
+    warning: ''
   };
 };
 
 export const fetchTerritorialMap = async (id: string) => {
   const cached = publicMapCache.get(id);
   if (cached) return cached;
-  if (!isSupabaseConfigured) return null;
 
-  const { data, error } = await supabase
-    .from('mapas_recursos')
-    .select('preview_url')
-    .eq('id', id)
-    .maybeSingle();
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('mapas_recursos')
+        .select('preview_url')
+        .eq('id', id)
+        .maybeSingle();
 
-  if (error || !data?.preview_url) return null;
+      if (!error && data?.preview_url) {
+        let raw: unknown;
+        if (String(data.preview_url).startsWith('data:')) {
+          raw = decodeDataUrl(String(data.preview_url));
+        } else {
+          const response = await fetch(data.preview_url, { cache: 'no-store' });
+          if (response.ok) raw = await response.json();
+        }
 
-  let raw: unknown;
-  if (String(data.preview_url).startsWith('data:')) {
-    raw = decodeDataUrl(String(data.preview_url));
-  } else {
-    const response = await fetch(data.preview_url, { cache: 'no-store' });
-    if (!response.ok) throw new Error('No se pudo descargar el mapa territorial publicado.');
-    raw = await response.json();
+        if (raw) {
+          const collection = normalizeFeatureCollection(raw);
+          publicMapCache.set(id, collection);
+          saveLocalMap(id, collection);
+          return collection;
+        }
+      }
+    } catch (error) {
+      console.warn('No se pudo consultar el mapa territorial remoto:', error);
+    }
   }
 
-  const collection = normalizeFeatureCollection(raw);
-  publicMapCache.set(id, collection);
-  return collection;
+  const local = readLocalMap(id);
+  if (local) publicMapCache.set(id, local);
+  return local;
 };
