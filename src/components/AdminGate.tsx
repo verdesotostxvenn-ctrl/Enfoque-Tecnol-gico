@@ -3,7 +3,10 @@ import { LockKeyhole, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const SESSION_KEY = 'mision-prevencion-admin-auth';
-const ADMIN_PIN = String((import.meta as any).env?.VITE_ADMIN_PIN || '1803').trim();
+const DEFAULT_ADMIN_PIN = '1803';
+const CONFIGURED_ADMIN_PIN = String((import.meta as any).env?.VITE_ADMIN_PIN || '').trim();
+
+const normalizePin = (value: string) => value.replace(/\s+/g, '').trim();
 
 const AdminGate = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
@@ -14,8 +17,14 @@ const AdminGate = ({ children }: { children: ReactNode }) => {
   const submit = (event: FormEvent) => {
     event.preventDefault();
 
-    if (pin.trim() !== ADMIN_PIN) {
-      setError('Código incorrecto.');
+    const enteredPin = normalizePin(pin);
+    const acceptedPins = new Set([
+      DEFAULT_ADMIN_PIN,
+      ...(CONFIGURED_ADMIN_PIN ? [normalizePin(CONFIGURED_ADMIN_PIN)] : [])
+    ]);
+
+    if (!acceptedPins.has(enteredPin)) {
+      setError('Código incorrecto. Usa 1803.');
       return;
     }
 
@@ -41,8 +50,12 @@ const AdminGate = ({ children }: { children: ReactNode }) => {
             type="password"
             inputMode="numeric"
             autoComplete="off"
+            maxLength={12}
             value={pin}
-            onChange={(event) => setPin(event.target.value)}
+            onChange={(event) => {
+              setPin(event.target.value.replace(/[^0-9\s]/g, ''));
+              if (error) setError('');
+            }}
             placeholder="Código de acceso"
             className="w-full rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-4 text-center text-xl font-black tracking-[.35em] text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
           />
