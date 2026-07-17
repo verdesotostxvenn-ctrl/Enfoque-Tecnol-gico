@@ -327,19 +327,32 @@ const AdminPanel = () => {
               <h2 className="text-xl font-black">Registros encontrados: {agentesFiltrados.length}</h2>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-cyan-100 bg-cyan-50/70 p-2">
+              <button
+                type="button"
+                onClick={alternarTodosFiltrados}
+                disabled={idsFiltrados.length === 0}
+                className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <CheckCircle2 size={15} />
+                {todosFiltradosSeleccionados ? 'Quitar todos' : 'Seleccionar todos'}
+              </button>
+
+              <span className="rounded-full bg-white px-3 py-2 text-xs font-black uppercase tracking-wider text-cyan-800 shadow-sm">
+                {seleccionados.size} seleccionados
+              </span>
+
               {seleccionados.size > 0 && (
                 <>
-                  <span className="rounded-full bg-cyan-100 px-3 py-2 text-xs font-black uppercase tracking-wider text-cyan-800">
-                    {seleccionados.size} seleccionados
-                  </span>
                   <button
+                    type="button"
                     onClick={limpiarSeleccion}
                     className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
                   >
                     <X size={14} /> Limpiar
                   </button>
                   <button
+                    type="button"
                     onClick={() => setConfirmarEliminacionMasiva(true)}
                     className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white hover:bg-red-500"
                   >
@@ -347,7 +360,7 @@ const AdminPanel = () => {
                   </button>
                 </>
               )}
-              <Filter className="text-slate-400" />
+              <Filter className="ml-auto text-slate-400" />
             </div>
           </div>
 

@@ -13,6 +13,7 @@ import {
   UploadCloud
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import brandLogoUrl from '../assets/logo-agentes-prevencion.png';
 import TerritorialMapView from './TerritorialMapView';
 import { isSupabaseConfigured } from '../supabaseClient';
 import {
@@ -25,7 +26,7 @@ import {
   type TerritorialStorageMode
 } from '../utils/territorialMaps';
 
-const LOGO_URL = 'https://blogger.googleusercontent.com/img/a/AVvXsEhy3dwaYQj6R2ws_jFzJAR7c3yKKTE6lbdml-nVgm4NwaM-W-5MXjgblPUVcqzs1KnN806FhXVXwvPsl9lJyYyGnbNbuSXyvXJCZvtlYw752K1uI63zBuNOHArFLhALPQPGLWy7TsYgi0UwtCxN_PFsTchZlW6fAPQ9sbzPwjfdBWoiwfiN2lywSte4Plw';
+const LOGO_URL = brandLogoUrl;
 
 type FolderInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   webkitdirectory?: string;

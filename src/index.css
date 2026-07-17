@@ -122,30 +122,36 @@
   box-shadow: 0 24px 55px rgba(236, 72, 153, .2);
 }
 
-/* Marco del logotipo: mantiene visible la imagen completa y recupera
-   el aro naranja exterior sin ampliar ni recortar el escudo. */
+/* El logotipo usa un archivo local con el aro naranja completo.
+   Se elimina cualquier borde o recorte adicional del contenedor. */
 .kids-theme .mission-logo-frame {
-  border-color: #f97316 !important;
-  background: #070707 !important;
-  padding: 6px;
-  box-shadow:
-    0 0 0 4px rgba(255, 255, 255, .95),
-    0 18px 42px rgba(7, 29, 74, .34) !important;
+  border-width: 0 !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  box-shadow: 0 16px 38px rgba(4, 22, 64, .34) !important;
 }
 
 .kids-theme .mission-logo-image {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
+  object-position: center;
   transform: none !important;
-  border-radius: 9999px;
+  border-radius: 0 !important;
+  filter: drop-shadow(0 3px 1px rgba(0, 0, 0, .14));
 }
 
+/* Un único cursor global. En pantallas con mouse se oculta el cursor nativo
+   y el colibrí se coloca con el pico exactamente sobre la coordenada real. */
 @media (pointer: fine) {
-  html.custom-cursor-ready,
-  html.custom-cursor-ready body,
-  html.custom-cursor-ready #root,
-  html.custom-cursor-ready #root * {
+  html.custom-cursor-enabled,
+  html.custom-cursor-enabled body,
+  html.custom-cursor-enabled body *,
+  html.custom-cursor-enabled #root,
+  html.custom-cursor-enabled #root * {
     cursor: none !important;
   }
 }
@@ -154,26 +160,41 @@
   position: fixed;
   left: 0;
   top: 0;
-  pointer-events: none;
   z-index: 2147483647;
+  pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
+  opacity: 0;
   will-change: transform, opacity;
+  transition: opacity .06s linear;
 }
 
-.custom-hummingbird-cursor-image {
+.custom-hummingbird-cursor[data-visible='true'] {
+  opacity: 1;
+}
+
+.custom-hummingbird-cursor img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  /* La animación crece desde el pico, así el punto de clic no se desplaza. */
-  transform-origin: 2.34375% 37.70833%;
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
+  transform-origin: 2.857% 7.407%;
+  transition: transform .07s ease, filter .07s ease;
+  filter: drop-shadow(0 1px 2px rgba(2, 6, 23, .55));
+}
+
+.custom-hummingbird-cursor[data-mode='interactive'] img {
+  transform: scale(1.06);
   filter:
-    drop-shadow(0 0 4px rgba(34, 211, 238, .3))
-    drop-shadow(0 0 8px rgba(253, 224, 71, .2));
+    drop-shadow(0 1px 2px rgba(2, 6, 23, .55))
+    drop-shadow(0 0 4px rgba(34, 211, 238, .35));
+}
+
+.custom-hummingbird-cursor[data-mode='pressed'] img {
+  transform: scale(.90) rotate(2deg);
 }
 
 @media (pointer: coarse) {

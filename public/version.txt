@@ -1,0 +1,2 @@
+FUSILERO-FINAL-2026-07-17
+Incluye: logo local con aro naranja completo, colibri pequeño con clic en el pico, cursor duplicado eliminado, seleccion multiple de usuarios y mapas compartidos persistentes.

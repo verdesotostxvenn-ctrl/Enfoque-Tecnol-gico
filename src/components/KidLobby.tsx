@@ -15,9 +15,10 @@ import {
   X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import brandLogoUrl from '../assets/logo-agentes-prevencion.png';
 import { supabase } from '../supabaseClient';
 
-const LOGO_URL = 'https://blogger.googleusercontent.com/img/a/AVvXsEhy3dwaYQj6R2ws_jFzJAR7c3yKKTE6lbdml-nVgm4NwaM-W-5MXjgblPUVcqzs1KnN806FhXVXwvPsl9lJyYyGnbNbuSXyvXJCZvtlYw752K1uI63zBuNOHArFLhALPQPGLWy7TsYgi0UwtCxN_PFsTchZlW6fAPQ9sbzPwjfdBWoiwfiN2lywSte4Plw';
+const LOGO_URL = brandLogoUrl;
 
 const AVATARS = {
   chica: 'https://blogger.googleusercontent.com/img/a/AVvXsEh_PnIcFYcgmsvgfKqk4Mr0s40x0a5f1_pIFmBRlR0oVInL1-uaLQIez5BrYNp-ua4-mBmHqb2A8Ox4tElSIJx3LtHnBaO-cGTxzHomjYO1f2X6KQzCYn8I0LmpqNe6o1UiXhc814JjCv0hWJ3kME5gcDJ1czrxl7xYge9BE214gnYyrIHHqxwuTMyoxPjd',
@@ -72,7 +73,7 @@ const KidLobby = () => {
     localStorage.setItem('misionVolcanCompletada', 'false');
     localStorage.setItem('misionInundacionCompletada', 'false');
     localStorage.setItem('misionEvacuacionCompletada', 'false');
-    localStorage.removeItem('introTerritorialVista');
+    sessionStorage.removeItem('introTerritorialVista');
 
     try {
       const { error } = await supabase.from('agentes').insert([{

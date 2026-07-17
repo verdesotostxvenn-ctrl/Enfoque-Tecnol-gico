@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import { motion, useMotionValue } from 'framer-motion';
+import { useEffect, useRef } from 'react';
+import hummingbirdCursorUrl from '../assets/hummingbird-cursor.png';
 
-const interactiveSelector = [
+const INTERACTIVE_SELECTOR = [
   'button',
   'a',
   'input',
@@ -14,202 +14,104 @@ const interactiveSelector = [
   '.cursor-interactive'
 ].join(',');
 
-const CURSOR_IMAGES = {
-  idle: '/hummingbird-cursor.svg',
-  hover: '/hummingbird-cursor.svg',
-  click: '/hummingbird-cursor.svg'
-} as const;
+// El archivo real mide 70 × 54 px y tiene 2 px transparentes de margen.
+// Lo mostramos a menos de la mitad del tamaño que tenía el cursor original.
+const DISPLAY_WIDTH = 34;
+const DISPLAY_HEIGHT = (54 / 70) * DISPLAY_WIDTH;
 
-type CursorMode = keyof typeof CURSOR_IMAGES;
-
-// Antes medía 74 px. Ahora ocupa exactamente la mitad para no tapar botones ni textos.
-const CURSOR_WIDTH = 36;
-const CURSOR_HEIGHT = 27;
-
-// Las imágenes se invierten dentro de su propio contenedor. Estas coordenadas
-// colocan el punto real del mouse en la punta del pico, no en el centro del ave.
-const BEAK_HOTSPOT: Record<CursorMode, { x: number; y: number }> = {
-  idle: { x: 1.5 / 64, y: 18.1 / 48 },
-  hover: { x: 1.5 / 64, y: 18.1 / 48 },
-  click: { x: 1.5 / 64, y: 18.1 / 48 }
-};
+// La punta del pico está en x=2, y=4 dentro del PNG (incluyendo el margen).
+// Estas coordenadas hacen que el punto real del mouse coincida con el pico.
+const HOTSPOT_X = (2 / 70) * DISPLAY_WIDTH;
+const HOTSPOT_Y = (4 / 54) * DISPLAY_HEIGHT;
 
 const CustomCursor = () => {
-  const cursorX = useMotionValue(-200);
-  const cursorY = useMotionValue(-200);
-  const modeRef = useRef<CursorMode>('idle');
-  const clickingRef = useRef(false);
-  const [mode, setMode] = useState<CursorMode>('idle');
-  const [visible, setVisible] = useState(false);
-  const [ready, setReady] = useState(false);
+  const cursorRef = useRef<HTMLDivElement | null>(null);
+  const frameRef = useRef<number | null>(null);
+  const lastPointRef = useRef({ x: -200, y: -200 });
 
   useEffect(() => {
     const finePointer = window.matchMedia('(pointer: fine)');
     if (!finePointer.matches) return;
 
-    let cancelled = false;
-    const idleImage = new Image();
+    const cursor = cursorRef.current;
+    if (!cursor) return;
 
-    idleImage.onload = () => {
-      if (cancelled) return;
-      document.documentElement.classList.add('custom-cursor-ready');
-      setReady(true);
+    document.documentElement.classList.add('custom-cursor-enabled');
+
+    const renderAt = (clientX: number, clientY: number) => {
+      lastPointRef.current = { x: clientX, y: clientY };
+      if (frameRef.current !== null) return;
+
+      frameRef.current = window.requestAnimationFrame(() => {
+        frameRef.current = null;
+        const { x, y } = lastPointRef.current;
+        cursor.style.transform = `translate3d(${x - HOTSPOT_X}px, ${y - HOTSPOT_Y}px, 0)`;
+      });
     };
 
-    idleImage.onerror = () => {
-      if (cancelled) return;
-      document.documentElement.classList.remove('custom-cursor-ready');
-      setReady(false);
-    };
-
-    idleImage.src = CURSOR_IMAGES.idle;
-    (['hover', 'click'] as CursorMode[]).forEach((imageMode) => {
-      const image = new Image();
-      image.src = CURSOR_IMAGES[imageMode];
-    });
-
-    return () => {
-      cancelled = true;
-      document.documentElement.classList.remove('custom-cursor-ready');
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!ready || !window.matchMedia('(pointer: fine)').matches) return;
-
-    const styleId = 'force-hide-native-cursor';
-    let style = document.getElementById(styleId) as HTMLStyleElement | null;
-    const createdHere = !style;
-
-    if (!style) {
-      style = document.createElement('style');
-      style.id = styleId;
-      document.head.appendChild(style);
-    }
-
-    style.textContent = `
-      @media (pointer: fine) {
-        html.custom-cursor-ready,
-        html.custom-cursor-ready body,
-        html.custom-cursor-ready body *,
-        html.custom-cursor-ready #root,
-        html.custom-cursor-ready #root * {
-          cursor: none !important;
-        }
+    const setMode = (target: EventTarget | null, pressed = false) => {
+      if (pressed) {
+        cursor.dataset.mode = 'pressed';
+        return;
       }
-    `;
 
-    const root = document.getElementById('root');
-    document.documentElement.style.setProperty('cursor', 'none', 'important');
-    document.body.style.setProperty('cursor', 'none', 'important');
-    root?.style.setProperty('cursor', 'none', 'important');
-
-    return () => {
-      document.documentElement.style.removeProperty('cursor');
-      document.body.style.removeProperty('cursor');
-      root?.style.removeProperty('cursor');
-      if (createdHere) style?.remove();
-    };
-  }, [ready]);
-
-  useEffect(() => {
-    const finePointer = window.matchMedia('(pointer: fine)');
-    if (!finePointer.matches) return;
-
-    const changeMode = (nextMode: CursorMode) => {
-      if (modeRef.current === nextMode) return;
-      modeRef.current = nextMode;
-      setMode(nextMode);
-    };
-
-    const positionCursor = (clientX: number, clientY: number, cursorMode: CursorMode) => {
-      const hotspot = BEAK_HOTSPOT[cursorMode];
-      cursorX.set(clientX - CURSOR_WIDTH * hotspot.x);
-      cursorY.set(clientY - CURSOR_HEIGHT * hotspot.y);
-    };
-
-    const getHoverState = (target: EventTarget | null) => {
       const element = target instanceof Element ? target : null;
-      return Boolean(element?.closest(interactiveSelector));
+      cursor.dataset.mode = element?.closest(INTERACTIVE_SELECTOR) ? 'interactive' : 'idle';
     };
 
     const move = (event: PointerEvent) => {
-      const hovering = getHoverState(event.target);
-      const nextMode: CursorMode = clickingRef.current ? 'click' : hovering ? 'hover' : 'idle';
-      changeMode(nextMode);
-      positionCursor(event.clientX, event.clientY, nextMode);
-      setVisible(true);
+      renderAt(event.clientX, event.clientY);
+      setMode(event.target);
+      cursor.dataset.visible = 'true';
     };
 
     const down = (event: PointerEvent) => {
-      clickingRef.current = true;
-      changeMode('click');
-      positionCursor(event.clientX, event.clientY, 'click');
+      renderAt(event.clientX, event.clientY);
+      setMode(event.target, true);
+      cursor.dataset.visible = 'true';
     };
 
     const up = (event: PointerEvent) => {
-      clickingRef.current = false;
-      const target = document.elementFromPoint(event.clientX, event.clientY);
-      const nextMode: CursorMode = getHoverState(target) ? 'hover' : 'idle';
-      changeMode(nextMode);
-      positionCursor(event.clientX, event.clientY, nextMode);
+      renderAt(event.clientX, event.clientY);
+      const element = document.elementFromPoint(event.clientX, event.clientY);
+      setMode(element);
     };
 
-    const leave = () => {
-      setVisible(false);
-      clickingRef.current = false;
-      changeMode('idle');
-    };
-
-    const enter = () => setVisible(true);
-    const visibility = () => {
-      if (document.hidden) leave();
+    const hide = () => {
+      cursor.dataset.visible = 'false';
+      cursor.dataset.mode = 'idle';
     };
 
     window.addEventListener('pointermove', move, { passive: true });
     window.addEventListener('pointerdown', down, { passive: true });
     window.addEventListener('pointerup', up, { passive: true });
-    document.documentElement.addEventListener('mouseleave', leave);
-    document.documentElement.addEventListener('mouseenter', enter);
-    window.addEventListener('blur', leave);
-    document.addEventListener('visibilitychange', visibility);
+    window.addEventListener('blur', hide);
+    document.documentElement.addEventListener('mouseleave', hide);
+    document.addEventListener('visibilitychange', hide);
 
     return () => {
+      document.documentElement.classList.remove('custom-cursor-enabled');
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerdown', down);
       window.removeEventListener('pointerup', up);
-      document.documentElement.removeEventListener('mouseleave', leave);
-      document.documentElement.removeEventListener('mouseenter', enter);
-      window.removeEventListener('blur', leave);
-      document.removeEventListener('visibilitychange', visibility);
+      window.removeEventListener('blur', hide);
+      document.documentElement.removeEventListener('mouseleave', hide);
+      document.removeEventListener('visibilitychange', hide);
+      if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
     };
-  }, [cursorX, cursorY]);
-
-  if (!ready) return null;
+  }, []);
 
   return (
-    <motion.div
+    <div
+      ref={cursorRef}
       aria-hidden="true"
       className="custom-hummingbird-cursor"
-      style={{ x: cursorX, y: cursorY, width: CURSOR_WIDTH, height: CURSOR_HEIGHT }}
-      initial={false}
-      animate={{ opacity: visible ? 1 : 0 }}
-      transition={{ duration: 0.08, ease: 'easeOut' }}
+      data-visible="false"
+      data-mode="idle"
+      style={{ width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT }}
     >
-      <motion.img
-        src={CURSOR_IMAGES[mode]}
-        alt=""
-        draggable={false}
-        className="custom-hummingbird-cursor-image"
-        initial={false}
-        animate={{
-          scaleX: mode === 'click' ? 0.96 : mode === 'hover' ? 1.04 : 1,
-          scaleY: mode === 'click' ? 0.96 : mode === 'hover' ? 1.04 : 1,
-          rotate: mode === 'click' ? 3 : mode === 'hover' ? -1 : 0
-        }}
-        transition={{ duration: 0.08, ease: 'easeOut' }}
-      />
-    </motion.div>
+      <img src={hummingbirdCursorUrl} alt="" draggable={false} />
+    </div>
   );
 };
 
