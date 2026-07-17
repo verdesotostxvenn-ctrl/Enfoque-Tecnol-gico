@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart3,
-  CalendarDays,
   CheckCircle2,
   Download,
   Filter,
@@ -12,7 +11,8 @@ import {
   ShieldAlert,
   Trash2,
   Trophy,
-  Users
+  Users,
+  X
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
@@ -40,7 +40,10 @@ const AdminPanel = () => {
   const [escuelaFiltro, setEscuelaFiltro] = useState('todas');
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>('todos');
   const [registroSeleccionado, setRegistroSeleccionado] = useState<Agente | null>(null);
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(() => new Set());
+  const [confirmarEliminacionMasiva, setConfirmarEliminacionMasiva] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingBulk, setDeletingBulk] = useState(false);
 
   const cargarDatos = async () => {
     setLoading(true);
@@ -53,7 +56,11 @@ const AdminPanel = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setAgentes((data || []) as Agente[]);
+
+      const registros = (data || []) as Agente[];
+      const idsExistentes = new Set(registros.map((item) => item.id));
+      setAgentes(registros);
+      setSeleccionados((prev) => new Set(Array.from(prev).filter((id) => idsExistentes.has(id))));
     } catch (error) {
       console.error(error);
       setErrorMsg('No se pudieron cargar los registros. Revisa las variables de Supabase y las políticas RLS.');
@@ -89,6 +96,10 @@ const AdminPanel = () => {
     });
   }, [agentes, busqueda, escuelaFiltro, estadoFiltro]);
 
+  const idsFiltrados = useMemo(() => agentesFiltrados.map((agente) => agente.id), [agentesFiltrados]);
+  const todosFiltradosSeleccionados = idsFiltrados.length > 0 && idsFiltrados.every((id) => seleccionados.has(id));
+  const seleccionadosVisibles = idsFiltrados.filter((id) => seleccionados.has(id)).length;
+
   const stats = useMemo(() => {
     const total = agentesFiltrados.length;
     const completados = agentesFiltrados.filter((a) => obtenerProgreso(a) === 100).length;
@@ -99,6 +110,26 @@ const AdminPanel = () => {
 
     return { total, completados, progresoPromedio, escuelasActivas };
   }, [agentesFiltrados]);
+
+  const alternarSeleccion = (id: string) => {
+    setSeleccionados((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const alternarTodosFiltrados = () => {
+    setSeleccionados((prev) => {
+      const next = new Set(prev);
+      if (todosFiltradosSeleccionados) idsFiltrados.forEach((id) => next.delete(id));
+      else idsFiltrados.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
+  const limpiarSeleccion = () => setSeleccionados(new Set());
 
   const eliminarRegistro = async () => {
     if (!registroSeleccionado) return;
@@ -114,10 +145,15 @@ const AdminPanel = () => {
 
     try {
       const { error } = await supabase.from('agentes').delete().eq('id', registroSeleccionado.id);
-
       if (error) throw error;
 
-      setAgentes((prev) => prev.filter((item) => item.id !== registroSeleccionado.id));
+      const deletedId = registroSeleccionado.id;
+      setAgentes((prev) => prev.filter((item) => item.id !== deletedId));
+      setSeleccionados((prev) => {
+        const next = new Set(prev);
+        next.delete(deletedId);
+        return next;
+      });
       setRegistroSeleccionado(null);
     } catch (error) {
       console.error(error);
@@ -127,7 +163,40 @@ const AdminPanel = () => {
     }
   };
 
+  const eliminarSeleccionados = async () => {
+    const ids = Array.from(seleccionados);
+    if (ids.length === 0) return;
+
+    if (!isSupabaseConfigured) {
+      setErrorMsg('Supabase no está configurado. No se pueden eliminar registros desde el panel.');
+      setConfirmarEliminacionMasiva(false);
+      return;
+    }
+
+    setDeletingBulk(true);
+    setErrorMsg('');
+
+    try {
+      const { error } = await supabase.from('agentes').delete().in('id', ids);
+      if (error) throw error;
+
+      const idsEliminados = new Set(ids);
+      setAgentes((prev) => prev.filter((item) => !idsEliminados.has(item.id)));
+      setSeleccionados(new Set());
+      setConfirmarEliminacionMasiva(false);
+    } catch (error) {
+      console.error(error);
+      setErrorMsg('No se pudieron eliminar los registros seleccionados. Verifica la política DELETE en Supabase.');
+    } finally {
+      setDeletingBulk(false);
+    }
+  };
+
   const exportarCSV = () => {
+    const origen = seleccionados.size > 0
+      ? agentesFiltrados.filter((agente) => seleccionados.has(agente.id))
+      : agentesFiltrados;
+
     const encabezado = [
       'Nombre',
       'Edad',
@@ -141,7 +210,7 @@ const AdminPanel = () => {
       'Última conexión'
     ];
 
-    const filas = agentesFiltrados.map((a) => [
+    const filas = origen.map((a) => [
       a.nombre || 'Sin nombre',
       a.edad ?? 'N/A',
       a.institucion || 'Sin institución',
@@ -170,7 +239,7 @@ const AdminPanel = () => {
   };
 
   return (
-    <main className="admin-dashboard-pro min-h-screen bg-slate-100 text-slate-950 p-4 md:p-6">
+    <main className="admin-dashboard-pro min-h-screen bg-slate-100 p-4 text-slate-950 md:p-6">
       <style>
         {`
           .admin-dashboard-pro,
@@ -180,62 +249,63 @@ const AdminPanel = () => {
 
           .admin-dashboard-pro button,
           .admin-dashboard-pro select,
+          .admin-dashboard-pro input[type='checkbox'],
           .admin-dashboard-pro .admin-clickable {
             cursor: pointer !important;
           }
 
-          .admin-dashboard-pro input {
+          .admin-dashboard-pro input:not([type='checkbox']) {
             cursor: text !important;
           }
         `}
       </style>
 
       <section className="mx-auto max-w-7xl space-y-6">
-        <header className="rounded-[2rem] bg-slate-950 text-white p-6 md:p-8 shadow-2xl overflow-hidden relative">
+        <header className="relative overflow-hidden rounded-[2rem] bg-slate-950 p-6 text-white shadow-2xl md:p-8">
           <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
-          <div className="absolute -left-24 -bottom-24 h-72 w-72 rounded-full bg-orange-400/20 blur-3xl" />
+          <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-orange-400/20 blur-3xl" />
 
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+          <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-cyan-300 text-xs font-black uppercase tracking-[0.28em] mb-2">Dashboard administrativo</p>
-              <h1 className="text-3xl md:text-5xl font-black tracking-tight">Registros de Misión Prevención</h1>
-              <p className="text-slate-300 mt-3 max-w-2xl font-semibold">
-                Entrada directa sin PIN para revisar estudiantes, progreso, instituciones y datos del plan piloto.
+              <p className="mb-2 text-xs font-black uppercase tracking-[0.28em] text-cyan-300">Dashboard administrativo</p>
+              <h1 className="text-3xl font-black tracking-tight md:text-5xl">Registros de Misión Prevención</h1>
+              <p className="mt-3 max-w-2xl font-semibold text-slate-300">
+                Revisa estudiantes, progreso, instituciones y datos del plan piloto.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={cargarDatos}
-                className="rounded-2xl bg-white/10 border border-white/10 px-4 py-3 font-black uppercase text-xs tracking-widest hover:bg-white/15 flex items-center gap-2"
+                className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-xs font-black uppercase tracking-widest hover:bg-white/15"
               >
                 <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Actualizar
               </button>
               <button
                 onClick={exportarCSV}
-                className="rounded-2xl bg-cyan-400 text-slate-950 px-4 py-3 font-black uppercase text-xs tracking-widest hover:bg-cyan-300 flex items-center gap-2"
+                className="flex items-center gap-2 rounded-2xl bg-cyan-400 px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-950 hover:bg-cyan-300"
               >
-                <Download size={16} /> Exportar
+                <Download size={16} /> {seleccionados.size > 0 ? `Exportar ${seleccionados.size}` : 'Exportar'}
               </button>
             </div>
           </div>
         </header>
 
         {errorMsg && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 font-bold flex items-center gap-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 font-bold text-red-700">
             <ShieldAlert size={20} /> {errorMsg}
           </div>
         )}
 
-        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <MetricCard icon={<Users />} label="Participantes" value={stats.total} tone="cyan" />
           <MetricCard icon={<School />} label="Instituciones" value={stats.escuelasActivas} tone="orange" />
           <MetricCard icon={<BarChart3 />} label="Progreso promedio" value={`${stats.progresoPromedio}%`} tone="emerald" />
           <MetricCard icon={<Trophy />} label="Completaron todo" value={stats.completados} tone="purple" />
         </section>
 
-        <section className="rounded-[2rem] border border-slate-200 bg-white p-4 md:p-5 shadow-xl">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-center">
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-xl md:p-5">
+          <div className="grid grid-cols-1 items-center gap-3 md:grid-cols-[1fr_auto_auto]">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
@@ -269,19 +339,55 @@ const AdminPanel = () => {
           </div>
         </section>
 
-        <section className="rounded-[2rem] border border-slate-200 bg-white shadow-xl overflow-hidden">
-          <div className="flex items-center justify-between gap-4 border-b border-slate-200 p-4 md:p-5">
+        <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xl">
+          <div className="flex flex-col gap-4 border-b border-slate-200 p-4 md:flex-row md:items-center md:justify-between md:p-5">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-500">Base de datos</p>
               <h2 className="text-xl font-black">Registros encontrados: {agentesFiltrados.length}</h2>
             </div>
-            <Filter className="text-slate-400" />
+
+            <div className="flex flex-wrap items-center gap-2">
+              {seleccionados.size > 0 && (
+                <>
+                  <span className="rounded-full bg-cyan-100 px-3 py-2 text-xs font-black uppercase tracking-wider text-cyan-800">
+                    {seleccionados.size} seleccionados
+                  </span>
+                  <button
+                    onClick={limpiarSeleccion}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
+                  >
+                    <X size={14} /> Limpiar
+                  </button>
+                  <button
+                    onClick={() => setConfirmarEliminacionMasiva(true)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white hover:bg-red-500"
+                  >
+                    <Trash2 size={14} /> Eliminar seleccionados
+                  </button>
+                </>
+              )}
+              <Filter className="text-slate-400" />
+            </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left">
+            <table className="w-full min-w-[1040px] text-left">
               <thead className="bg-slate-50 text-xs uppercase tracking-widest text-slate-500">
                 <tr>
+                  <th className="w-16 px-5 py-4 text-center">
+                    <input
+                      type="checkbox"
+                      checked={todosFiltradosSeleccionados}
+                      onChange={alternarTodosFiltrados}
+                      disabled={idsFiltrados.length === 0}
+                      aria-label="Seleccionar todos los registros visibles"
+                      title={todosFiltradosSeleccionados ? 'Quitar selección visible' : 'Seleccionar registros visibles'}
+                      className="h-5 w-5 rounded border-2 border-slate-300 accent-cyan-600"
+                    />
+                    {seleccionadosVisibles > 0 && !todosFiltradosSeleccionados && (
+                      <span className="mt-1 block text-[9px] text-cyan-700">{seleccionadosVisibles}</span>
+                    )}
+                  </th>
                   <th className="px-5 py-4">Estudiante</th>
                   <th className="px-5 py-4">Institución</th>
                   <th className="px-5 py-4">Edad</th>
@@ -295,18 +401,28 @@ const AdminPanel = () => {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-12 text-center font-black text-slate-500">Cargando registros...</td>
+                    <td colSpan={9} className="px-5 py-12 text-center font-black text-slate-500">Cargando registros...</td>
                   </tr>
                 ) : agentesFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-12 text-center font-black text-slate-500">No hay registros para mostrar.</td>
+                    <td colSpan={9} className="px-5 py-12 text-center font-black text-slate-500">No hay registros para mostrar.</td>
                   </tr>
                 ) : (
                   agentesFiltrados.map((agente) => {
                     const progreso = obtenerProgreso(agente);
+                    const isSelected = seleccionados.has(agente.id);
 
                     return (
-                      <tr key={agente.id} className="hover:bg-slate-50/70 transition-colors">
+                      <tr key={agente.id} className={`transition-colors ${isSelected ? 'bg-cyan-50' : 'hover:bg-slate-50/70'}`}>
+                        <td className="px-5 py-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => alternarSeleccion(agente.id)}
+                            aria-label={`Seleccionar a ${agente.nombre || 'este estudiante'}`}
+                            className="h-5 w-5 rounded border-2 border-slate-300 accent-cyan-600"
+                          />
+                        </td>
                         <td className="px-5 py-4">
                           <div className="font-black text-slate-950">{agente.nombre || 'Sin nombre'}</div>
                           <div className="text-xs font-bold text-slate-500">Avatar: {agente.avatar || 'N/A'}</div>
@@ -317,10 +433,10 @@ const AdminPanel = () => {
                           <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-black text-white">Nivel {agente.nivel ?? 1}</span>
                         </td>
                         <td className="px-5 py-4">
-                          <div className="w-36 rounded-full bg-slate-100 h-3 overflow-hidden">
+                          <div className="h-3 w-36 overflow-hidden rounded-full bg-slate-100">
                             <div className="h-full bg-gradient-to-r from-cyan-500 to-emerald-500" style={{ width: `${progreso}%` }} />
                           </div>
-                          <div className="text-xs font-black text-slate-500 mt-1">{progreso}%</div>
+                          <div className="mt-1 text-xs font-black text-slate-500">{progreso}%</div>
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex gap-1.5">
@@ -359,7 +475,7 @@ const AdminPanel = () => {
               <Trash2 size={26} />
             </div>
             <h3 className="text-2xl font-black">Eliminar registro</h3>
-            <p className="mt-2 text-slate-600 font-semibold">
+            <p className="mt-2 font-semibold text-slate-600">
               ¿Seguro que deseas eliminar a <strong>{registroSeleccionado.nombre || 'este estudiante'}</strong>? Esta acción no se puede deshacer.
             </p>
             <div className="mt-6 flex gap-3">
@@ -375,6 +491,40 @@ const AdminPanel = () => {
                 className="flex-1 rounded-2xl bg-red-600 px-4 py-3 font-black uppercase tracking-wider text-white hover:bg-red-500 disabled:opacity-50"
               >
                 {deletingId === registroSeleccionado.id ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {confirmarEliminacionMasiva && seleccionados.size > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl"
+          >
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-red-600">
+              <Trash2 size={26} />
+            </div>
+            <h3 className="text-2xl font-black">Eliminar varios registros</h3>
+            <p className="mt-2 font-semibold text-slate-600">
+              Vas a eliminar <strong>{seleccionados.size} usuarios</strong> al mismo tiempo. Esta acción no se puede deshacer.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setConfirmarEliminacionMasiva(false)}
+                disabled={deletingBulk}
+                className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={eliminarSeleccionados}
+                disabled={deletingBulk}
+                className="flex-1 rounded-2xl bg-red-600 px-4 py-3 font-black uppercase tracking-wider text-white hover:bg-red-500 disabled:opacity-50"
+              >
+                {deletingBulk ? 'Eliminando...' : `Eliminar ${seleccionados.size}`}
               </button>
             </div>
           </motion.div>

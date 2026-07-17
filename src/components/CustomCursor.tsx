@@ -22,13 +22,15 @@ const CURSOR_IMAGES = {
 
 type CursorMode = keyof typeof CURSOR_IMAGES;
 
-const CURSOR_SIZE = 74;
+// Antes medía 74 px. Ahora ocupa exactamente la mitad para no tapar botones ni textos.
+const CURSOR_SIZE = 37;
 
-// Las imágenes originales miran a la derecha. Al invertirlas, la punta del pico queda a la izquierda.
-const HOTSPOT_RATIO: Record<CursorMode, { x: number; y: number }> = {
-  idle: { x: 0.09, y: 0.25 },
-  hover: { x: 0.09, y: 0.3 },
-  click: { x: 0.09, y: 0.57 }
+// Las imágenes se invierten dentro de su propio contenedor. Estas coordenadas
+// colocan el punto real del mouse en la punta del pico, no en el centro del ave.
+const BEAK_HOTSPOT: Record<CursorMode, { x: number; y: number }> = {
+  idle: { x: 0.08, y: 0.25 },
+  hover: { x: 0.08, y: 0.3 },
+  click: { x: 0.08, y: 0.57 }
 };
 
 const CustomCursor = () => {
@@ -82,7 +84,7 @@ const CustomCursor = () => {
     };
 
     const positionCursor = (clientX: number, clientY: number, cursorMode: CursorMode) => {
-      const hotspot = HOTSPOT_RATIO[cursorMode];
+      const hotspot = BEAK_HOTSPOT[cursorMode];
       cursorX.set(clientX - CURSOR_SIZE * hotspot.x);
       cursorY.set(clientY - CURSOR_SIZE * hotspot.y);
     };
@@ -147,22 +149,28 @@ const CustomCursor = () => {
   if (!ready) return null;
 
   return (
-    <motion.img
-      src={CURSOR_IMAGES[mode]}
-      alt=""
+    <motion.div
       aria-hidden="true"
-      draggable={false}
       className="custom-hummingbird-cursor"
       style={{ x: cursorX, y: cursorY, width: CURSOR_SIZE, height: CURSOR_SIZE }}
       initial={false}
-      animate={{
-        opacity: visible ? 1 : 0,
-        scaleX: -1,
-        scaleY: mode === 'click' ? 0.94 : mode === 'hover' ? 1.06 : 1,
-        rotate: mode === 'click' ? 5 : mode === 'hover' ? -2 : 0
-      }}
-      transition={{ duration: 0.1, ease: 'easeOut' }}
-    />
+      animate={{ opacity: visible ? 1 : 0 }}
+      transition={{ duration: 0.08, ease: 'easeOut' }}
+    >
+      <motion.img
+        src={CURSOR_IMAGES[mode]}
+        alt=""
+        draggable={false}
+        className="custom-hummingbird-cursor-image"
+        initial={false}
+        animate={{
+          scaleX: -1,
+          scaleY: mode === 'click' ? 0.96 : mode === 'hover' ? 1.04 : 1,
+          rotate: mode === 'click' ? 3 : mode === 'hover' ? -1 : 0
+        }}
+        transition={{ duration: 0.08, ease: 'easeOut' }}
+      />
+    </motion.div>
   );
 };
 

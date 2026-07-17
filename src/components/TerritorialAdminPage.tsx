@@ -143,8 +143,8 @@ const TerritorialAdminPage = () => {
       <section className="relative z-10 mx-auto max-w-[1500px] space-y-5">
         <header className="overflow-hidden rounded-[2.5rem] border-4 border-white bg-gradient-to-r from-[#0B4BB3] via-[#176ED8] to-[#16B7D8] text-white shadow-2xl">
           <div className="grid gap-5 p-5 md:grid-cols-[auto_1fr_auto] md:items-center md:p-7">
-            <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-white shadow-xl md:h-36 md:w-36">
-              <img src={LOGO_URL} alt="Logo Misión Prevención" className="h-full w-full scale-[1.55] object-contain" />
+            <div className="mission-logo-frame flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-[6px] shadow-xl md:h-36 md:w-36">
+              <img src={LOGO_URL} alt="Logo Misión Prevención" className="mission-logo-image" />
             </div>
 
             <div>

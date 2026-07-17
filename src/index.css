@@ -122,21 +122,23 @@
   box-shadow: 0 24px 55px rgba(236, 72, 153, .2);
 }
 
-/* El contenedor deja de dibujar el círculo blanco y el escudo se amplía
-   hasta ocultar el aro blanco exterior que viene dentro de la imagen. */
-.kids-theme div:has(> img[alt="Logo Misión Prevención"]),
-.kids-theme div:has(> img[alt="Logo Misión Prevención 18D03"]) {
-  border-color: transparent !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
+/* Marco del logotipo: mantiene visible la imagen completa y recupera
+   el aro naranja exterior sin ampliar ni recortar el escudo. */
+.kids-theme .mission-logo-frame {
+  border-color: #f97316 !important;
+  background: #070707 !important;
+  padding: 6px;
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, .95),
+    0 18px 42px rgba(7, 29, 74, .34) !important;
 }
 
-.kids-theme img[alt="Logo Misión Prevención 18D03"] {
-  transform: scale(2.62) !important;
-}
-
-.kids-theme img[alt="Logo Misión Prevención"] {
-  transform: scale(2.55) !important;
+.kids-theme .mission-logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: none !important;
+  border-radius: 9999px;
 }
 
 @media (pointer: fine) {
@@ -154,15 +156,23 @@
   top: 0;
   pointer-events: none;
   z-index: 2147483647;
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: transform, opacity;
+}
+
+.custom-hummingbird-cursor-image {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  transform-origin: 12% 35%;
+  transform-origin: center;
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
-  will-change: transform, opacity;
   filter:
-    drop-shadow(0 0 7px rgba(34, 211, 238, .34))
-    drop-shadow(0 0 14px rgba(253, 224, 71, .22));
+    drop-shadow(0 0 4px rgba(34, 211, 238, .3))
+    drop-shadow(0 0 8px rgba(253, 224, 71, .2));
 }
 
 @media (pointer: coarse) {
@@ -192,10 +202,5 @@
 @media (max-width: 640px) {
   .kids-theme h1 {
     text-shadow: 0 2px 0 rgba(0, 0, 0, .1);
-  }
-
-  .kids-theme img[alt="Logo Misión Prevención 18D03"],
-  .kids-theme img[alt="Logo Misión Prevención"] {
-    transform: scale(2.4) !important;
   }
 }

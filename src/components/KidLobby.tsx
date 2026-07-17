@@ -132,9 +132,8 @@ const KidLobby = () => {
             </div>
 
             <div className="mx-auto flex w-full max-w-[460px] items-center justify-center py-2">
-              <div className="relative flex h-64 w-64 items-center justify-center overflow-hidden rounded-full border-[10px] border-white bg-white shadow-[0_22px_65px_rgba(1,21,70,.35)] md:h-72 md:w-72">
-                <div className="absolute inset-0 bg-gradient-to-br from-yellow-100 via-white to-cyan-100" />
-                <img src={LOGO_URL} alt="Logo Misión Prevención 18D03" className="relative h-full w-full scale-[1.65] object-contain" />
+              <div className="mission-logo-frame relative flex h-64 w-64 items-center justify-center overflow-hidden rounded-full border-[10px] shadow-[0_22px_65px_rgba(1,21,70,.35)] md:h-72 md:w-72">
+                <img src={LOGO_URL} alt="Logo Misión Prevención 18D03" className="mission-logo-image relative" />
               </div>
             </div>
 

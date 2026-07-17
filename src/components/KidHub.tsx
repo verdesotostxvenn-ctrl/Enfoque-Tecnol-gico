@@ -105,8 +105,8 @@ const KidHub = () => {
       <section className="relative z-10 mx-auto max-w-[1450px] space-y-6">
         <header className="overflow-hidden rounded-[2.5rem] border-4 border-white bg-gradient-to-r from-[#0B4BB3] via-[#176ED8] to-[#16B7D8] text-white shadow-[0_28px_80px_rgba(0,0,0,.3)]">
           <div className="grid gap-5 p-5 lg:grid-cols-[auto_1fr_auto] lg:items-center md:p-7">
-            <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-white shadow-xl md:h-36 md:w-36">
-              <img src={LOGO_URL} alt="Logo Misión Prevención" className="h-full w-full scale-[1.55] object-contain" />
+            <div className="mission-logo-frame flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-[6px] shadow-xl md:h-36 md:w-36">
+              <img src={LOGO_URL} alt="Logo Misión Prevención" className="mission-logo-image" />
             </div>
 
             <div>
