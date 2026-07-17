@@ -219,10 +219,12 @@ const MapasPage = () => {
       setRenderMode('fallback');
       resetView();
 
-      const localLoaded = await loadLocal();
-      if (!localLoaded) {
-        const remoteLoaded = await loadRemote();
-        if (!remoteLoaded && !cancelled) {
+      // La versión publicada en Supabase tiene prioridad para evitar que una copia local
+      // antigua oculte el mapa que deben ver todos los estudiantes.
+      const remoteLoaded = await loadRemote();
+      if (!remoteLoaded) {
+        const localLoaded = await loadLocal();
+        if (!localLoaded && !cancelled) {
           setEstado('Este mapa todavía no está disponible. Pide a tu docente que lo prepare.');
           setRenderMode('fallback');
         }

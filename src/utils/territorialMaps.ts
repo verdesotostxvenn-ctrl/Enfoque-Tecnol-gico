@@ -301,6 +301,7 @@ export const publishTerritorialMaps = async (
   saveLocalMap(TERRITORIAL_IDS.parroquias, optimizedParroquias);
   publicMapCache.set(TERRITORIAL_IDS.cantones, optimizedCantones);
   publicMapCache.set(TERRITORIAL_IDS.parroquias, optimizedParroquias);
+  window.dispatchEvent(new Event('territorialMapsUpdated'));
 
   if (!isSupabaseConfigured) {
     return {

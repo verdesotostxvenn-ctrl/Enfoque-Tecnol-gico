@@ -22,6 +22,7 @@ import {
   getMapResource
 } from '../config/mapResources';
 import {
+  dataUrlToBlob,
   loadGeoTiffRaster,
   parseKmlInstitutions,
   parseWorldFileContent,
@@ -33,10 +34,16 @@ import {
   type InstitutionPoint
 } from '../utils/geotiffRenderer';
 import { saveLocalHazardMap } from '../utils/localMapStore';
+import { isSupabaseConfigured, supabase } from '../supabaseClient';
 
 type FolderInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   webkitdirectory?: string;
   directory?: string;
+};
+
+type PublishResult = {
+  mode: 'remote' | 'local';
+  warning?: string;
 };
 
 type PreparedMap = {
@@ -46,6 +53,8 @@ type PreparedMap = {
   previewDataUrl: string;
   points: InstitutionPoint[];
 };
+
+const getErrorMessage = (reason: unknown) => reason instanceof Error ? reason.message : String(reason || 'Error desconocido');
 
 const nextPaint = () => new Promise<void>((resolve) => {
   window.requestAnimationFrame(() => window.setTimeout(resolve, 35));
@@ -142,15 +151,70 @@ const FastMapAdminPage = () => {
     }
   };
 
-  const savePrepared = async (prepared: PreparedMap) => {
+  const savePrepared = async (prepared: PreparedMap): Promise<PublishResult> => {
+    const updatedAt = new Date().toISOString();
+    const portableRaster = rasterToPortablePayload(prepared.raster);
+
+    // Siempre conservamos una copia local para que el administrador no pierda el trabajo.
     await saveLocalHazardMap({
       id: prepared.resource.id,
       title: prepared.resource.title,
       description: prepared.resource.description,
       previewDataUrl: prepared.previewDataUrl,
-      raster: rasterToPortablePayload(prepared.raster),
-      updatedAt: new Date().toISOString()
+      raster: portableRaster,
+      updatedAt
     });
+
+    if (!isSupabaseConfigured) {
+      return {
+        mode: 'local',
+        warning: 'Vercel no tiene configuradas VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.'
+      };
+    }
+
+    try {
+      // Publicamos solo la versión web optimizada. Evita volver a subir los TIF pesados.
+      const folder = `publicados/${prepared.resource.storagePrefix}`;
+      const previewPath = `${folder}/preview.png`;
+      const rasterPath = `${folder}/raster.json`;
+      const previewBlob = await dataUrlToBlob(prepared.previewDataUrl);
+      const rasterBlob = new Blob([JSON.stringify(portableRaster)], { type: 'application/json' });
+
+      const { error: previewError } = await supabase.storage.from('mapas').upload(previewPath, previewBlob, {
+        upsert: true,
+        contentType: 'image/png',
+        cacheControl: '0'
+      });
+      if (previewError) throw previewError;
+
+      const { error: rasterError } = await supabase.storage.from('mapas').upload(rasterPath, rasterBlob, {
+        upsert: true,
+        contentType: 'application/json',
+        cacheControl: '0'
+      });
+      if (rasterError) throw rasterError;
+
+      const { data: previewPublic } = supabase.storage.from('mapas').getPublicUrl(previewPath);
+
+      const { error: databaseError } = await supabase.from('mapas_recursos').upsert({
+        id: prepared.resource.id,
+        titulo: prepared.resource.title,
+        descripcion: prepared.resource.description,
+        tif_url: null,
+        preview_url: `${previewPublic.publicUrl}?v=${Date.now()}`,
+        storage_folder: folder,
+        updated_at: updatedAt
+      });
+      if (databaseError) throw databaseError;
+
+      return { mode: 'remote' };
+    } catch (reason) {
+      console.error(`No se pudo publicar ${prepared.resource.shortTitle} en Supabase:`, reason);
+      return {
+        mode: 'local',
+        warning: `Supabase rechazó la publicación: ${getErrorMessage(reason)}`
+      };
+    }
   };
 
   const publishOne = async () => {
@@ -168,8 +232,12 @@ const FastMapAdminPage = () => {
       const prepared = raster && previewDataUrl && tifFile
         ? { resource: selectedResource, tifFile, raster, previewDataUrl, points }
         : await prepareMap(files, selectedResource);
-      await savePrepared(prepared);
-      setStatus(`${selectedResource.shortTitle} ya funciona en este navegador. Abre el mapa público para comprobarlo.`);
+      const result = await savePrepared(prepared);
+      if (result.mode === 'remote') {
+        setStatus(`${selectedResource.shortTitle} publicado para todos los dispositivos. Abre /mapas para comprobarlo.`);
+      } else {
+        setStatus(`${selectedResource.shortTitle} quedó solo en este navegador y todavía no será visible para los estudiantes. ${result.warning || ''}`);
+      }
       window.dispatchEvent(new CustomEvent('hazardMapsUpdated', { detail: { id: selectedResource.id } }));
     } catch (reason) {
       console.error(reason);
@@ -189,7 +257,8 @@ const FastMapAdminPage = () => {
     setPublishing(true);
     setError('');
     setLog([]);
-    let completed = 0;
+    let remoteCount = 0;
+    let localCount = 0;
     let failed = 0;
 
     for (const resource of MAP_RESOURCES) {
@@ -208,9 +277,14 @@ const FastMapAdminPage = () => {
 
       try {
         const prepared = await prepareMap(files, resource);
-        await savePrepared(prepared);
-        completed += 1;
-        setLog((current) => [...current, `✅ ${resource.shortTitle}: guardado correctamente.`]);
+        const result = await savePrepared(prepared);
+        if (result.mode === 'remote') {
+          remoteCount += 1;
+          setLog((current) => [...current, `✅ ${resource.shortTitle}: publicado para todos.`]);
+        } else {
+          localCount += 1;
+          setLog((current) => [...current, `⚠️ ${resource.shortTitle}: solo quedó en este navegador. ${result.warning || ''}`]);
+        }
       } catch (reason) {
         failed += 1;
         const message = reason instanceof Error ? reason.message : 'Error desconocido';
@@ -220,9 +294,7 @@ const FastMapAdminPage = () => {
     }
 
     setStatus(
-      failed
-        ? `Proceso terminado: ${completed} mapas listos y ${failed} con error.`
-        : `¡Proceso terminado! ${completed} mapas ya funcionan en este navegador.`
+      `Proceso terminado: ${remoteCount} publicados para todos, ${localCount} solo en este navegador y ${failed} con error.`
     );
     setPublishing(false);
     window.dispatchEvent(new Event('hazardMapsUpdated'));
@@ -245,8 +317,8 @@ const FastMapAdminPage = () => {
             <button onClick={() => navigate('/hub')} className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-xs font-black uppercase tracking-wider">Volver al centro</button>
           </div>
           <p className="text-[10px] font-black uppercase tracking-[.28em] text-cyan-300">Administrador / Mapas GIS</p>
-          <h1 className="mt-2 text-4xl font-black md:text-6xl">Publicar mapas sin bloqueos</h1>
-          <p className="mt-3 max-w-3xl font-semibold text-slate-300">Esta versión guarda los mapas procesados en el navegador y evita la subida pesada que estaba dejando congelado el botón verde.</p>
+          <h1 className="mt-2 text-4xl font-black md:text-6xl">Publicar mapas para estudiantes</h1>
+          <p className="mt-3 max-w-3xl font-semibold text-slate-300">El sistema procesa los TIF en el navegador y publica una versión web optimizada en Supabase para que pueda abrirse desde celulares y computadoras diferentes.</p>
         </header>
 
         <section className="grid gap-3 md:grid-cols-3">
@@ -307,6 +379,7 @@ const FastMapAdminPage = () => {
               <p>World file: {tfwFile?.name || 'No encontrado'}</p>
               <p>KML: {kmlFile?.name || 'No encontrado'}</p>
               <p>Puntos dentro: {positionedPoints.length}/{points.length}</p>
+              <p className={isSupabaseConfigured ? 'mt-2 font-black text-emerald-300' : 'mt-2 font-black text-amber-300'}>Nube: {isSupabaseConfigured ? 'variables detectadas' : 'sin configurar'}</p>
             </div>
 
             <button onClick={publishAll} disabled={!files.length || processing || publishing} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-5 py-4 text-sm font-black uppercase tracking-widest text-slate-950 disabled:opacity-40">
