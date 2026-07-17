@@ -33,6 +33,18 @@ const publicMapCache = new Map<string, GeoJsonFeatureCollection>();
 const STORAGE_BUCKET = 'mapas';
 const LOCAL_PREFIX = 'mision-prevencion:territorio:';
 
+const TERRITORIAL_STORAGE_PATHS: Record<string, string> = {
+  [TERRITORIAL_IDS.cantones]: 'territorial/cantones.geojson',
+  [TERRITORIAL_IDS.parroquias]: 'territorial/parroquias.geojson'
+};
+
+const getTerritorialPublicUrl = (id: string) => {
+  const path = TERRITORIAL_STORAGE_PATHS[id];
+  if (!path || !isSupabaseConfigured) return '';
+  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+  return data?.publicUrl || '';
+};
+
 const normalize = (value: string) =>
   value
     .normalize('NFD')
@@ -344,96 +356,111 @@ export const publishTerritorialMaps = async (
     };
   }
 
-  const folder = `territorial/${Date.now()}`;
-  let allStoredInline = true;
-
   const payloads = [
     {
       id: TERRITORIAL_IDS.cantones,
       title: 'Cantones de Tungurahua',
       description: 'Ubicación provincial con Baños de Agua Santa destacado.',
-      filename: 'cantones.geojson',
       collection: optimizedCantones
     },
     {
       id: TERRITORIAL_IDS.parroquias,
       title: 'Parroquias de Baños de Agua Santa',
       description: 'Territorio cantonal dividido por parroquias.',
-      filename: 'parroquias.geojson',
       collection: optimizedParroquias
     }
   ];
 
+  let sharedCount = 0;
+  let databaseCount = 0;
+  const warnings: string[] = [];
+
   for (const item of payloads) {
-    const path = `${folder}/${item.filename}`;
+    const path = TERRITORIAL_STORAGE_PATHS[item.id];
     const json = JSON.stringify(item.collection);
     const blob = new Blob([json], { type: 'application/geo+json' });
-    const inlineUrl = encodeDataUrl(item.collection);
-    let backupUrl = '';
-    let storageFolder = 'database-inline';
+    const updatedAt = new Date().toISOString();
+    let publicUrl = '';
+    let storageShared = false;
 
-    // Storage queda como respaldo. La copia principal se guarda dentro de la
-    // fila de mapas_recursos para evitar fallos de CORS, caché o enlaces públicos.
+    // Ruta fija: no cambia con cada publicación. Así cualquier dispositivo puede
+    // consultar el mismo archivo aunque la fila de la tabla tarde en actualizarse.
     try {
       const { error: uploadError } = await supabase.storage.from(STORAGE_BUCKET).upload(path, blob, {
         upsert: true,
-        contentType: 'application/geo+json'
+        contentType: 'application/geo+json',
+        cacheControl: '60'
       });
 
-      if (!uploadError) {
-        const { data: publicData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-        backupUrl = publicData.publicUrl;
-        storageFolder = folder;
-      } else if (!isMissingBucketError(uploadError)) {
-        console.warn('Storage no pudo guardar el respaldo territorial:', uploadError.message || uploadError);
-      }
-    } catch (uploadError) {
-      console.warn('Storage no pudo guardar el respaldo territorial:', uploadError);
+      if (uploadError) throw uploadError;
+
+      publicUrl = getTerritorialPublicUrl(item.id);
+      if (!publicUrl) throw new Error('Supabase no devolvió una URL pública para el mapa.');
+
+      // Verifica la publicación real; no basta con que Storage responda sin error.
+      const remote = await fetchRemoteJson(publicUrl, updatedAt);
+      normalizeFeatureCollection(remote);
+      storageShared = true;
+      sharedCount += 1;
+    } catch (storageError) {
+      const message = storageError instanceof Error ? storageError.message : String(storageError || 'Error de Storage');
+      warnings.push(`${item.title}: Storage no confirmó la publicación (${message}).`);
     }
 
     const baseRecord = {
       id: item.id,
       titulo: item.title,
       descripcion: item.description,
-      tif_url: backupUrl || null,
-      storage_folder: storageFolder,
-      updated_at: new Date().toISOString()
+      tif_url: publicUrl || null,
+      storage_folder: storageShared ? 'territorial' : 'database-inline',
+      updated_at: updatedAt
     };
 
-    // Método principal: GeoJSON optimizado embebido en la base de datos.
-    let { error: dbError } = await supabase.from('mapas_recursos').upsert({
+    if (storageShared) {
+      // La tabla funciona como índice, pero el archivo fijo de Storage ya es
+      // suficiente para que la bienvenida lo vea en otros dispositivos.
+      const { error: dbError } = await supabase.from('mapas_recursos').upsert({
+        ...baseRecord,
+        preview_url: publicUrl
+      });
+
+      if (!dbError) databaseCount += 1;
+      else warnings.push(`${item.title}: el archivo quedó compartido, pero la tabla no se actualizó (${dbError.message}).`);
+      continue;
+    }
+
+    // Respaldo: si Storage falla, intenta guardar el GeoJSON optimizado dentro
+    // de la tabla. Solo se considera local cuando ambos métodos fallan.
+    const inlineUrl = encodeDataUrl(item.collection);
+    const { error: dbError } = await supabase.from('mapas_recursos').upsert({
       ...baseRecord,
       preview_url: inlineUrl
     });
 
-    // Si el proveedor rechaza un payload grande, conserva como respaldo la URL
-    // pública de Storage en vez de dejarlo únicamente en el navegador.
-    if (dbError && backupUrl) {
-      allStoredInline = false;
-      const retry = await supabase.from('mapas_recursos').upsert({
-        ...baseRecord,
-        preview_url: backupUrl
-      });
-      dbError = retry.error;
-    }
-
-    if (dbError) {
+    if (!dbError) {
+      databaseCount += 1;
+      sharedCount += 1;
+    } else {
       const details = isMissingTableError(dbError)
-        ? 'La tabla mapas_recursos todavía no está disponible para la API de este proyecto.'
+        ? 'La tabla mapas_recursos no está disponible para la API.'
         : dbError.message;
-
-      return {
-        folder: 'local-browser',
-        storageMode: 'local' as TerritorialStorageMode,
-        warning: `Los mapas quedaron guardados en este navegador. ${details}`
-      };
+      warnings.push(`${item.title}: tampoco pudo guardarse en la tabla (${details}).`);
     }
   }
 
+  if (sharedCount !== payloads.length) {
+    return {
+      folder: 'local-browser',
+      storageMode: 'local' as TerritorialStorageMode,
+      warning: `Los mapas siguen visibles en este navegador, pero no se confirmó la publicación para otros dispositivos. ${warnings.join(' ')}`
+    };
+  }
+
+  const storageMode: TerritorialStorageMode = databaseCount === payloads.length ? 'database' : 'bucket';
   return {
-    folder,
-    storageMode: (allStoredInline ? 'database' : 'bucket') as TerritorialStorageMode,
-    warning: ''
+    folder: 'territorial',
+    storageMode,
+    warning: warnings.join(' ')
   };
 };
 
@@ -445,50 +472,60 @@ export const fetchTerritorialMap = async (id: string, forceRefresh = false) => {
     publicMapCache.delete(id);
   }
 
+  let lastError: unknown = null;
+
   if (isSupabaseConfigured) {
-    let lastError: unknown = null;
+    const candidates: Array<{ url: string; version: string }> = [];
 
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        const { data, error } = await supabase
-          .from('mapas_recursos')
-          .select('preview_url,tif_url,updated_at')
-          .eq('id', id)
-          .maybeSingle();
+    // 1) Índice de la base de datos, cuando está disponible.
+    try {
+      const { data, error } = await supabase
+        .from('mapas_recursos')
+        .select('preview_url,tif_url,updated_at')
+        .eq('id', id)
+        .maybeSingle();
 
-        if (error) throw error;
-
-        const candidates = [data?.preview_url, data?.tif_url]
-          .filter((value): value is string => Boolean(value));
-
-        for (const candidate of candidates) {
-          try {
-            const raw = candidate.startsWith('data:')
-              ? decodeDataUrl(candidate)
-              : await fetchRemoteJson(candidate, String(data?.updated_at || ''));
-
-            const collection = normalizeFeatureCollection(raw);
-            publicMapCache.set(id, collection);
-            saveLocalMap(id, collection);
-            return collection;
-          } catch (candidateError) {
-            lastError = candidateError;
-          }
-        }
-
-        if (!candidates.length) {
-          lastError = new Error('El registro territorial existe, pero no contiene datos publicados.');
-        }
-      } catch (error) {
-        lastError = error;
-      }
-
-      if (attempt < 2) await delay(350 * (attempt + 1));
+      if (error) throw error;
+      [data?.preview_url, data?.tif_url]
+        .filter((value): value is string => Boolean(value))
+        .forEach((url) => candidates.push({ url, version: String(data?.updated_at || '') }));
+    } catch (error) {
+      lastError = error;
     }
 
-    if (lastError) console.warn('No se pudo consultar el mapa territorial remoto:', lastError);
+    // 2) Ruta pública fija. Esta es la reparación clave: funciona aunque el
+    // registro de la tabla falte, esté desactualizado o tarde en propagarse.
+    const deterministicUrl = getTerritorialPublicUrl(id);
+    if (deterministicUrl) {
+      candidates.push({
+        url: deterministicUrl,
+        version: forceRefresh ? String(Date.now()) : ''
+      });
+    }
+
+    const seen = new Set<string>();
+    for (const candidate of candidates) {
+      if (!candidate.url || seen.has(candidate.url)) continue;
+      seen.add(candidate.url);
+
+      try {
+        const raw = candidate.url.startsWith('data:')
+          ? decodeDataUrl(candidate.url)
+          : await fetchRemoteJson(candidate.url, candidate.version);
+
+        const collection = normalizeFeatureCollection(raw);
+        publicMapCache.set(id, collection);
+        saveLocalMap(id, collection);
+        return collection;
+      } catch (candidateError) {
+        lastError = candidateError;
+      }
+    }
+
+    if (lastError) console.warn('No se pudo consultar el mapa territorial compartido:', lastError);
   }
 
+  // 3) Copia local únicamente como último respaldo para el administrador.
   const local = readLocalMap(id);
   if (local) publicMapCache.set(id, local);
   return local;

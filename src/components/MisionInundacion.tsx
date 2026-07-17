@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { motion, useMotionValue, useSpring } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   CheckCircle2,
   ChevronLeft,
@@ -22,38 +22,9 @@ const MISSION_IMAGE_URL = '';
 
 const MisionInundacion = () => {
   const navigate = useNavigate();
-
-  const [isHovering, setIsHovering] = useState(false);
-  const [cursorVisible, setCursorVisible] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
-
-  const rawMouseX = useMotionValue(-100);
-  const rawMouseY = useMotionValue(-100);
-  const mouseX = useSpring(rawMouseX, { stiffness: 1100, damping: 55 });
-  const mouseY = useSpring(rawMouseY, { stiffness: 1100, damping: 55 });
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      rawMouseX.set(e.clientX);
-      rawMouseY.set(e.clientY);
-      setCursorVisible(true);
-    };
-
-    const handleMouseLeave = () => setCursorVisible(false);
-    const handleMouseEnter = () => setCursorVisible(true);
-
-    window.addEventListener('mousemove', handleMouseMove);
-    document.documentElement.addEventListener('mouseleave', handleMouseLeave);
-    document.documentElement.addEventListener('mouseenter', handleMouseEnter);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
-      document.documentElement.removeEventListener('mouseenter', handleMouseEnter);
-    };
-  }, [rawMouseX, rawMouseY]);
 
   const handleWinQuiz = async () => {
     setShowQuiz(false);
@@ -117,23 +88,6 @@ const MisionInundacion = () => {
 
   return (
     <main className="h-screen max-h-screen bg-[#010413] text-white relative overflow-hidden cursor-none p-3 md:p-5">
-      <motion.div
-        style={{ x: mouseX, y: mouseY, translateX: '-50%', translateY: '-50%' }}
-        animate={{ opacity: cursorVisible ? 1 : 0 }}
-        className="fixed top-0 left-0 pointer-events-none z-[99999] hidden md:block"
-      >
-        <motion.div
-          animate={{
-            scale: isHovering ? 1.08 : 1,
-            borderColor: isHovering ? '#38bdf8' : '#22d3ee',
-            backgroundColor: isHovering ? 'rgba(56,189,248,0.08)' : 'rgba(34,211,238,0.08)'
-          }}
-          transition={{ duration: 0.1 }}
-          className="w-4 h-4 border rounded-full flex items-center justify-center shadow-[0_0_16px_rgba(34,211,238,0.6)] backdrop-blur-sm"
-        >
-          <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_8px_#fff]" />
-        </motion.div>
-      </motion.div>
 
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <motion.div
@@ -170,8 +124,6 @@ const MisionInundacion = () => {
 
           <button
             onClick={() => navigate('/hub')}
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
             className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3 rounded-2xl text-white/60 text-[10px] font-black uppercase tracking-widest hover:text-cyan-300 hover:border-cyan-400/40 transition-all"
           >
             <ChevronLeft size={16} />
@@ -236,8 +188,6 @@ const MisionInundacion = () => {
               type="button"
               onClick={() => setShowQuiz(true)}
               disabled={loading || isCompleted}
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => setIsHovering(false)}
               whileHover={!loading && !isCompleted ? { scale: 1.02, y: -2 } : {}}
               whileTap={!loading && !isCompleted ? { scale: 0.97 } : {}}
               className={`w-full p-4 rounded-[1.5rem] font-black uppercase tracking-[0.22em] transition-all flex items-center justify-center gap-3 text-xs md:text-sm ${

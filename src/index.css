@@ -166,7 +166,8 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  transform-origin: center;
+  /* La animación crece desde el pico, así el punto de clic no se desplaza. */
+  transform-origin: 2.34375% 37.70833%;
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;

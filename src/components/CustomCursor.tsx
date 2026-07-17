@@ -23,15 +23,15 @@ const CURSOR_IMAGES = {
 type CursorMode = keyof typeof CURSOR_IMAGES;
 
 // Antes medía 74 px. Ahora ocupa exactamente la mitad para no tapar botones ni textos.
-const CURSOR_WIDTH = 42;
-const CURSOR_HEIGHT = 32;
+const CURSOR_WIDTH = 36;
+const CURSOR_HEIGHT = 27;
 
 // Las imágenes se invierten dentro de su propio contenedor. Estas coordenadas
 // colocan el punto real del mouse en la punta del pico, no en el centro del ave.
 const BEAK_HOTSPOT: Record<CursorMode, { x: number; y: number }> = {
-  idle: { x: 0.025, y: 0.375 },
-  hover: { x: 0.025, y: 0.375 },
-  click: { x: 0.025, y: 0.375 }
+  idle: { x: 1.5 / 64, y: 18.1 / 48 },
+  hover: { x: 1.5 / 64, y: 18.1 / 48 },
+  click: { x: 1.5 / 64, y: 18.1 / 48 }
 };
 
 const CustomCursor = () => {
