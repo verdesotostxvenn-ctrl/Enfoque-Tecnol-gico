@@ -6,6 +6,9 @@ type Props = {
   collection: GeoJsonFeatureCollection | null;
   mode: 'cantones' | 'parroquias';
   className?: string;
+  loading?: boolean;
+  audience?: 'admin' | 'student';
+  onRetry?: () => void;
 };
 
 const COLORS = ['#34d399', '#38bdf8', '#a78bfa', '#fbbf24', '#fb7185', '#2dd4bf', '#60a5fa', '#a3e635', '#f472b6', '#fb923c'];
@@ -35,7 +38,7 @@ const simplifyRing = (ring: Position[]) => {
   return sampled;
 };
 
-const TerritorialMapView = ({ collection, mode, className = '' }: Props) => {
+const TerritorialMapView = ({ collection, mode, className = '', loading = false, audience = 'admin', onRetry }: Props) => {
   const [activeName, setActiveName] = useState('');
 
   const projected = useMemo(() => {
@@ -96,11 +99,26 @@ const TerritorialMapView = ({ collection, mode, className = '' }: Props) => {
   }, [collection]);
 
   if (!collection) {
+    const studentCopy = loading
+      ? 'Estamos preparando el territorio para tu misión.'
+      : 'No pudimos descargar el mapa en este momento. Puedes intentarlo de nuevo.';
+    const adminCopy = loading
+      ? 'Consultando los mapas publicados...'
+      : 'Selecciona la carpeta de Cantones y Parroquias. La vista previa aparecerá aquí sin recargar la página.';
+
     return (
       <div className={`flex min-h-[300px] items-center justify-center rounded-[1.8rem] border-4 border-dashed border-cyan-200 bg-gradient-to-br from-cyan-50 to-violet-50 p-8 text-center ${className}`}>
-        <div>
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-cyan-700">Mapa territorial pendiente</p>
-          <p className="mt-3 max-w-md text-sm font-bold leading-relaxed text-slate-600">Selecciona la carpeta de Cantones y Parroquias. La vista previa aparecerá aquí sin recargar la página.</p>
+        <div className="flex max-w-md flex-col items-center">
+          {loading && <span className="mb-4 h-10 w-10 animate-spin rounded-full border-4 border-cyan-200 border-t-violet-600" />}
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-cyan-700">
+            {loading ? 'Cargando territorio' : audience === 'student' ? 'Mapa no disponible' : 'Mapa territorial pendiente'}
+          </p>
+          <p className="mt-3 text-sm font-bold leading-relaxed text-slate-600">{audience === 'student' ? studentCopy : adminCopy}</p>
+          {!loading && onRetry && (
+            <button type="button" onClick={onRetry} className="mt-5 rounded-2xl bg-violet-600 px-5 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg hover:bg-violet-700">
+              Volver a intentar
+            </button>
+          )}
         </div>
       </div>
     );

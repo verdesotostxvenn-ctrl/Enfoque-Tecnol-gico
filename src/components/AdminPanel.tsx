@@ -240,25 +240,6 @@ const AdminPanel = () => {
 
   return (
     <main className="admin-dashboard-pro min-h-screen bg-slate-100 p-4 text-slate-950 md:p-6">
-      <style>
-        {`
-          .admin-dashboard-pro,
-          .admin-dashboard-pro * {
-            cursor: auto !important;
-          }
-
-          .admin-dashboard-pro button,
-          .admin-dashboard-pro select,
-          .admin-dashboard-pro input[type='checkbox'],
-          .admin-dashboard-pro .admin-clickable {
-            cursor: pointer !important;
-          }
-
-          .admin-dashboard-pro input:not([type='checkbox']) {
-            cursor: text !important;
-          }
-        `}
-      </style>
 
       <section className="mx-auto max-w-7xl space-y-6">
         <header className="relative overflow-hidden rounded-[2rem] bg-slate-950 p-6 text-white shadow-2xl md:p-8">

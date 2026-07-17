@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -16,8 +16,11 @@ import { useNavigate } from 'react-router-dom';
 import TerritorialMapView from './TerritorialMapView';
 import { isSupabaseConfigured } from '../supabaseClient';
 import {
+  fetchTerritorialMap,
   parseTerritorialFiles,
   publishTerritorialMaps,
+  readStoredTerritorialMaps,
+  TERRITORIAL_IDS,
   type GeoJsonFeatureCollection,
   type TerritorialStorageMode
 } from '../utils/territorialMaps';
@@ -42,6 +45,42 @@ const TerritorialAdminPage = () => {
   const [processing, setProcessing] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [storageMode, setStorageMode] = useState<TerritorialStorageMode | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const restorePublishedMaps = async () => {
+      const local = readStoredTerritorialMaps();
+      if (!cancelled) {
+        if (local.cantones) setCantones(local.cantones);
+        if (local.parroquias) setParroquias(local.parroquias);
+      }
+
+      try {
+        const [remoteCantones, remoteParroquias] = await Promise.all([
+          fetchTerritorialMap(TERRITORIAL_IDS.cantones, true),
+          fetchTerritorialMap(TERRITORIAL_IDS.parroquias, true)
+        ]);
+
+        if (cancelled) return;
+        if (remoteCantones) setCantones(remoteCantones);
+        if (remoteParroquias) setParroquias(remoteParroquias);
+
+        if (remoteCantones && remoteParroquias) {
+          setNoticeKind('success');
+          setStatus('Los mapas publicados ya están cargados. Puedes volver a publicarlos para reparar la copia compartida sin seleccionar los archivos otra vez.');
+        } else if (local.cantones && local.parroquias) {
+          setNoticeKind('info');
+          setStatus('Recuperé los mapas de este navegador. Pulsa “Publicar territorio” para reparar la copia que ven los estudiantes.');
+        }
+      } catch (restoreError) {
+        console.warn('No se pudieron restaurar los mapas territoriales:', restoreError);
+      }
+    };
+
+    restorePublishedMaps();
+    return () => { cancelled = true; };
+  }, []);
 
   const detected = useMemo(() => {
     const names = files.map((file) => file.name.toLowerCase());

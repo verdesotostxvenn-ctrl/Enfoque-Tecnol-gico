@@ -133,23 +133,6 @@ const LobbyUltra = () => {
 
   return (
     <main className="lobby-safe min-h-screen w-full bg-[#010413] text-white relative overflow-hidden flex items-center justify-center p-3 md:p-5">
-      <style>
-        {`
-          .lobby-safe,
-          .lobby-safe * {
-            cursor: auto !important;
-          }
-
-          .lobby-safe button,
-          .lobby-safe .lobby-clickable {
-            cursor: pointer !important;
-          }
-
-          .lobby-safe input {
-            cursor: text !important;
-          }
-        `}
-      </style>
 
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-40 -left-40 w-[34rem] h-[34rem] bg-orange-500/25 rounded-full blur-[120px]" />

@@ -15,22 +15,23 @@ const interactiveSelector = [
 ].join(',');
 
 const CURSOR_IMAGES = {
-  idle: 'https://blogger.googleusercontent.com/img/a/AVvXsEhAxYl2pbar0HgOu8ojyrHMcRlI6M-dbrY3qasmn68etuWquzeKYRmFiclIu5qgpVyORX4bb0f3w-rqaItKCh-9aPoLE7p2jdFL2eKJzjfCKNyVnw3WHbhaHUF_chcSqruaN7ouxe_ZmNCPFr7AddUNSiRgbqenWs8cEklvotMQCQp02p0Oib64eBetjFs',
-  hover: 'https://blogger.googleusercontent.com/img/a/AVvXsEhUCnTr7w10SCDEOHxi4rsyS7qOc1GCdrc2eh2wtlw037uSLzPbhWFmetDHRvGA7Re6ias1hLDY9q9S57wqY6XLZWnOsYZxTngxweEQYMPdVU6sFQkHXJRpFUQAtjjwSN5-xWxrbQIq3YqIVwQux4GZ021vb0h58u5AhFEtmG6VCX_43iH-4krL6WsgTs0',
-  click: 'https://blogger.googleusercontent.com/img/a/AVvXsEh5AsyyJC8qJKUz3l69RGbXFMH1jGWaaeJlJxAFcMwjijQ-6y8oM25d7ftxuwKio-tqz87qvcnRIli_lyBs0VaJxxqIk7CJ4FXzZM8k6sXXZ6OMG6DMClbUI8XXMkIuxVxvnMFvv0VpqA1zLTMIOXWmDEQGPE0gZvvVN82qCZXoTZ6uB0KQDce8-4Gad8c'
+  idle: '/hummingbird-cursor.svg',
+  hover: '/hummingbird-cursor.svg',
+  click: '/hummingbird-cursor.svg'
 } as const;
 
 type CursorMode = keyof typeof CURSOR_IMAGES;
 
 // Antes medía 74 px. Ahora ocupa exactamente la mitad para no tapar botones ni textos.
-const CURSOR_SIZE = 37;
+const CURSOR_WIDTH = 42;
+const CURSOR_HEIGHT = 32;
 
 // Las imágenes se invierten dentro de su propio contenedor. Estas coordenadas
 // colocan el punto real del mouse en la punta del pico, no en el centro del ave.
 const BEAK_HOTSPOT: Record<CursorMode, { x: number; y: number }> = {
-  idle: { x: 0.08, y: 0.25 },
-  hover: { x: 0.08, y: 0.3 },
-  click: { x: 0.08, y: 0.57 }
+  idle: { x: 0.025, y: 0.375 },
+  hover: { x: 0.025, y: 0.375 },
+  click: { x: 0.025, y: 0.375 }
 };
 
 const CustomCursor = () => {
@@ -74,6 +75,44 @@ const CustomCursor = () => {
   }, []);
 
   useEffect(() => {
+    if (!ready || !window.matchMedia('(pointer: fine)').matches) return;
+
+    const styleId = 'force-hide-native-cursor';
+    let style = document.getElementById(styleId) as HTMLStyleElement | null;
+    const createdHere = !style;
+
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+
+    style.textContent = `
+      @media (pointer: fine) {
+        html.custom-cursor-ready,
+        html.custom-cursor-ready body,
+        html.custom-cursor-ready body *,
+        html.custom-cursor-ready #root,
+        html.custom-cursor-ready #root * {
+          cursor: none !important;
+        }
+      }
+    `;
+
+    const root = document.getElementById('root');
+    document.documentElement.style.setProperty('cursor', 'none', 'important');
+    document.body.style.setProperty('cursor', 'none', 'important');
+    root?.style.setProperty('cursor', 'none', 'important');
+
+    return () => {
+      document.documentElement.style.removeProperty('cursor');
+      document.body.style.removeProperty('cursor');
+      root?.style.removeProperty('cursor');
+      if (createdHere) style?.remove();
+    };
+  }, [ready]);
+
+  useEffect(() => {
     const finePointer = window.matchMedia('(pointer: fine)');
     if (!finePointer.matches) return;
 
@@ -85,8 +124,8 @@ const CustomCursor = () => {
 
     const positionCursor = (clientX: number, clientY: number, cursorMode: CursorMode) => {
       const hotspot = BEAK_HOTSPOT[cursorMode];
-      cursorX.set(clientX - CURSOR_SIZE * hotspot.x);
-      cursorY.set(clientY - CURSOR_SIZE * hotspot.y);
+      cursorX.set(clientX - CURSOR_WIDTH * hotspot.x);
+      cursorY.set(clientY - CURSOR_HEIGHT * hotspot.y);
     };
 
     const getHoverState = (target: EventTarget | null) => {
@@ -152,7 +191,7 @@ const CustomCursor = () => {
     <motion.div
       aria-hidden="true"
       className="custom-hummingbird-cursor"
-      style={{ x: cursorX, y: cursorY, width: CURSOR_SIZE, height: CURSOR_SIZE }}
+      style={{ x: cursorX, y: cursorY, width: CURSOR_WIDTH, height: CURSOR_HEIGHT }}
       initial={false}
       animate={{ opacity: visible ? 1 : 0 }}
       transition={{ duration: 0.08, ease: 'easeOut' }}
@@ -164,7 +203,7 @@ const CustomCursor = () => {
         className="custom-hummingbird-cursor-image"
         initial={false}
         animate={{
-          scaleX: -1,
+          scaleX: mode === 'click' ? 0.96 : mode === 'hover' ? 1.04 : 1,
           scaleY: mode === 'click' ? 0.96 : mode === 'hover' ? 1.04 : 1,
           rotate: mode === 'click' ? 3 : mode === 'hover' ? -1 : 0
         }}

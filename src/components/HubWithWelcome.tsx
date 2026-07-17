@@ -15,30 +15,42 @@ const HubWithWelcome = () => {
   const [step, setStep] = useState(0);
   const [cantones, setCantones] = useState<GeoJsonFeatureCollection | null>(null);
   const [parroquias, setParroquias] = useState<GeoJsonFeatureCollection | null>(null);
+  const [mapsLoading, setMapsLoading] = useState(true);
+  const [mapError, setMapError] = useState('');
 
   const nombre = localStorage.getItem('agenteNombre') || 'Agente';
   const avatarKey = localStorage.getItem('agenteAvatar') === 'chica' ? 'chica' : 'chico';
 
-  const loadTerritorialMaps = useCallback(async () => {
+  const loadTerritorialMaps = useCallback(async (forceRefresh = false) => {
+    setMapsLoading(true);
+    setMapError('');
+
     try {
       const [cantonalMap, parishMap] = await Promise.all([
-        fetchTerritorialMap(TERRITORIAL_IDS.cantones),
-        fetchTerritorialMap(TERRITORIAL_IDS.parroquias)
+        fetchTerritorialMap(TERRITORIAL_IDS.cantones, forceRefresh),
+        fetchTerritorialMap(TERRITORIAL_IDS.parroquias, forceRefresh)
       ]);
       setCantones(cantonalMap);
       setParroquias(parishMap);
+
+      if (!cantonalMap || !parishMap) {
+        setMapError('Uno o ambos mapas todavía no están disponibles en la publicación compartida.');
+      }
     } catch (error) {
       console.warn('Mapas territoriales todavía no disponibles:', error);
+      setMapError('No se pudo conectar con los mapas territoriales.');
+    } finally {
+      setMapsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     const refresh = () => loadTerritorialMaps();
     const visibility = () => {
-      if (!document.hidden) loadTerritorialMaps();
+      if (!document.hidden) loadTerritorialMaps(true);
     };
 
-    loadTerritorialMaps();
+    loadTerritorialMaps(false);
     window.addEventListener('focus', refresh);
     window.addEventListener('storage', refresh);
     window.addEventListener('territorialMapsUpdated', refresh as EventListener);
@@ -53,7 +65,7 @@ const HubWithWelcome = () => {
   }, [loadTerritorialMaps]);
 
   useEffect(() => {
-    if (open && step > 0) loadTerritorialMaps();
+    if (open && step > 0) loadTerritorialMaps(false);
   }, [open, step, loadTerritorialMaps]);
 
   const close = () => {
@@ -79,7 +91,7 @@ const HubWithWelcome = () => {
 
       <button
         type="button"
-        onClick={() => { setStep(0); setOpen(true); loadTerritorialMaps(); }}
+        onClick={() => { setStep(0); setOpen(true); loadTerritorialMaps(true); }}
         className="fixed bottom-5 right-5 z-40 rounded-full border-4 border-white bg-gradient-to-br from-orange-500 to-pink-500 p-4 text-white shadow-2xl transition hover:-translate-y-1 hover:scale-105"
         aria-label="Abrir introducción territorial"
       >
@@ -128,6 +140,9 @@ const HubWithWelcome = () => {
                   </div>
 
                   <div className="relative min-h-0 overflow-auto bg-[#F7FAFF] p-5 lg:p-8">
+                    {mapError && step > 0 && !mapsLoading && (
+                      <div className="mb-3 rounded-2xl border-2 border-amber-200 bg-amber-50 px-4 py-3 text-center text-xs font-black text-amber-800" role="status">{mapError}</div>
+                    )}
                     {step === 0 && (
                       <div className="flex h-full min-h-[420px] items-center justify-center">
                         <div className="relative">
@@ -137,8 +152,8 @@ const HubWithWelcome = () => {
                         </div>
                       </div>
                     )}
-                    {step === 1 && <TerritorialMapView collection={cantones} mode="cantones" className="h-full min-h-[430px]" />}
-                    {step === 2 && <TerritorialMapView collection={parroquias} mode="parroquias" className="h-full min-h-[430px]" />}
+                    {step === 1 && <TerritorialMapView collection={cantones} mode="cantones" className="h-full min-h-[430px]" loading={mapsLoading} audience="student" onRetry={() => loadTerritorialMaps(true)} />}
+                    {step === 2 && <TerritorialMapView collection={parroquias} mode="parroquias" className="h-full min-h-[430px]" loading={mapsLoading} audience="student" onRetry={() => loadTerritorialMaps(true)} />}
                   </div>
                 </motion.div>
               </AnimatePresence>

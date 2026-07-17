@@ -276,6 +276,39 @@ const readLocalMap = (id: string) => {
   }
 };
 
+export const readStoredTerritorialMaps = () => ({
+  cantones: readLocalMap(TERRITORIAL_IDS.cantones),
+  parroquias: readLocalMap(TERRITORIAL_IDS.parroquias)
+});
+
+const delay = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+const fetchRemoteJson = async (url: string, version = '') => {
+  const separator = url.includes('?') ? '&' : '?';
+  const requestUrl = version && !url.startsWith('data:')
+    ? `${url}${separator}v=${encodeURIComponent(version)}`
+    : url;
+
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(requestUrl, {
+        cache: 'no-store',
+        headers: { Accept: 'application/json, application/geo+json' }
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) await delay(300 * (attempt + 1));
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('No se pudo descargar el mapa publicado.');
+};
+
 const isMissingBucketError = (error: any) => {
   const message = String(error?.message || error || '').toLowerCase();
   return message.includes('bucket not found') || (message.includes('bucket') && message.includes('not found'));
@@ -312,7 +345,7 @@ export const publishTerritorialMaps = async (
   }
 
   const folder = `territorial/${Date.now()}`;
-  let usedDatabaseFallback = false;
+  let allStoredInline = true;
 
   const payloads = [
     {
@@ -333,45 +366,60 @@ export const publishTerritorialMaps = async (
 
   for (const item of payloads) {
     const path = `${folder}/${item.filename}`;
-    const blob = new Blob([JSON.stringify(item.collection)], { type: 'application/geo+json' });
-    let publicUrl = '';
-    let storageFolder = folder;
+    const json = JSON.stringify(item.collection);
+    const blob = new Blob([json], { type: 'application/geo+json' });
+    const inlineUrl = encodeDataUrl(item.collection);
+    let backupUrl = '';
+    let storageFolder = 'database-inline';
 
-    const { error: uploadError } = await supabase.storage.from(STORAGE_BUCKET).upload(path, blob, {
-      upsert: true,
-      contentType: 'application/geo+json'
-    });
+    // Storage queda como respaldo. La copia principal se guarda dentro de la
+    // fila de mapas_recursos para evitar fallos de CORS, caché o enlaces públicos.
+    try {
+      const { error: uploadError } = await supabase.storage.from(STORAGE_BUCKET).upload(path, blob, {
+        upsert: true,
+        contentType: 'application/geo+json'
+      });
 
-    if (uploadError) {
-      if (!isMissingBucketError(uploadError)) {
-        return {
-          folder: 'local-browser',
-          storageMode: 'local' as TerritorialStorageMode,
-          warning: `Los mapas quedaron guardados en este navegador. Supabase respondió: ${uploadError.message || uploadError}`
-        };
+      if (!uploadError) {
+        const { data: publicData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+        backupUrl = publicData.publicUrl;
+        storageFolder = folder;
+      } else if (!isMissingBucketError(uploadError)) {
+        console.warn('Storage no pudo guardar el respaldo territorial:', uploadError.message || uploadError);
       }
-
-      usedDatabaseFallback = true;
-      publicUrl = encodeDataUrl(item.collection);
-      storageFolder = 'database-fallback';
-    } else {
-      const { data: publicData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-      publicUrl = publicData.publicUrl;
+    } catch (uploadError) {
+      console.warn('Storage no pudo guardar el respaldo territorial:', uploadError);
     }
 
-    const { error: dbError } = await supabase.from('mapas_recursos').upsert({
+    const baseRecord = {
       id: item.id,
       titulo: item.title,
       descripcion: item.description,
-      tif_url: null,
-      preview_url: publicUrl,
+      tif_url: backupUrl || null,
       storage_folder: storageFolder,
       updated_at: new Date().toISOString()
+    };
+
+    // Método principal: GeoJSON optimizado embebido en la base de datos.
+    let { error: dbError } = await supabase.from('mapas_recursos').upsert({
+      ...baseRecord,
+      preview_url: inlineUrl
     });
+
+    // Si el proveedor rechaza un payload grande, conserva como respaldo la URL
+    // pública de Storage en vez de dejarlo únicamente en el navegador.
+    if (dbError && backupUrl) {
+      allStoredInline = false;
+      const retry = await supabase.from('mapas_recursos').upsert({
+        ...baseRecord,
+        preview_url: backupUrl
+      });
+      dbError = retry.error;
+    }
 
     if (dbError) {
       const details = isMissingTableError(dbError)
-        ? 'La cuenta de Vercel parece estar conectada a otro proyecto de Supabase o la tabla todavía no está visible para la API.'
+        ? 'La tabla mapas_recursos todavía no está disponible para la API de este proyecto.'
         : dbError.message;
 
       return {
@@ -384,42 +432,61 @@ export const publishTerritorialMaps = async (
 
   return {
     folder,
-    storageMode: (usedDatabaseFallback ? 'database' : 'bucket') as TerritorialStorageMode,
+    storageMode: (allStoredInline ? 'database' : 'bucket') as TerritorialStorageMode,
     warning: ''
   };
 };
 
-export const fetchTerritorialMap = async (id: string) => {
-  const cached = publicMapCache.get(id);
-  if (cached) return cached;
+export const fetchTerritorialMap = async (id: string, forceRefresh = false) => {
+  if (!forceRefresh) {
+    const cached = publicMapCache.get(id);
+    if (cached) return cached;
+  } else {
+    publicMapCache.delete(id);
+  }
 
   if (isSupabaseConfigured) {
-    try {
-      const { data, error } = await supabase
-        .from('mapas_recursos')
-        .select('preview_url')
-        .eq('id', id)
-        .maybeSingle();
+    let lastError: unknown = null;
 
-      if (!error && data?.preview_url) {
-        let raw: unknown;
-        if (String(data.preview_url).startsWith('data:')) {
-          raw = decodeDataUrl(String(data.preview_url));
-        } else {
-          const response = await fetch(data.preview_url, { cache: 'no-store' });
-          if (response.ok) raw = await response.json();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const { data, error } = await supabase
+          .from('mapas_recursos')
+          .select('preview_url,tif_url,updated_at')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        const candidates = [data?.preview_url, data?.tif_url]
+          .filter((value): value is string => Boolean(value));
+
+        for (const candidate of candidates) {
+          try {
+            const raw = candidate.startsWith('data:')
+              ? decodeDataUrl(candidate)
+              : await fetchRemoteJson(candidate, String(data?.updated_at || ''));
+
+            const collection = normalizeFeatureCollection(raw);
+            publicMapCache.set(id, collection);
+            saveLocalMap(id, collection);
+            return collection;
+          } catch (candidateError) {
+            lastError = candidateError;
+          }
         }
 
-        if (raw) {
-          const collection = normalizeFeatureCollection(raw);
-          publicMapCache.set(id, collection);
-          saveLocalMap(id, collection);
-          return collection;
+        if (!candidates.length) {
+          lastError = new Error('El registro territorial existe, pero no contiene datos publicados.');
         }
+      } catch (error) {
+        lastError = error;
       }
-    } catch (error) {
-      console.warn('No se pudo consultar el mapa territorial remoto:', error);
+
+      if (attempt < 2) await delay(350 * (attempt + 1));
     }
+
+    if (lastError) console.warn('No se pudo consultar el mapa territorial remoto:', lastError);
   }
 
   const local = readLocalMap(id);
